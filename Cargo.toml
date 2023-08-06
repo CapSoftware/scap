@@ -13,8 +13,20 @@ keywords = ["screen", "recording", "video", "audio", "ffmpeg"]
 categories = []
 build = "build.rs"
 
-[build-dependencies]
+[target.'cfg(target_os = "macos")'.build-dependencies]
 swift-bridge-build = "0.1"
 
 [dependencies]
+
+[target.'cfg(target_os = "windows")'.dependencies.windows]
+version = "0.48"
+features = [
+    "Data_Xml_Dom",
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_Threading",
+    "Win32_UI_WindowsAndMessaging",
+]
+
+[target.'cfg(target_os = "macos")'.dependencies]
 swift-bridge = "0.1"
