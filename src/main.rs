@@ -1,9 +1,10 @@
+#[cfg(target_os = "windows")]
 use windows::{
     core::*, Data::Xml::Dom::*, Win32::Foundation::*, Win32::System::Threading::*,
     Win32::UI::WindowsAndMessaging::*,
 };
 
-fn main() -> Result<()> {
+fn main() -> Result<(), ()> {
     #[cfg(target_os = "macos")]
     {
         let devices = ffi::get_aperture_devices();
@@ -11,27 +12,30 @@ fn main() -> Result<()> {
     }
 
     println!("Hello, world!");
-    let doc = XmlDocument::new()?;
-    doc.LoadXml(h!("<html>hello world</html>"))?;
 
-    let root = doc.DocumentElement()?;
-    assert!(root.NodeName()? == "html");
-    assert!(root.InnerText()? == "hello world");
+    #[cfg(target_os = "windows")]
+    {
+        let doc = XmlDocument::new()?;
+        doc.LoadXml(h!("<html>hello world</html>"))?;
 
-    unsafe {
-        let event = CreateEventW(None, true, false, None)?;
-        SetEvent(event).ok()?;
-        WaitForSingleObject(event, 0);
-        CloseHandle(event).ok()?;
+        let root = doc.DocumentElement()?;
+        assert!(root.NodeName()? == "html");
+        assert!(root.InnerText()? == "hello world");
 
-        MessageBoxA(None, s!("Ansi"), s!("Caption"), MB_OK);
-        MessageBoxW(None, w!("Wide"), w!("Caption"), MB_OK);
+        unsafe {
+            let event = CreateEventW(None, true, false, None)?;
+            SetEvent(event).ok()?;
+            WaitForSingleObject(event, 0);
+            CloseHandle(event).ok()?;
+
+            MessageBoxA(None, s!("Ansi"), s!("Caption"), MB_OK);
+            MessageBoxW(None, w!("Wide"), w!("Caption"), MB_OK);
+        }
     }
 
     Ok(())
 }
 
-#[cfg(target_os = "macos")]
 #[swift_bridge::bridge]
 mod ffi {
     // extern "Rust" {
