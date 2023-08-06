@@ -1,2 +1,3 @@
-# cypher
-A cross-platform screen capture API written in Rust. 🚧 WIP 🚧
+# Cypher (🚧 WIP 🚧)
+
+A cross-platform screen capture API written in Rust.
