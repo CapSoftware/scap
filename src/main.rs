@@ -1,8 +1,5 @@
 #[cfg(target_os = "windows")]
-use windows::{
-    core::*, Data::Xml::Dom::*, Win32::Foundation::*, Win32::System::Threading::*,
-    Win32::UI::WindowsAndMessaging::*,
-};
+use windows::Graphics::Capture;
 
 fn main() -> Result<(), ()> {
     #[cfg(target_os = "macos")]
@@ -11,32 +8,18 @@ fn main() -> Result<(), ()> {
         println!("Devices: {}", devices);
     }
 
-    println!("Hello, world!");
-
     #[cfg(target_os = "windows")]
     {
-        let doc = XmlDocument::new()?;
-        doc.LoadXml(h!("<html>hello world</html>"))?;
+        let supported = Capture::GraphicsCaptureSession::IsSupported().unwrap();
 
-        let root = doc.DocumentElement()?;
-        assert!(root.NodeName()? == "html");
-        assert!(root.InnerText()? == "hello world");
-
-        unsafe {
-            let event = CreateEventW(None, true, false, None)?;
-            SetEvent(event).ok()?;
-            WaitForSingleObject(event, 0);
-            CloseHandle(event).ok()?;
-
-            MessageBoxA(None, s!("Ansi"), s!("Caption"), MB_OK);
-            MessageBoxW(None, w!("Wide"), w!("Caption"), MB_OK);
-        }
+        println!("Supported: {}", supported);
     }
 
     Ok(())
 }
 
 #[swift_bridge::bridge]
+#[cfg(target_os = "macos")]
 mod ffi {
     // extern "Rust" {
     //     fn rust_double_number(num: i64) -> i64;
