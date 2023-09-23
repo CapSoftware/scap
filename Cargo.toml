@@ -17,11 +17,12 @@ build = "build.rs"
 swift-bridge-build = "0.1"
 
 [dependencies]
+tokio = { version = "1", features = ["full"] }
 
 [target.'cfg(target_os = "windows")'.dependencies.windows]
 version = "0.48"
 features = [
-    "Graphics", "Graphics_Display", "Graphics_Capture", "Foundation"
+    "Graphics", "Graphics_Display", "Graphics_Capture", "Foundation", "Win32_Graphics_Direct3D11", "Win32_Foundation", "Win32_Graphics_Direct3D", "Win32_Graphics_Dxgi"
 ]
 
 [target.'cfg(target_os = "macos")'.dependencies]
