@@ -17,6 +17,7 @@ build = "build.rs"
 swift-bridge-build = "0.1"
 
 [dependencies]
+screencapturekit = "0.1.0"
 
 [target.'cfg(target_os = "windows")'.dependencies.windows]
 version = "0.48"

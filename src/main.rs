@@ -1,54 +1,31 @@
-#[cfg(target_os = "windows")]
-use windows::{
-    core::*, Data::Xml::Dom::*, Win32::Foundation::*, Win32::System::Threading::*,
-    Win32::UI::WindowsAndMessaging::*,
-};
+use screencapturekit::{sc_display, sc_shareable_content, sc_stream, sc_stream_configuration};
 
 fn main() -> Result<(), ()> {
-    #[cfg(target_os = "macos")]
-    {
-        let devices = ffi::get_aperture_devices();
-        println!("Devices: {}", devices);
-    }
+    let content = sc_shareable_content::SCShareableContent::current();
 
-    println!("Hello, world!");
+    content.applications.iter().for_each(|app| {
+        println!("App: {:?}", app);
+    });
 
-    #[cfg(target_os = "windows")]
-    {
-        let doc = XmlDocument::new()?;
-        doc.LoadXml(h!("<html>hello world</html>"))?;
+    content.displays.iter().for_each(|display| {
+        println!("Display: {:?}", display);
+    });
 
-        let root = doc.DocumentElement()?;
-        assert!(root.NodeName()? == "html");
-        assert!(root.InnerText()? == "hello world");
+    content.windows.iter().for_each(|window| {
+        println!("Window: {:?}", window);
+    });
 
-        unsafe {
-            let event = CreateEventW(None, true, false, None)?;
-            SetEvent(event).ok()?;
-            WaitForSingleObject(event, 0);
-            CloseHandle(event).ok()?;
+    let mut stream_config = sc_stream_configuration::SCStreamConfiguration::default();
 
-            MessageBoxA(None, s!("Ansi"), s!("Caption"), MB_OK);
-            MessageBoxW(None, w!("Wide"), w!("Caption"), MB_OK);
-        }
-    }
+    stream_config.shows_cursor = false;
+    stream_config.width = 1920;
+    stream_config.height = 1080;
+    stream_config.captures_audio = false;
+    stream_config.scales_to_fit = true;
+
+    let stream = sc_stream::SCStream::new(filter, stream_config, handler);
+
+    // print!("Display: {:?}", display);
 
     Ok(())
 }
-
-#[swift_bridge::bridge]
-mod ffi {
-    // extern "Rust" {
-    //     fn rust_double_number(num: i64) -> i64;
-    // }
-
-    extern "Swift" {
-        fn get_aperture_devices() -> String;
-    }
-}
-
-// fn rust_double_number(num: i64) -> i64 {
-//     println!("Rust double function called...");
-
-//     num * 2
-// }
