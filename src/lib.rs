@@ -6,7 +6,7 @@ mod windows;
 
 pub fn capture() {
     #[cfg(target_os = "macos")]
-    mac::main().expect("Error!");
+    mac::main();
 
     #[cfg(target_os = "windows")]
     windows::main();
