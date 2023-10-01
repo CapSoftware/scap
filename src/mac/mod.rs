@@ -7,7 +7,10 @@ use screencapturekit::{
     sc_stream_configuration::SCStreamConfiguration,
 };
 
-use core_video_sys::CVPixelBufferRef;
+use core_video_sys::{
+    CVPixelBufferGetBaseAddress, CVPixelBufferGetBytesPerRow, CVPixelBufferGetHeight,
+    CVPixelBufferGetWidth, CVPixelBufferRef,
+};
 
 struct ConsoleErrorHandler;
 
@@ -21,29 +24,62 @@ struct OutputHandler;
 
 impl StreamOutput for OutputHandler {
     fn stream_output(&self, sample: CMSampleBuffer) {
-        println!("Got sample!");
+        // println!("Got sample: {:?}", sample);
+        let timestamp = sample.presentation_timestamp.value;
+        let pixel_buffer =
+            sample.pixel_buffer.expect("No buffer found in sample") as CVPixelBufferRef;
 
-        let time_cmtime = sample.presentation_timestamp;
-        let time = time_cmtime.value;
-        println!("Time: {:?}", time);
+        println!("pixel_buffer: {:?}", pixel_buffer);
 
-        let pixel_buffer_ref = sample.pixel_buffer.unwrap();
-        println!("PixelBufferRef: {:?}", pixel_buffer_ref);
+        // get the pixel buffer's width and height
+        let width = unsafe { CVPixelBufferGetWidth(pixel_buffer) };
+        let height = unsafe { CVPixelBufferGetHeight(pixel_buffer) };
+        // println!("size: {}x{}", width, height);
 
-        // let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer)
+        // create an ImageBuffer from the pixel buffer data
+        let bytes_per_row = unsafe { CVPixelBufferGetBytesPerRow(pixel_buffer) };
+        let base_address = unsafe { CVPixelBufferGetBaseAddress(pixel_buffer) };
+
+        // HELP: base_address is 0x0 all the time
+        // println!("base_address: {:?}", base_address);
+
+        let buffer = unsafe {
+            std::slice::from_raw_parts(base_address as *const u8, bytes_per_row * height)
+        };
+
+        // HELP: buffer is empty
+        println!("buffer: {:?}", buffer);
+
+        // let image_buffer =
+        //     ImageBuffer::<Rgba<u8>, _>::from_raw(width as u32, height as u32, buffer).unwrap();
+
+        // write the ImageBuffer to a PNG file
+
+        // let filename = format!("output-{}.png", timestamp);
+        // let file = File::create(&filename).unwrap();
+        // let ref mut writer = BufWriter::new(file);
+        // let encoder = image::codecs::png::PngEncoder::new(writer);
+        // encoder
+        //     .encode(
+        //         &image_buffer,
+        //         width as u32,
+        //         height as u32,
+        //         image::ColorType::Rgba8,
+        //     )
+        //     .unwrap();
+
+        // println!("Wrote PNG file: {}", filename);
     }
 }
 
 pub fn main() -> Result<(), ()> {
     let content = SCShareableContent::current();
-    // contains displays, applications and windows
-
     let display = content.displays.first().unwrap();
 
     let width = display.width;
     let height = display.height;
 
-    let params = InitParams::Display(display.clone());
+    let params = InitParams::Display(display.to_owned());
     let filter = SCContentFilter::new(params);
 
     let mut stream_config = SCStreamConfiguration::default();
@@ -51,16 +87,12 @@ pub fn main() -> Result<(), ()> {
     stream_config.shows_cursor = true;
     stream_config.width = width;
     stream_config.height = height;
-    stream_config.captures_audio = false;
-    stream_config.scales_to_fit = true;
-
-    // println!("Stream Config: {:?}", stream_config);
+    stream_config.captures_audio = true;
 
     let handler = ConsoleErrorHandler;
     let mut stream = SCStream::new(filter, stream_config, handler);
 
     let output_handler = OutputHandler;
-
     stream.add_output(output_handler);
 
     stream.start_capture();

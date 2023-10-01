@@ -11,7 +11,6 @@ repository = "https://github.com/clearlysid/cypher"
 documentation = "https://docs.rs/cypher"
 keywords = ["screen", "recording", "video", "audio", "ffmpeg"]
 categories = []
-build = "build.rs"
 
 [dependencies]
 image = "0.24.7"
