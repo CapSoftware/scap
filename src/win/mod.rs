@@ -1,4 +1,4 @@
-#[cfg(target_os = "windows")]
+
 use windows::Graphics::Capture;
 use windows::Win32::Graphics::Direct3D11;
 

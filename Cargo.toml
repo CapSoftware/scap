@@ -11,13 +11,11 @@ repository = "https://github.com/clearlysid/cypher"
 documentation = "https://docs.rs/cypher"
 keywords = ["screen", "recording", "video", "audio", "ffmpeg"]
 categories = []
-build = "build.rs"
-
-[target.'cfg(target_os = "macos")'.build-dependencies]
-swift-bridge-build = "0.1"
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
+ffmpeg-next = {git = "https://github.com/remotion-dev/rust-ffmpeg", rev ="98f1b3311325e925403f3cd804359d93ddcc42fb"}
+image = "0.24.7"
+yuv = "0.1.5"
 
 [target.'cfg(target_os = "windows")'.dependencies.windows]
 version = "0.48"
@@ -26,4 +24,6 @@ features = [
 ]
 
 [target.'cfg(target_os = "macos")'.dependencies]
-swift-bridge = "0.1"
+tao-core-video-sys = "0.2.0"
+core-graphics = "0.23.1"
+screencapturekit = { git = "https://github.com/svtlabs/screencapturekit-rs", branch = "main" }
