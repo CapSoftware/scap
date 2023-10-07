@@ -13,7 +13,9 @@ keywords = ["screen", "recording", "video", "audio", "ffmpeg"]
 categories = []
 
 [dependencies]
+ffmpeg-next = {git = "https://github.com/remotion-dev/rust-ffmpeg", rev ="98f1b3311325e925403f3cd804359d93ddcc42fb"}
 image = "0.24.7"
+yuv = "0.1.5"
 
 [target.'cfg(target_os = "windows")'.dependencies.windows]
 version = "0.48"
@@ -27,5 +29,5 @@ features = [
 
 [target.'cfg(target_os = "macos")'.dependencies]
 tao-core-video-sys = "0.2.0"
-screencapturekit = "0.1.0"
 core-graphics = "0.23.1"
+screencapturekit = { path = "screencapturekit-rs/screencapturekit" }
