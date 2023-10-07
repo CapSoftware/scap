@@ -7,6 +7,7 @@ use screencapturekit::{
     sc_stream_configuration::SCStreamConfiguration,
 };
 
+use core_graphics::access::ScreenCaptureAccess;
 use core_graphics::display::CGMainDisplayID;
 
 use core_video_sys::{
@@ -14,8 +15,6 @@ use core_video_sys::{
     CVPixelBufferGetBytesPerRow, CVPixelBufferGetHeight, CVPixelBufferGetPixelFormatType,
     CVPixelBufferGetWidth, CVPixelBufferLockBaseAddress, CVPixelBufferUnlockBaseAddress,
 };
-
-use std::sync::{Arc, Mutex};
 
 struct ConsoleErrorHandler;
 
@@ -39,25 +38,25 @@ impl StreamOutput for OutputHandler {
                 let timestamp = sample_ptr.get_presentation_timestamp().value;
                 let filename = format!("frame_{}.png", timestamp);
 
-                let pixel_buffer = sample_ptr.get_image_buffer() as CVImageBufferRef;
+                // let pixel_buffer = sample_ptr.get_image_buffer() as CVImageBufferRef;
 
-                unsafe {
-                    CVPixelBufferLockBaseAddress(pixel_buffer, 0);
+                // unsafe {
+                //     CVPixelBufferLockBaseAddress(pixel_buffer, 0);
 
-                    let base_address =
-                        CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 0) as *const u8;
-                    let pixel_format_type = CVPixelBufferGetPixelFormatType(pixel_buffer);
+                //     let base_address =
+                //         CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 0) as *const u8;
+                //     let pixel_format_type = CVPixelBufferGetPixelFormatType(pixel_buffer);
 
-                    // get the pixel buffer's width and height
-                    let width = CVPixelBufferGetWidth(pixel_buffer);
-                    let height = CVPixelBufferGetHeight(pixel_buffer);
+                //     // get the pixel buffer's width and height
+                //     let width = CVPixelBufferGetWidth(pixel_buffer);
+                //     let height = CVPixelBufferGetHeight(pixel_buffer);
 
-                    let bytes_per_row = CVPixelBufferGetBytesPerRow(pixel_buffer);
+                //     let bytes_per_row = CVPixelBufferGetBytesPerRow(pixel_buffer);
 
-                    // Safe part starts here
+                //     // Safe part starts here
 
-                    CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
-                }
+                //     CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
+                // }
             }
             _ => {}
         }
@@ -65,6 +64,16 @@ impl StreamOutput for OutputHandler {
 }
 
 pub fn main() {
+    // check for screen capture permission
+    let access = ScreenCaptureAccess::default();
+    let access = access.preflight();
+
+    // if access isnt true, log it and return
+    if !access {
+        println!("screencapture access not granted");
+        return;
+    }
+
     // Setup premise
     let content = SCShareableContent::current();
 
