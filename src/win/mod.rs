@@ -1,23 +1,28 @@
-use windows::{
-    core::*, Data::Xml::Dom::*, Win32::Foundation::*, Win32::System::Threading::*,
-    Win32::UI::WindowsAndMessaging::*,
-};
 
-fn main() {
-    let doc = XmlDocument::new()?;
-    doc.LoadXml(h!("<html>hello world</html>"))?;
+use windows::Graphics::Capture;
+use windows::Win32::Graphics::Direct3D11;
 
-    let root = doc.DocumentElement()?;
-    assert!(root.NodeName()? == "html");
-    assert!(root.InnerText()? == "hello world");
+pub async fn main() {
+    let supported = Capture::GraphicsCaptureSession::IsSupported().unwrap();
 
-    unsafe {
-        let event = CreateEventW(None, true, false, None)?;
-        SetEvent(event).ok()?;
-        WaitForSingleObject(event, 0);
-        CloseHandle(event).ok()?;
-
-        MessageBoxA(None, s!("Ansi"), s!("Caption"), MB_OK);
-        MessageBoxW(None, w!("Wide"), w!("Caption"), MB_OK);
+    if supported == false {
+        // Show message to user that screen capture is unsupported
+        return;
     }
+
+    println!("Supported: {}", supported);
+
+    //     // Create the D3D device and SharpDX device
+    //     unsafe {
+    //         let _device = Direct3D11::D3D11CreateDevice();
+    //     }
+
+    // Let the user pick an item to capture
+    let picker = Capture::GraphicsCapturePicker::new().expect("Failed to create picker");
+
+    let capture_item = picker.PickSingleItemAsync();
+
+    capture_item.await;
+
+    println!("Capture Item: {:?}", capture_item);
 }
