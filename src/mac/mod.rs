@@ -5,6 +5,7 @@ use screencapturekit::{
     sc_shareable_content::SCShareableContent,
     sc_stream::SCStream,
     sc_stream_configuration::SCStreamConfiguration,
+    sc_sys::{CMSampleBufferGetFormatDescription, CMSampleBufferGetImageBuffer, SCFrameStatus},
 };
 
 use core_graphics::access::ScreenCaptureAccess;
@@ -31,45 +32,54 @@ impl StreamOutput for OutputHandler {
         match of_type {
             SCStreamOutputType::Screen => {
                 let frame_status = sample.frame_status;
-                println!("Frame Status: {:?}", frame_status);
 
-                let sample_ptr = sample.ptr;
+                match frame_status {
+                    SCFrameStatus::Idle => {
+                        return;
+                    }
+                    _ => {
+                        let ptr = sample.ptr;
+                        let timestamp = ptr.get_presentation_timestamp().value;
+                        println!("Timestamp: {}", timestamp);
 
-                let timestamp = sample_ptr.get_presentation_timestamp().value;
-                let filename = format!("frame_{}.png", timestamp);
+                        let attachments = ptr.get_attachments();
 
-                // let pixel_buffer = sample_ptr.get_image_buffer() as CVImageBufferRef;
+                        // println!("Sample ptr: {:?}", ptr.get_attachments());
 
-                // unsafe {
-                //     CVPixelBufferLockBaseAddress(pixel_buffer, 0);
+                        // let pixel_buffer = sample_ptr.get_image_buffer() as CVImageBufferRef;
 
-                //     let base_address =
-                //         CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 0) as *const u8;
-                //     let pixel_format_type = CVPixelBufferGetPixelFormatType(pixel_buffer);
+                        // unsafe {
+                        //     CVPixelBufferLockBaseAddress(pixel_buffer, 0);
 
-                //     // get the pixel buffer's width and height
-                //     let width = CVPixelBufferGetWidth(pixel_buffer);
-                //     let height = CVPixelBufferGetHeight(pixel_buffer);
+                        //     let base_address =
+                        //         CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 0) as *const u8;
+                        //     let pixel_format_type = CVPixelBufferGetPixelFormatType(pixel_buffer);
 
-                //     let bytes_per_row = CVPixelBufferGetBytesPerRow(pixel_buffer);
+                        //     // get the pixel buffer's width and height
+                        //     let width = CVPixelBufferGetWidth(pixel_buffer);
+                        //     let height = CVPixelBufferGetHeight(pixel_buffer);
 
-                //     // Safe part starts here
+                        //     let bytes_per_row = CVPixelBufferGetBytesPerRow(pixel_buffer);
 
-                //     CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
-                // }
+                        //     // Safe part starts here
+
+                        //     CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
+                        // }
+                    }
+                }
             }
-            _ => {}
+            SCStreamOutputType::Audio => {
+                // TODO: Handle audio
+            }
         }
     }
 }
 
 pub fn main() {
-    // Setup premise
     let content = SCShareableContent::current();
-
-    let main_display_id = unsafe { CGMainDisplayID() };
     let displays = content.displays;
 
+    let main_display_id = unsafe { CGMainDisplayID() };
     let main_display = displays
         .iter()
         .find(|display| display.display_id == main_display_id)
@@ -91,14 +101,9 @@ pub fn main() {
         ..Default::default()
     };
 
-    let handler = ConsoleErrorHandler;
-    let mut stream = SCStream::new(filter, stream_config, handler);
-
-    let output_handler = OutputHandler {
-        // video_encoder,
-        // video_stream: Arc::clone(&video_stream),
-    };
-
+    let error_handler = ConsoleErrorHandler;
+    let mut stream = SCStream::new(filter, stream_config, error_handler);
+    let output_handler = OutputHandler {};
     stream.add_output(output_handler);
 
     stream.start_capture();
