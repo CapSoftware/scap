@@ -9,13 +9,17 @@ pub fn capture() {
     mac::main();
 
     #[cfg(target_os = "windows")]
-    windows::main();
+    win::main();
 }
 
 pub fn is_supported() -> bool {
-    // macOS: ScreenCaptureKit support
-    // Windows:  Windows.Graphics.Capture
-    true
+    #[cfg(target_os = "macos")]
+    let access = mac::is_supported();
+
+    #[cfg(target_os = "windows")]
+    let access = win::is_supported();
+
+    access
 }
 
 pub fn has_permission() -> bool {
