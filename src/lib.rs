@@ -19,9 +19,13 @@ pub fn is_supported() -> bool {
 }
 
 pub fn has_permission() -> bool {
-    // Check for screen recording permission
-    // On macOS, check for accessibility permission too
-    true
+    #[cfg(target_os = "macos")]
+    let access = mac::has_permission();
+
+    #[cfg(target_os = "windows")]
+    let access = true;
+
+    access
 }
 
 pub fn request_permission() -> bool {

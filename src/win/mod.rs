@@ -1,8 +1,7 @@
-
 use windows::Graphics::Capture;
 use windows::Win32::Graphics::Direct3D11;
 
-pub async fn main() {
+pub fn main() {
     let supported = Capture::GraphicsCaptureSession::IsSupported().unwrap();
 
     if supported == false {
@@ -22,7 +21,7 @@ pub async fn main() {
 
     let capture_item = picker.PickSingleItemAsync();
 
-    capture_item.await;
+    // capture_item.await;
 
     println!("Capture Item: {:?}", capture_item);
 }

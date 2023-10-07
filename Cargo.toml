@@ -1,7 +1,7 @@
 [package]
 name = "cypher"
-description = "High-performance, cross-platform screen recording API for Rust."
-version = "0.0.1"
+description = "High-performance, screen capture API for Rust."
+version = "0.0.2"
 edition = "2021"
 rust-version = "1.56"
 license = "MIT"
@@ -14,14 +14,9 @@ categories = []
 
 [dependencies]
 ffmpeg-next = {git = "https://github.com/remotion-dev/rust-ffmpeg", rev ="98f1b3311325e925403f3cd804359d93ddcc42fb"}
-image = "0.24.7"
-yuv = "0.1.5"
 
-[target.'cfg(target_os = "windows")'.dependencies.windows]
-version = "0.48"
-features = [
-    "Graphics", "Graphics_Display", "Graphics_Capture", "Foundation", "Win32_Graphics_Direct3D11", "Win32_Foundation", "Win32_Graphics_Direct3D", "Win32_Graphics_Dxgi"
-]
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.48", features = ["Graphics", "Graphics_Display", "Graphics_Capture", "Foundation", "Win32_Graphics_Direct3D11", "Win32_Foundation", "Win32_Graphics_Direct3D", "Win32_Graphics_Dxgi" ] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 tao-core-video-sys = "0.2.0"

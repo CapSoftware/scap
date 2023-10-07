@@ -64,16 +64,6 @@ impl StreamOutput for OutputHandler {
 }
 
 pub fn main() {
-    // check for screen capture permission
-    let access = ScreenCaptureAccess::default();
-    let access = access.preflight();
-
-    // if access isnt true, log it and return
-    if !access {
-        println!("screencapture access not granted");
-        return;
-    }
-
     // Setup premise
     let content = SCShareableContent::current();
 
@@ -119,4 +109,9 @@ pub fn main() {
 
     stream.stop_capture();
     println!("Capture stopped.");
+}
+
+pub fn has_permission() -> bool {
+    let access = ScreenCaptureAccess::default();
+    access.preflight()
 }
