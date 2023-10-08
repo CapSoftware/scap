@@ -1,3 +1,5 @@
+use core_graphics::access::ScreenCaptureAccess;
+use core_graphics::display::CGMainDisplayID;
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
     sc_error_handler,
@@ -7,11 +9,8 @@ use screencapturekit::{
     sc_stream_configuration::SCStreamConfiguration,
     sc_sys::{CMSampleBufferGetImageBuffer, CMSampleBufferRef, SCFrameStatus},
 };
-
-use core_graphics::access::ScreenCaptureAccess;
-use core_graphics::display::CGMainDisplayID;
-
 use std::mem::transmute;
+use std::process::Command;
 
 struct ConsoleErrorHandler;
 
@@ -100,4 +99,23 @@ pub fn main() {
 pub fn has_permission() -> bool {
     let access = ScreenCaptureAccess::default();
     access.preflight()
+}
+
+pub fn is_supported() -> bool {
+    let min_suported_macos_version = 12.3;
+
+    let output = Command::new("sw_vers")
+        .arg("-productVersion")
+        .output()
+        .expect("Failed to execute sw_vers command");
+
+    let os_version = String::from_utf8(output.stdout).expect("Output not UTF-8");
+    let os_version = os_version.trim().parse::<f64>().unwrap();
+
+    if os_version < min_suported_macos_version {
+        println!("macOS version {} is not supported", os_version);
+        return false;
+    } else {
+        return true;
+    }
 }
