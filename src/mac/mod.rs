@@ -5,17 +5,13 @@ use screencapturekit::{
     sc_shareable_content::SCShareableContent,
     sc_stream::SCStream,
     sc_stream_configuration::SCStreamConfiguration,
-    sc_sys::{CMSampleBufferGetFormatDescription, CMSampleBufferGetImageBuffer, SCFrameStatus},
+    sc_sys::{CMSampleBufferGetImageBuffer, CMSampleBufferRef, SCFrameStatus},
 };
 
 use core_graphics::access::ScreenCaptureAccess;
 use core_graphics::display::CGMainDisplayID;
 
-use core_video_sys::{
-    CVImageBufferRef, CVPixelBufferGetBaseAddress, CVPixelBufferGetBaseAddressOfPlane,
-    CVPixelBufferGetBytesPerRow, CVPixelBufferGetHeight, CVPixelBufferGetPixelFormatType,
-    CVPixelBufferGetWidth, CVPixelBufferLockBaseAddress, CVPixelBufferUnlockBaseAddress,
-};
+use std::mem::transmute;
 
 struct ConsoleErrorHandler;
 
@@ -39,32 +35,17 @@ impl StreamOutput for OutputHandler {
                     }
                     _ => {
                         let ptr = sample.ptr;
+                        println!("Id<CMSampleBufferRef>: {:?}", ptr);
+
                         let timestamp = ptr.get_presentation_timestamp().value;
                         println!("Timestamp: {}", timestamp);
 
-                        let attachments = ptr.get_attachments();
+                        let raw_ptr: *mut CMSampleBufferRef = unsafe { transmute(ptr) };
 
-                        // println!("Sample ptr: {:?}", ptr.get_attachments());
+                        println!("CMSampleBufferRef: {:?}", raw_ptr);
 
-                        // let pixel_buffer = sample_ptr.get_image_buffer() as CVImageBufferRef;
-
-                        // unsafe {
-                        //     CVPixelBufferLockBaseAddress(pixel_buffer, 0);
-
-                        //     let base_address =
-                        //         CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 0) as *const u8;
-                        //     let pixel_format_type = CVPixelBufferGetPixelFormatType(pixel_buffer);
-
-                        //     // get the pixel buffer's width and height
-                        //     let width = CVPixelBufferGetWidth(pixel_buffer);
-                        //     let height = CVPixelBufferGetHeight(pixel_buffer);
-
-                        //     let bytes_per_row = CVPixelBufferGetBytesPerRow(pixel_buffer);
-
-                        //     // Safe part starts here
-
-                        //     CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
-                        // }
+                        // ptr is Id<CMSampleBufferRef>
+                        // I need to get the CMSampleBufferRef from it
                     }
                 }
             }

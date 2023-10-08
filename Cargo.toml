@@ -13,7 +13,6 @@ keywords = ["screen", "recording", "video", "audio", "ffmpeg"]
 categories = []
 
 [dependencies]
-ffmpeg-next = {git = "https://github.com/remotion-dev/rust-ffmpeg", rev ="98f1b3311325e925403f3cd804359d93ddcc42fb"}
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.48", features = ["Graphics", "Graphics_Display", "Graphics_Capture", "Foundation", "Win32_Graphics_Direct3D11", "Win32_Foundation", "Win32_Graphics_Direct3D", "Win32_Graphics_Dxgi" ] }
