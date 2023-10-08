@@ -1,5 +1,8 @@
 use cypher;
 
+// This program is just a testbed for the library itself
+// Refer to the lib.rs file for the actual implementation
+
 fn main() {
     // #1 Check if the platform is supported
     let supported = cypher::is_supported();
@@ -19,6 +22,6 @@ fn main() {
         println!("✅ Permission granted");
     }
 
-    // #3 Capture the screen
+    // #3 Capture the screen (WIP)
     cypher::capture();
 }

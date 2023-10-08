@@ -24,16 +24,10 @@ pub fn is_supported() -> bool {
 
 pub fn has_permission() -> bool {
     #[cfg(target_os = "macos")]
-    let access = mac::has_permission();
+    let permission = mac::has_permission();
 
     #[cfg(target_os = "windows")]
-    let access = true;
+    let permission = true; // TODO: check Windows permissions
 
-    access
-}
-
-pub fn request_permission() -> bool {
-    // Request screen recording permission
-    // On macOS, request accessibility permission too
-    true
+    permission
 }
