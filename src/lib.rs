@@ -4,6 +4,24 @@ mod mac;
 #[cfg(target_os = "windows")]
 mod win;
 
+pub enum TargetKind {
+    Display,
+    Window,
+    Audio,
+}
+
+pub struct Target {
+    kind: TargetKind,
+    id: u32,
+}
+
+pub struct Options {
+    fps: u32,
+    targets: Vec<Target>,
+    show_cursor: bool,
+    show_highlight: bool,
+}
+
 pub fn capture() {
     #[cfg(target_os = "macos")]
     mac::main();

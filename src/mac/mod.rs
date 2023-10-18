@@ -7,9 +7,8 @@ use screencapturekit::{
     sc_shareable_content::SCShareableContent,
     sc_stream::SCStream,
     sc_stream_configuration::SCStreamConfiguration,
-    sc_sys::{CMSampleBufferGetImageBuffer, CMSampleBufferRef, SCFrameStatus},
+    sc_sys::{CMSampleBufferGetImageBuffer, SCFrameStatus},
 };
-use std::mem::transmute;
 use std::process::Command;
 
 struct ConsoleErrorHandler;
@@ -23,10 +22,11 @@ impl sc_error_handler::StreamErrorHandler for ConsoleErrorHandler {
 struct OutputHandler {}
 
 impl StreamOutput for OutputHandler {
+    // CMSampleBuffer
     fn did_output_sample_buffer(&self, sample: CMSampleBuffer, of_type: SCStreamOutputType) {
         match of_type {
             SCStreamOutputType::Screen => {
-                let frame_status = sample.frame_status;
+                let frame_status = &sample.frame_status;
 
                 match frame_status {
                     SCFrameStatus::Idle => {
@@ -36,15 +36,12 @@ impl StreamOutput for OutputHandler {
                         let ptr = sample.ptr;
                         println!("Id<CMSampleBufferRef>: {:?}", ptr);
 
-                        let timestamp = ptr.get_presentation_timestamp().value;
-                        println!("Timestamp: {}", timestamp);
+                        // error on the following line
+                        // let owned = *ptr;
 
-                        let raw_ptr: *mut CMSampleBufferRef = unsafe { transmute(ptr) };
-
-                        println!("CMSampleBufferRef: {:?}", raw_ptr);
-
-                        // ptr is Id<CMSampleBufferRef>
-                        // I need to get the CMSampleBufferRef from it
+                        // But this command needs to own CMSampleBufferRef
+                        // let image_buffer = unsafe { CMSampleBufferGetImageBuffer(&owned) };
+                        // println!("CMSampleBufferRef: {:?}", image_buffer);
                     }
                 }
             }
