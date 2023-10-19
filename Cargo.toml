@@ -13,8 +13,10 @@ keywords = ["screen", "recording", "video", "audio", "ffmpeg"]
 categories = []
 
 [dependencies]
+rand = "0.8.5"
 
 [target.'cfg(target_os = "windows")'.dependencies]
+windows-capture = "1.0.19"
 windows = { version = "0.48", features = ["Graphics", "Graphics_Display", "Graphics_Capture", "Foundation", "Win32_Graphics_Direct3D11", "Win32_Foundation", "Win32_Graphics_Direct3D", "Win32_Graphics_Dxgi" ] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
