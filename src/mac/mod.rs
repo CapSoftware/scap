@@ -116,3 +116,12 @@ pub fn is_supported() -> bool {
         return true;
     }
 }
+
+pub fn get_targets() {
+    let content = SCShareableContent::current();
+    let displays = content.displays;
+
+    for display in displays {
+        println!("Display: {:?}", display);
+    }
+}
