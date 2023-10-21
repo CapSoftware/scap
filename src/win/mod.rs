@@ -101,21 +101,22 @@ pub fn get_targets() -> Vec<Target> {
         let target = Target {
             kind: TargetKind::Display,
             id: 2,
-            name: name,
+            name,
         };
         targets.push(target);
     }
 
     // TODO: complete windows implementation
 
-    // for window in windows {
-    //     let id = window;
-    //     let target = Target {
-    //         kind: TargetKind::Window,
-    //         id,
-    //     };
-    //     targets.push(target);
-    // }
+    for window in windows {
+        let id = window;
+        let target = Target {
+            kind: TargetKind::Window,
+            name: "".into(),
+            id: 3,
+        };
+        targets.push(target);
+    }
 
     targets
 }

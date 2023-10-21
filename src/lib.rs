@@ -50,7 +50,7 @@ impl Recorder {
         win::main();
     }
 
-    pub fn stop_capture() {
+    pub fn stop_capture(&self) {
         // TODO: add stop_capture() to mac and win modules
         // #[cfg(target_os = "macos")]
         // mac::stop_capture();
@@ -66,16 +66,18 @@ pub fn is_supported() -> bool {
 
     #[cfg(target_os = "windows")]
     let supported = win::is_supported();
+
     supported
 }
 
-pub fn get_targets() {
+pub fn get_targets() -> Vec<Target> {
     #[cfg(target_os = "macos")]
     let targets = mac::get_targets();
 
     #[cfg(target_os = "windows")]
     let targets = win::get_targets();
-    // targets
+
+    targets
 }
 
 pub fn has_permission() -> bool {

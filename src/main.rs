@@ -4,8 +4,6 @@ use cypher::{Options, Recorder};
 // Refer to the lib.rs file for the actual implementation
 
 fn main() {
-    let recorder = Recorder::init();
-
     // #1 Check if the platform is supported
     let supported = cypher::is_supported();
     if !supported {
@@ -24,7 +22,11 @@ fn main() {
         println!("✅ Permission granted");
     }
 
-    // #3 Capture the screen (WIP)
-    cypher::get_targets();
-    // recorder.start_capture(options)
+    // #3 Get recording targets (WIP)
+    let targets = cypher::get_targets();
+    println!("🎯 Targets: {:?}", targets);
+
+    // #4 Capture the screen (WIP)
+    // let recorder = Recorder::init();
+    // recorder.start_capture(options);
 }
