@@ -1,6 +1,7 @@
-use core_graphics::display::CGDisplay;
+
 use core_graphics::display::CGMainDisplayID;
-use core_graphics::{access::ScreenCaptureAccess, window};
+use core_graphics::{access::ScreenCaptureAccess};
+use core_video_sys:: {CVPixelBufferRef}
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
     sc_error_handler,
@@ -8,9 +9,14 @@ use screencapturekit::{
     sc_shareable_content::SCShareableContent,
     sc_stream::SCStream,
     sc_stream_configuration::SCStreamConfiguration,
-    sc_sys::{CMSampleBufferGetImageBuffer, SCFrameStatus},
+    sc_sys::{ SCFrameStatus},
 };
+use std::ops::Deref;
 use std::process::Command;
+use objc_foundation::{INSData};
+use image::{ ImageBuffer, RgbImage, RgbaImage, Rgba };
+use chrono::prelude::*;
+
 
 use crate::{Target, TargetKind};
 
@@ -23,6 +29,8 @@ impl sc_error_handler::StreamErrorHandler for ConsoleErrorHandler {
 }
 
 struct OutputHandler {}
+
+
 
 impl StreamOutput for OutputHandler {
     // CMSampleBuffer
@@ -37,7 +45,41 @@ impl StreamOutput for OutputHandler {
                     }
                     _ => {
                         let ptr = sample.ptr;
-                        println!("Id<CMSampleBufferRef>: {:?}", ptr);
+                        // println!("Id<CMSampleBufferRef>: {:?}", ptr);
+                        let cvImageBufferRef= ptr.get_image_buffer();
+                        let shared_NSData = cvImageBufferRef.get_data();
+                        let owned_NSData = shared_NSData.deref();
+                        let image_bytes = owned_NSData.bytes();
+                        let last_five: &[u8] = &image_bytes[image_bytes.len() - 15..];
+
+                        println!("#########");
+                        println!("Something: {:?}", owned_NSData);
+                        println!("#########");
+                        let width = 1470;
+                        let height = 956;
+                        let mut img: RgbaImage = ImageBuffer::new(width, height);
+
+                        let timestamp = Utc::now().to_string();
+
+                        let buffer_data =  image_bytes;
+                        
+                        for y in 0..height {
+                            for x in 0..width {
+                                let offset = (y * width + x * 4) as usize;
+                                let pixel = Rgba([
+                                    buffer_data[offset + 1],  // Red
+                                    buffer_data[offset + 2],  // Green
+                                    buffer_data[offset + 3],  // Blue
+                                    buffer_data[offset + 0],  // Alpha
+                                ]);
+                                img.put_pixel(x as u32, y as u32, pixel);
+                            }
+                        }
+                    
+                        // Save the image to disk
+                        let filename = format!("frame_{}.png", timestamp);
+                        img.save(filename).expect("Failed to save image");
+                        // Save the buffer as "image.png"
 
                         // error on the following line
                         // let owned = *ptr;
@@ -95,6 +137,7 @@ pub fn main() {
     stream.stop_capture();
     println!("Capture stopped.");
 }
+
 
 pub fn has_permission() -> bool {
     let access = ScreenCaptureAccess::default();

@@ -15,20 +15,20 @@ pub enum TargetKind {
 
 #[derive(Debug)]
 pub struct Target {
-    kind: TargetKind,
-    name: String,
-    id: u32,
+    pub kind: TargetKind,
+    pub name: String,
+    pub id: u32,
 }
 
 pub struct Options {
-    fps: u32,
-    targets: Vec<Target>,
-    show_cursor: bool,
-    show_highlight: bool,
+    pub fps: u32,
+    pub targets: Vec<Target>,
+    pub show_cursor: bool,
+    pub show_highlight: bool,
 }
 
 pub struct Recorder {
-    id: String,
+    pub id: String,
 }
 
 impl Recorder {

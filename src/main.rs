@@ -1,4 +1,4 @@
-use cypher::{Options, Recorder};
+use cypher::{Options, Recorder, Target, TargetKind};
 
 // This program is just a testbed for the library itself
 // Refer to the lib.rs file for the actual implementation
@@ -24,7 +24,22 @@ fn main() {
         println!("✅ Permission granted");
     }
 
+    // let test_options = Options { fps: 32, targets: }
+
     // #3 Capture the screen (WIP)
     cypher::get_targets();
-    // recorder.start_capture(options)
+    let options = Options {
+        fps: 32,
+        targets: vec![
+            Target {
+                kind: TargetKind::Window,
+                name: String::from("main.rs — circle_area"),
+                id: 7780,
+            }
+        ],
+        show_cursor: true,
+        show_highlight: true,
+    };
+    recorder.start_capture(options)
 }
+
