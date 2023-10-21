@@ -16,12 +16,18 @@ fn main() {
     }
 
     // #2 Check if the app has permission to capture the screen
-    let has_permission = cypher::has_permission();
-    if !has_permission {
-        println!("❌ Permission not granted");
-        return;
-    } else {
-        println!("✅ Permission granted");
+
+    // macOS Only
+
+    #[cfg(target_os = "macos")]
+    {
+        let has_permission = cypher::has_permission();
+        if !has_permission {
+            println!("❌ Permission not granted");
+            return;
+        } else {
+            println!("✅ Permission granted");
+        }
     }
 
     // #3 Capture the screen (WIP)
