@@ -83,7 +83,7 @@ dependencies = [
  "rand",
  "screencapturekit",
  "tao-core-video-sys",
- "windows 0.48.0",
+ "windows",
  "windows-capture",
 ]
 
@@ -390,15 +390,6 @@ checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 
 [[package]]
 name = "windows"
-version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e686886bc078bc1b0b600cac0147aadb815089b6e4da64016cbd754b6342700f"
-dependencies = [
- "windows-targets",
-]
-
-[[package]]
-name = "windows"
 version = "0.51.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca229916c5ee38c2f2bc1e9d8f04df975b4bd93f9955dc69fabb5d91270045c9"
@@ -416,7 +407,7 @@ dependencies = [
  "log",
  "parking_lot",
  "thiserror",
- "windows 0.51.1",
+ "windows",
 ]
 
 [[package]]

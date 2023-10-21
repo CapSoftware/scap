@@ -7,11 +7,39 @@ use windows_capture::{
     window::Window,
 };
 
+use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, HMONITOR, MONITORINFOEXW};
+
 use crate::{Target, TargetKind};
 
 struct Recorder {
     frames: usize,
     last_output: Instant,
+}
+
+fn get_monitor_name(h_monitor: HMONITOR) -> windows::core::Result<String> {
+    let mut monitor_info = MONITORINFOEXW::default();
+
+    monitor_info.monitorInfo.cbSize = std::mem::size_of::<MONITORINFOEXW>() as u32;
+
+    let success =
+        unsafe { GetMonitorInfoW(h_monitor, &mut monitor_info as *mut _ as *mut _).as_bool() };
+
+    if success {
+        let name = unsafe {
+            let len = monitor_info
+                .szDevice
+                .iter()
+                .position(|&i| i == 0)
+                .unwrap_or(0);
+            String::from_utf16(&monitor_info.szDevice[..len])?
+        };
+        Ok(name)
+    } else {
+        Err(windows::core::Error::new(
+            windows::core::HRESULT(0),
+            "Failed to get monitor info".into(),
+        ))
+    }
 }
 
 impl WindowsCaptureHandler for Recorder {
@@ -59,23 +87,30 @@ pub fn get_targets() -> Vec<Target> {
 
     for display in displays {
         let id = display;
+
         // TODO: get name;
+
+        let name = get_monitor_name(display).unwrap();
+        println!("name: {}", name);
 
         let target = Target {
             kind: TargetKind::Display,
-            id,
+            id: 2,
+            name: name,
         };
         targets.push(target);
     }
 
-    for window in windows {
-        let id = window;
-        let target = Target {
-            kind: TargetKind::Window,
-            id,
-        };
-        targets.push(target);
-    }
+    // TODO: complete windows implementation
+
+    // for window in windows {
+    //     let id = window;
+    //     let target = Target {
+    //         kind: TargetKind::Window,
+    //         id,
+    //     };
+    //     targets.push(target);
+    // }
 
     targets
 }

@@ -17,7 +17,7 @@ rand = "0.8.5"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-capture = "1.0.19"
-windows = { version = "0.48", features = ["Graphics", "Graphics_Display", "Graphics_Capture", "Foundation", "Win32_Graphics_Direct3D11", "Win32_Foundation", "Win32_Graphics_Direct3D", "Win32_Graphics_Dxgi" ] }
+windows = { version = "0.51", features = ["Graphics", "Graphics_Display", "Graphics_Capture", "Foundation", "Win32_Graphics_Direct3D11", "Win32_Foundation", "Win32_Graphics_Direct3D", "Win32_Graphics_Dxgi", "Win32_Graphics_Gdi" ] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 tao-core-video-sys = "0.2.0"

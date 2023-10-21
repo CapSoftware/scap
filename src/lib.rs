@@ -19,14 +19,14 @@ pub struct Target {
 }
 
 pub struct Options {
-    fps: u32,
-    targets: Vec<Target>,
-    show_cursor: bool,
-    show_highlight: bool,
+    pub fps: u32,
+    pub targets: Vec<Target>,
+    pub show_cursor: bool,
+    pub show_highlight: bool,
 }
 
 pub struct Recorder {
-    id: String,
+    pub id: String,
 }
 
 impl Recorder {
@@ -48,7 +48,7 @@ impl Recorder {
         win::main();
     }
 
-    pub fn stop_capture() {
+    pub fn stop_capture(&self) {
         #[cfg(target_os = "macos")]
         mac::stop_capture();
 
@@ -56,7 +56,7 @@ impl Recorder {
         // win::stop_capture();
     }
 
-    pub fn is_supported() -> bool {
+    pub fn is_supported(&self) -> bool {
         #[cfg(target_os = "macos")]
         let access = mac::is_supported();
 
@@ -66,7 +66,7 @@ impl Recorder {
         access
     }
 
-    pub fn get_targets() -> Vec<Target> {
+    pub fn get_targets(&self) -> Vec<Target> {
         #[cfg(target_os = "macos")]
         let targets = mac::get_targets();
 
