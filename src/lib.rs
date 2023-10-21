@@ -62,12 +62,11 @@ impl Recorder {
 
 pub fn is_supported() -> bool {
     #[cfg(target_os = "macos")]
-    let access = mac::is_supported();
+    let supported = mac::is_supported();
 
     #[cfg(target_os = "windows")]
-    let access = win::is_supported();
-
-    access
+    let supported = win::is_supported();
+    supported
 }
 
 pub fn get_targets() {
@@ -79,7 +78,12 @@ pub fn get_targets() {
     // targets
 }
 
-#[cfg(target_os = "macos")]
 pub fn has_permission() -> bool {
-    mac::has_permission()
+    #[cfg(target_os = "macos")]
+    let access = mac::has_permission();
+
+    #[cfg(target_os = "windows")]
+    let access = win::has_permission();
+
+    access
 }

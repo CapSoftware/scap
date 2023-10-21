@@ -79,6 +79,11 @@ pub fn is_supported() -> bool {
     Capture::GraphicsCaptureSession::IsSupported().unwrap()
 }
 
+pub fn has_permission() -> bool {
+    // TODO: add correct permission mechanism here
+    true
+}
+
 pub fn get_targets() -> Vec<Target> {
     let mut targets: Vec<Target> = Vec::new();
 
