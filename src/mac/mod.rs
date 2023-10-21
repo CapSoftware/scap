@@ -1,5 +1,6 @@
-use core_graphics::access::ScreenCaptureAccess;
+use core_graphics::display::CGDisplay;
 use core_graphics::display::CGMainDisplayID;
+use core_graphics::{access::ScreenCaptureAccess, window};
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
     sc_error_handler,
@@ -10,6 +11,8 @@ use screencapturekit::{
     sc_sys::{CMSampleBufferGetImageBuffer, SCFrameStatus},
 };
 use std::process::Command;
+
+use crate::{Target, TargetKind};
 
 struct ConsoleErrorHandler;
 
@@ -46,7 +49,7 @@ impl StreamOutput for OutputHandler {
                 }
             }
             SCStreamOutputType::Audio => {
-                // TODO: Handle audio
+                // TODO: Handle audios
             }
         }
     }
@@ -118,10 +121,43 @@ pub fn is_supported() -> bool {
 }
 
 pub fn get_targets() {
+    let mut targets: Vec<Target> = Vec::new();
+
     let content = SCShareableContent::current();
     let displays = content.displays;
+    let windows = content.windows;
 
     for display in displays {
-        println!("Display: {:?}", display);
+        // println!("Display: {:?}", display);
+        let name = format!("Display {}", display.display_id); // TODO: get this from core-graphics
+
+        let target = Target {
+            kind: TargetKind::Display,
+            id: display.display_id,
+            name,
+        };
+
+        targets.push(target);
     }
+
+    for window in windows {
+        match window.title {
+            Some(title) => {
+                let name = title;
+                let app = window.owning_application.unwrap().application_name.unwrap();
+                println!("Title: {:?}", app);
+
+                let target = Target {
+                    kind: TargetKind::Window,
+                    id: window.window_id,
+                    name,
+                };
+
+                targets.push(target);
+            }
+            None => {}
+        }
+    }
+
+    println!("Targets: {:?}", targets);
 }

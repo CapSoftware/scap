@@ -7,7 +7,7 @@ fn main() {
     let recorder = Recorder::init();
 
     // #1 Check if the platform is supported
-    let supported = recorder.is_supported();
+    let supported = cypher::is_supported();
     if !supported {
         println!("❌ Platform not supported");
         return;
@@ -16,7 +16,7 @@ fn main() {
     }
 
     // #2 Check if the app has permission to capture the screen
-    let has_permission = recorder.has_permission();
+    let has_permission = cypher::has_permission();
     if !has_permission {
         println!("❌ Permission not granted");
         return;
@@ -25,5 +25,6 @@ fn main() {
     }
 
     // #3 Capture the screen (WIP)
-    recorder.start_capture(options)
+    cypher::get_targets();
+    // recorder.start_capture(options)
 }
