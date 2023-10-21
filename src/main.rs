@@ -7,31 +7,24 @@ fn main() {
     let recorder = Recorder::init();
 
     // #1 Check if the platform is supported
-    // let supported = recorder.is_supported();
-    // if !supported {
-    //     println!("❌ Platform not supported");
-    //     return;
-    // } else {
-    //     println!("✅ Platform supported");
-    // }
+    let supported = cypher::is_supported();
+    if !supported {
+        println!("❌ Platform not supported");
+        return;
+    } else {
+        println!("✅ Platform supported");
+    }
 
     // #2 Check if the app has permission to capture the screen
-    // let has_permission = recorder.has_permission();
-    // if !has_permission {
-    //     println!("❌ Permission not granted");
-    //     return;
-    // } else {
-    //     println!("✅ Permission granted");
-    // }
-
-    recorder.get_targets();
+    let has_permission = cypher::has_permission();
+    if !has_permission {
+        println!("❌ Permission not granted");
+        return;
+    } else {
+        println!("✅ Permission granted");
+    }
 
     // #3 Capture the screen (WIP)
-    let options = Options {
-        fps: 30,
-        targets: vec![],
-        show_cursor: true,
-        show_highlight: true,
-    };
-    recorder.start_capture(options)
+    cypher::get_targets();
+    // recorder.start_capture(options)
 }

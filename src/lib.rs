@@ -6,12 +6,14 @@ mod mac;
 #[cfg(target_os = "windows")]
 mod win;
 
+#[derive(Debug)]
 pub enum TargetKind {
     Display,
     Window,
     Audio,
 }
 
+#[derive(Debug)]
 pub struct Target {
     kind: TargetKind,
     name: String,
@@ -48,35 +50,36 @@ impl Recorder {
         win::main();
     }
 
-    pub fn stop_capture(&self) {
-        #[cfg(target_os = "macos")]
-        mac::stop_capture();
+    pub fn stop_capture() {
+        // TODO: add stop_capture() to mac and win modules
+        // #[cfg(target_os = "macos")]
+        // mac::stop_capture();
 
         // #[cfg(target_os = "windows")]
         // win::stop_capture();
     }
+}
 
-    pub fn is_supported(&self) -> bool {
-        #[cfg(target_os = "macos")]
-        let access = mac::is_supported();
-
-        #[cfg(target_os = "windows")]
-        let access = win::is_supported();
-
-        access
-    }
-
-    pub fn get_targets(&self) -> Vec<Target> {
-        #[cfg(target_os = "macos")]
-        let targets = mac::get_targets();
-
-        #[cfg(target_os = "windows")]
-        let targets = win::get_targets();
-        targets
-    }
-
+pub fn is_supported() -> bool {
     #[cfg(target_os = "macos")]
-    pub fn has_permission() -> bool {
-        mac::has_permission()
-    }
+    let access = mac::is_supported();
+
+    #[cfg(target_os = "windows")]
+    let access = win::is_supported();
+
+    access
+}
+
+pub fn get_targets() {
+    #[cfg(target_os = "macos")]
+    let targets = mac::get_targets();
+
+    #[cfg(target_os = "windows")]
+    let targets = win::get_targets();
+    // targets
+}
+
+#[cfg(target_os = "macos")]
+pub fn has_permission() -> bool {
+    mac::has_permission()
 }
