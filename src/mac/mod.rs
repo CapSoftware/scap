@@ -140,24 +140,26 @@ pub fn get_targets() {
         targets.push(target);
     }
 
-    for window in windows {
-        match window.title {
-            Some(title) => {
-                let name = title;
-                let app = window.owning_application.unwrap().application_name.unwrap();
-                println!("Title: {:?}", app);
+    // TODO: finish adding windows
+    // for window in windows {
+    //     match window.title {
+    //         Some(title) => {
+    //             let name = title;
+    //             let app = window.owning_application.unwrap().application_name.unwrap();
+    //             println!("Title: {:?}", app);
 
-                let target = Target {
-                    kind: TargetKind::Window,
-                    id: window.window_id,
-                    name,
-                };
+    //             let target = Target {
+    //                 kind: TargetKind::Window,
+    //                 id: window.window_id,
+    //                 name,
+    //             };
 
-                targets.push(target);
-            }
-            None => {}
-        }
-    }
+    //             targets.push(target);
+    //         }
+    //         None => {}
+    //     }
+    // }
 
-    println!("Targets: {:?}", targets);
+    // println!("Targets: {:?}", targets);
+    targets
 }
