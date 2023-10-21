@@ -1,7 +1,14 @@
-
+use std::{
+    fs::File,
+    io::Write,
+    process::Command,
+    rc::Rc,
+    sync::mpsc::{channel, sync_channel, Receiver, SyncSender},
+    thread,
+    time::Duration,
+};
 use core_graphics::display::CGMainDisplayID;
 use core_graphics::{access::ScreenCaptureAccess};
-use core_video_sys:: {CVPixelBufferRef}
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
     sc_error_handler,
@@ -12,10 +19,7 @@ use screencapturekit::{
     sc_sys::{ SCFrameStatus},
 };
 use std::ops::Deref;
-use std::process::Command;
 use objc_foundation::{INSData};
-use image::{ ImageBuffer, RgbImage, RgbaImage, Rgba };
-use chrono::prelude::*;
 
 
 use crate::{Target, TargetKind};
@@ -55,31 +59,13 @@ impl StreamOutput for OutputHandler {
                         println!("#########");
                         println!("Something: {:?}", owned_NSData);
                         println!("#########");
-                        let width = 1470;
-                        let height = 956;
-                        let mut img: RgbaImage = ImageBuffer::new(width, height);
 
-                        let timestamp = Utc::now().to_string();
-
-                        let buffer_data =  image_bytes;
-                        
-                        for y in 0..height {
-                            for x in 0..width {
-                                let offset = (y * width + x * 4) as usize;
-                                let pixel = Rgba([
-                                    buffer_data[offset + 1],  // Red
-                                    buffer_data[offset + 2],  // Green
-                                    buffer_data[offset + 3],  // Blue
-                                    buffer_data[offset + 0],  // Alpha
-                                ]);
-                                img.put_pixel(x as u32, y as u32, pixel);
-                            }
-                        }
-                    
-                        // Save the image to disk
-                        let filename = format!("frame_{}.png", timestamp);
-                        img.save(filename).expect("Failed to save image");
-                        // Save the buffer as "image.png"
+                        let mut buffer = File::create("picture.jpg").unwrap();
+                        buffer.write_all(owned_NSData.bytes()).unwrap();
+                        Command::new("open")
+                        .args(["picture.jpg"])
+                        .output()
+                        .expect("failedto execute process");
 
                         // error on the following line
                         // let owned = *ptr;
