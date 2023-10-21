@@ -1,5 +1,3 @@
-use rand::Rng;
-
 #[cfg(target_os = "macos")]
 mod mac;
 
@@ -22,9 +20,10 @@ pub struct Target {
 
 pub struct Options {
     pub fps: u32,
-    pub targets: Vec<Target>,
     pub show_cursor: bool,
     pub show_highlight: bool,
+    pub targets: Vec<Target>,
+    pub excluded_targets: Option<Vec<Target>>,
 }
 
 pub struct Recorder {
@@ -39,10 +38,6 @@ impl Recorder {
     }
 
     pub fn start_capture(&self, options: Options) {
-        let mut rng = rand::thread_rng();
-        let id: u32 = rng.gen();
-        println!("id: {}", id);
-
         #[cfg(target_os = "macos")]
         mac::main();
 
