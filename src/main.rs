@@ -27,5 +27,5 @@ fn main() {
     println!("🎯 Targets: {:?}", targets);
 
     // #4 Capture the screen (WIP)
-    let recorder = Recorder::init();
+    // let recorder = Recorder::init();
 }

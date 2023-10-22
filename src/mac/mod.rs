@@ -120,7 +120,7 @@ pub fn is_supported() -> bool {
     }
 }
 
-pub fn get_targets() {
+pub fn get_targets() -> Vec<Target> {
     let mut targets: Vec<Target> = Vec::new();
 
     let content = SCShareableContent::current();
