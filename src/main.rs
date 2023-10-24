@@ -1,4 +1,4 @@
-use cypher::{Options, Recorder, Target, TargetKind};
+use cypher::{Options, Recorder};
 
 // This program is just a testbed for the library itself
 // Refer to the lib.rs file for the actual implementation
@@ -26,7 +26,16 @@ fn main() {
     let targets = cypher::get_targets();
     println!("🎯 Targets: {:?}", targets);
 
-    // #4 Capture the screen (WIP)
-    // let recorder = Recorder::init();
-}
+    // #4 Create Options
+    let options = Options {
+        fps: 60,
+        targets,
+        show_cursor: true,
+        show_highlight: true,
+        excluded_targets: None,
+    };
 
+    // #4 Capture the screen (WIP)
+    let recorder = Recorder::init();
+    recorder.start_capture(options);
+}

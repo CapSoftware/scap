@@ -37,7 +37,8 @@ impl Recorder {
         }
     }
 
-    pub fn start_capture(&self, options: Options) {
+    pub fn start_capture(&self, _: Options) {
+        // TODO: process and pass on the options
         #[cfg(target_os = "macos")]
         mac::main();
 

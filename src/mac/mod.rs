@@ -1,14 +1,6 @@
-use std::{
-    fs::File,
-    io::Write,
-    process::Command,
-    rc::Rc,
-    sync::mpsc::{channel, sync_channel, Receiver, SyncSender},
-    thread,
-    time::Duration,
-};
+use core_graphics::access::ScreenCaptureAccess;
 use core_graphics::display::CGMainDisplayID;
-use core_graphics::{access::ScreenCaptureAccess};
+use objc_foundation::INSData;
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
     sc_error_handler,
@@ -16,11 +8,10 @@ use screencapturekit::{
     sc_shareable_content::SCShareableContent,
     sc_stream::SCStream,
     sc_stream_configuration::SCStreamConfiguration,
-    sc_sys::{ SCFrameStatus},
+    sc_sys::SCFrameStatus,
 };
 use std::ops::Deref;
-use objc_foundation::{INSData};
-
+use std::{fs::File, io::Write, process::Command};
 
 use crate::{Target, TargetKind};
 
@@ -33,8 +24,6 @@ impl sc_error_handler::StreamErrorHandler for ConsoleErrorHandler {
 }
 
 struct OutputHandler {}
-
-
 
 impl StreamOutput for OutputHandler {
     // CMSampleBuffer
@@ -50,29 +39,20 @@ impl StreamOutput for OutputHandler {
                     _ => {
                         let ptr = sample.ptr;
                         // println!("Id<CMSampleBufferRef>: {:?}", ptr);
-                        let cvImageBufferRef= ptr.get_image_buffer();
-                        let shared_NSData = cvImageBufferRef.get_data();
-                        let owned_NSData = shared_NSData.deref();
-                        let image_bytes = owned_NSData.bytes();
-                        let last_five: &[u8] = &image_bytes[image_bytes.len() - 15..];
+                        let ptr_cv_image_buffer_ref = ptr.get_image_buffer();
+                        let shared_ns_data = ptr_cv_image_buffer_ref.get_data();
+                        let owned_ns_data = shared_ns_data.deref();
+                        let image_bytes = owned_ns_data.bytes();
 
-                        println!("#########");
-                        println!("Something: {:?}", owned_NSData);
-                        println!("#########");
+                        println!("Something: {:?}", image_bytes);
 
-                        let mut buffer = File::create("picture.jpg").unwrap();
-                        buffer.write_all(owned_NSData.bytes()).unwrap();
+                        // TEST: write the buffer to a file
+                        let mut file = File::create("picture.jpg").unwrap();
+                        file.write_all(image_bytes).unwrap();
                         Command::new("open")
-                        .args(["picture.jpg"])
-                        .output()
-                        .expect("failedto execute process");
-
-                        // error on the following line
-                        // let owned = *ptr;
-
-                        // But this command needs to own CMSampleBufferRef
-                        // let image_buffer = unsafe { CMSampleBufferGetImageBuffer(&owned) };
-                        // println!("CMSampleBufferRef: {:?}", image_buffer);
+                            .args(["picture.jpg"])
+                            .output()
+                            .expect("failedto execute process");
                     }
                 }
             }
@@ -124,7 +104,6 @@ pub fn main() {
     println!("Capture stopped.");
 }
 
-
 pub fn has_permission() -> bool {
     let access = ScreenCaptureAccess::default();
     access.preflight()
@@ -154,7 +133,6 @@ pub fn get_targets() -> Vec<Target> {
 
     let content = SCShareableContent::current();
     let displays = content.displays;
-    let windows = content.windows;
 
     for display in displays {
         // println!("Display: {:?}", display);
@@ -170,6 +148,7 @@ pub fn get_targets() -> Vec<Target> {
     }
 
     // TODO: finish adding windows
+    // let windows = content.windows;
     // for window in windows {
     //     match window.title {
     //         Some(title) => {
