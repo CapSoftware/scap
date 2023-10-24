@@ -1,5 +1,6 @@
 use core_graphics::access::ScreenCaptureAccess;
 use core_graphics::display::CGMainDisplayID;
+use core_video_sys::{CVPixelBufferGetHeight, CVPixelBufferGetWidth, CVPixelBufferRef};
 use objc_foundation::INSData;
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
@@ -38,13 +39,13 @@ impl StreamOutput for OutputHandler {
                     }
                     _ => {
                         let ptr = sample.ptr;
-                        // println!("Id<CMSampleBufferRef>: {:?}", ptr);
-                        let ptr_cv_image_buffer_ref = ptr.get_image_buffer();
-                        let shared_ns_data = ptr_cv_image_buffer_ref.get_data();
-                        let owned_ns_data = shared_ns_data.deref();
-                        let image_bytes = owned_ns_data.bytes();
+                        let pixel_buffer = ptr.get_image_buffer().get_raw() as CVPixelBufferRef;
 
-                        println!("Something: {:?}", image_bytes);
+                        unsafe {
+                            let width = CVPixelBufferGetWidth(pixel_buffer);
+                            let height = CVPixelBufferGetHeight(pixel_buffer);
+                            println!("Size: {:?}x{:?}", width, height);
+                        }
 
                         // TEST: write the buffer to a file
                         // let mut file = File::create("picture.jpg").unwrap();
