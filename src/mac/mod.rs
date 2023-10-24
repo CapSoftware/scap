@@ -1,7 +1,6 @@
 use core_graphics::access::ScreenCaptureAccess;
 use core_graphics::display::CGMainDisplayID;
 use core_video_sys::{CVPixelBufferGetHeight, CVPixelBufferGetWidth, CVPixelBufferRef};
-use objc_foundation::INSData;
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
     sc_error_handler,
@@ -11,8 +10,7 @@ use screencapturekit::{
     sc_stream_configuration::SCStreamConfiguration,
     sc_sys::SCFrameStatus,
 };
-use std::ops::Deref;
-use std::{fs::File, io::Write, process::Command};
+use std::process::Command;
 
 use crate::{Target, TargetKind};
 
