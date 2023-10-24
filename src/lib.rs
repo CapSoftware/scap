@@ -13,9 +13,9 @@ pub enum TargetKind {
 
 #[derive(Debug)]
 pub struct Target {
-    kind: TargetKind,
-    name: String,
-    id: u32,
+    pub kind: TargetKind,
+    pub name: String,
+    pub id: u32,
 }
 
 pub struct Options {

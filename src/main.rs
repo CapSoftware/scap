@@ -1,4 +1,4 @@
-use cypher::{Options, Recorder};
+use cypher::{Options, Recorder, Target, TargetKind};
 
 // This program is just a testbed for the library itself
 // Refer to the lib.rs file for the actual implementation
@@ -29,3 +29,4 @@ fn main() {
     // #4 Capture the screen (WIP)
     // let recorder = Recorder::init();
 }
+

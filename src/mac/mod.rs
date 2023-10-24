@@ -1,6 +1,14 @@
-use core_graphics::display::CGDisplay;
+use std::{
+    fs::File,
+    io::Write,
+    process::Command,
+    rc::Rc,
+    sync::mpsc::{channel, sync_channel, Receiver, SyncSender},
+    thread,
+    time::Duration,
+};
 use core_graphics::display::CGMainDisplayID;
-use core_graphics::{access::ScreenCaptureAccess, window};
+use core_graphics::{access::ScreenCaptureAccess};
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
     sc_error_handler,
@@ -8,9 +16,11 @@ use screencapturekit::{
     sc_shareable_content::SCShareableContent,
     sc_stream::SCStream,
     sc_stream_configuration::SCStreamConfiguration,
-    sc_sys::{CMSampleBufferGetImageBuffer, SCFrameStatus},
+    sc_sys::{ SCFrameStatus},
 };
-use std::process::Command;
+use std::ops::Deref;
+use objc_foundation::{INSData};
+
 
 use crate::{Target, TargetKind};
 
@@ -23,6 +33,8 @@ impl sc_error_handler::StreamErrorHandler for ConsoleErrorHandler {
 }
 
 struct OutputHandler {}
+
+
 
 impl StreamOutput for OutputHandler {
     // CMSampleBuffer
@@ -37,7 +49,23 @@ impl StreamOutput for OutputHandler {
                     }
                     _ => {
                         let ptr = sample.ptr;
-                        println!("Id<CMSampleBufferRef>: {:?}", ptr);
+                        // println!("Id<CMSampleBufferRef>: {:?}", ptr);
+                        let cvImageBufferRef= ptr.get_image_buffer();
+                        let shared_NSData = cvImageBufferRef.get_data();
+                        let owned_NSData = shared_NSData.deref();
+                        let image_bytes = owned_NSData.bytes();
+                        let last_five: &[u8] = &image_bytes[image_bytes.len() - 15..];
+
+                        println!("#########");
+                        println!("Something: {:?}", owned_NSData);
+                        println!("#########");
+
+                        let mut buffer = File::create("picture.jpg").unwrap();
+                        buffer.write_all(owned_NSData.bytes()).unwrap();
+                        Command::new("open")
+                        .args(["picture.jpg"])
+                        .output()
+                        .expect("failedto execute process");
 
                         // error on the following line
                         // let owned = *ptr;
@@ -95,6 +123,7 @@ pub fn main() {
     stream.stop_capture();
     println!("Capture stopped.");
 }
+
 
 pub fn has_permission() -> bool {
     let access = ScreenCaptureAccess::default();
