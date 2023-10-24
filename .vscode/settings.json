@@ -1,0 +1,6 @@
+{
+	"rust-analyzer.linkedProjects": [
+		"./screencapturekit-rs/screencapturekit-sys/Cargo.toml",
+		"./screencapturekit-rs/screencapturekit-sys/Cargo.toml"
+	]
+}

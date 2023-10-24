@@ -650,7 +650,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 [[package]]
 name = "screencapturekit"
 version = "0.1.0"
-source = "git+https://github.com/svtlabs/screencapturekit-rs?branch=main#e6f8dbb7342765ccb03f5a55bfc1886be1850428"
+source = "git+https://github.com/clearlysid/screencapturekit-rs?branch=main#e6f8dbb7342765ccb03f5a55bfc1886be1850428"
 dependencies = [
  "screencapturekit-sys",
 ]
@@ -658,7 +658,7 @@ dependencies = [
 [[package]]
 name = "screencapturekit-sys"
 version = "0.1.0"
-source = "git+https://github.com/svtlabs/screencapturekit-rs?branch=main#e6f8dbb7342765ccb03f5a55bfc1886be1850428"
+source = "git+https://github.com/clearlysid/screencapturekit-rs?branch=main#e6f8dbb7342765ccb03f5a55bfc1886be1850428"
 dependencies = [
  "block",
  "dispatch",
