@@ -47,12 +47,12 @@ impl StreamOutput for OutputHandler {
                         println!("Something: {:?}", image_bytes);
 
                         // TEST: write the buffer to a file
-                        let mut file = File::create("picture.jpg").unwrap();
-                        file.write_all(image_bytes).unwrap();
-                        Command::new("open")
-                            .args(["picture.jpg"])
-                            .output()
-                            .expect("failedto execute process");
+                        // let mut file = File::create("picture.jpg").unwrap();
+                        // file.write_all(image_bytes).unwrap();
+                        // Command::new("open")
+                        //     .args(["picture.jpg"])
+                        //     .output()
+                        //     .expect("failedto execute process");
                     }
                 }
             }
