@@ -1,6 +1,11 @@
 use core_graphics::access::ScreenCaptureAccess;
 use core_graphics::display::CGMainDisplayID;
-use core_video_sys::{CVPixelBufferGetHeight, CVPixelBufferGetWidth, CVPixelBufferRef};
+use core_video_sys::{
+    CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRowOfPlane,
+    CVPixelBufferGetHeightOfPlane, CVPixelBufferGetPixelFormatType, CVPixelBufferGetWidthOfPlane,
+    CVPixelBufferLockBaseAddress, CVPixelBufferRef, CVPixelBufferUnlockBaseAddress,
+};
+use image::RgbImage;
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
     sc_error_handler,
@@ -24,8 +29,31 @@ impl sc_error_handler::StreamErrorHandler for ConsoleErrorHandler {
 
 struct OutputHandler {}
 
+fn ycbcr_to_rgb(y_data: &[u8], cbcr_data: &[u8], width: usize, height: usize) -> Vec<u8> {
+    let mut rgb_data = Vec::with_capacity(width * height * 3);
+
+    for j in 0..height {
+        for i in 0..width {
+            let y_idx = j * width + i;
+            let uv_idx = (j / 2) * width + i - i % 2;
+
+            let y = y_data[y_idx] as f32;
+            let cb = cbcr_data[uv_idx] as f32 - 128.0;
+            let cr = cbcr_data[uv_idx + 1] as f32 - 128.0;
+
+            let r = (y + 1.402 * cr).max(0.0).min(255.0) as u8;
+            let g = (y - 0.344136 * cb - 0.714136 * cr).max(0.0).min(255.0) as u8;
+            let b = (y + 1.772 * cb).max(0.0).min(255.0) as u8;
+
+            rgb_data.push(r);
+            rgb_data.push(g);
+            rgb_data.push(b);
+        }
+    }
+    rgb_data
+}
+
 impl StreamOutput for OutputHandler {
-    // CMSampleBuffer
     fn did_output_sample_buffer(&self, sample: CMSampleBuffer, of_type: SCStreamOutputType) {
         match of_type {
             SCStreamOutputType::Screen => {
@@ -37,21 +65,65 @@ impl StreamOutput for OutputHandler {
                     }
                     _ => {
                         let ptr = sample.ptr;
+                        let timestamp = ptr.get_presentation_timestamp().value;
                         let pixel_buffer = ptr.get_image_buffer().get_raw() as CVPixelBufferRef;
 
                         unsafe {
-                            let width = CVPixelBufferGetWidth(pixel_buffer);
-                            let height = CVPixelBufferGetHeight(pixel_buffer);
-                            println!("Size: {:?}x{:?}", width, height);
-                        }
+                            // Lock the base address
+                            CVPixelBufferLockBaseAddress(pixel_buffer, 0);
 
-                        // TEST: write the buffer to a file
-                        // let mut file = File::create("picture.jpg").unwrap();
-                        // file.write_all(image_bytes).unwrap();
-                        // Command::new("open")
-                        //     .args(["picture.jpg"])
-                        //     .output()
-                        //     .expect("failedto execute process");
+                            // Check the format of the pixel buffer
+                            // let format = CVPixelBufferGetPixelFormatType(pixel_buffer);
+
+                            // Currently: 875704438, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+                            // TODO: Capture in BRGA format instead
+
+                            // Plane 1 — Y (Luma)
+                            let y_width = CVPixelBufferGetWidthOfPlane(pixel_buffer, 0);
+                            let y_height = CVPixelBufferGetHeightOfPlane(pixel_buffer, 0);
+                            let y_bytes_row = CVPixelBufferGetBytesPerRowOfPlane(pixel_buffer, 0);
+                            let y_address = CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 0);
+
+                            // Plane 2 — CbCr (Chroma)
+                            let c_width = CVPixelBufferGetWidthOfPlane(pixel_buffer, 1);
+                            let c_height = CVPixelBufferGetHeightOfPlane(pixel_buffer, 1);
+                            let c_address = CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 1);
+                            let c_bytes_row = CVPixelBufferGetBytesPerRowOfPlane(pixel_buffer, 1);
+
+                            // Logs
+                            // println!("y_width: {:?}", y_width);
+                            // println!("y_height: {:?}", y_height);
+                            // println!("y_address: {:?}", y_address);
+                            // println!("y_bytes_per_row: {:?}", y_bytes_row);
+                            // println!("c_width: {:?}", c_width);
+                            // println!("c_height: {:?}", c_height);
+                            // println!("c_address: {:?}", c_address);
+                            // println!("c_bytes_per_row: {:?}", c_bytes_row);
+
+                            let y_data = std::slice::from_raw_parts(
+                                y_address as *const u8,
+                                y_height as usize * y_bytes_row as usize,
+                            );
+
+                            let c_data = std::slice::from_raw_parts(
+                                c_address as *const u8,
+                                c_height as usize * c_bytes_row as usize,
+                            );
+
+                            // println!("y_data: {:?}", y_data);
+                            // println!("c_data: {:?}", c_data);
+
+                            let rgb_data = ycbcr_to_rgb(&y_data, &c_data, y_width, y_height);
+                            let img = RgbImage::from_raw(y_width as u32, y_height as u32, rgb_data)
+                                .unwrap();
+
+                            // Save the image to disk
+                            let filename = format!("frame_{}.png", timestamp);
+                            img.save(filename).expect("Failed to save image");
+
+                            // unlock base address
+                            CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
+                        }
                     }
                 }
             }
