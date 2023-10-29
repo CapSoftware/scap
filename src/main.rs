@@ -1,28 +1,41 @@
-#[cfg(target_os = "windows")]
-use windows::{
-    core::*, Data::Xml::Dom::*, Win32::Foundation::*, Win32::System::Threading::*,
-    Win32::UI::WindowsAndMessaging::*,
-};
+use cypher::{Options, Recorder};
 
-extern crate ffmpeg_next;
+// This program is just a testbed for the library itself
+// Refer to the lib.rs file for the actual implementation
 
-fn main() -> Result<(), ()> {
-    #[cfg(target_os = "macos")]
-    {
-        let devices = ffi::get_aperture_devices();
-        println!("Devices: {}", devices);
+fn main() {
+    // #1 Check if the platform is supported
+    let supported = cypher::is_supported();
+    if !supported {
+        println!("❌ Platform not supported");
+        return;
+    } else {
+        println!("✅ Platform supported");
     }
 
-    let ffmpeg = ffmpeg_next::init().unwrap();
-
-    println!("{:?}", ffmpeg);
-
-    Ok(())
-}
-
-#[swift_bridge::bridge]
-mod ffi {
-    extern "Swift" {
-        fn get_aperture_devices() -> String;
+    // #2 Check if we have permission to capture the screen
+    let has_permission = cypher::has_permission();
+    if !has_permission {
+        println!("❌ Permission not granted");
+        return;
+    } else {
+        println!("✅ Permission granted");
     }
+
+    // #3 Get recording targets (WIP)
+    let targets = cypher::get_targets();
+    println!("🎯 Targets: {:?}", targets);
+
+    // #4 Create Options
+    let options = Options {
+        fps: 60,
+        targets,
+        show_cursor: true,
+        show_highlight: true,
+        excluded_targets: None,
+    };
+
+    // #4 Capture the screen (WIP)
+    let recorder = Recorder::init();
+    recorder.start_capture(options);
 }

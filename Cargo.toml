@@ -1,7 +1,7 @@
 [package]
 name = "cypher"
-description = "High-performance, cross-platform screen recording API for Rust."
-version = "0.0.1"
+description = "High-performance screen capture API for Rust."
+version = "0.0.2"
 edition = "2021"
 rust-version = "1.56"
 license = "MIT"
@@ -11,23 +11,19 @@ repository = "https://github.com/clearlysid/cypher"
 documentation = "https://docs.rs/cypher"
 keywords = ["screen", "recording", "video", "audio", "ffmpeg"]
 categories = []
-build = "build.rs"
-
-[target.'cfg(target_os = "macos")'.build-dependencies]
-swift-bridge-build = "0.1"
 
 [dependencies]
-ffmpeg-next = {git = "https://github.com/remotion-dev/rust-ffmpeg", rev ="98f1b3311325e925403f3cd804359d93ddcc42fb"}
+ffmpeg-next = { git = "https://github.com/remotion-dev/rust-ffmpeg", rev = "98f1b3311325e925403f3cd804359d93ddcc42fb" }
+image = "0.24.7"
 
-[target.'cfg(target_os = "windows")'.dependencies.windows]
-version = "0.48"
-features = [
-    "Data_Xml_Dom",
-    "Win32_Foundation",
-    "Win32_Security",
-    "Win32_System_Threading",
-    "Win32_UI_WindowsAndMessaging",
-]
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-capture = "1.0.21"
+windows = { version = "0.51", features = [
+	"Win32_Foundation",
+	"Win32_Graphics_Gdi",
+] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-swift-bridge = "0.1"
+tao-core-video-sys = "0.2.0"
+core-graphics = "0.23.1"
+screencapturekit = { path = "screencapturekit-rs/screencapturekit" }
