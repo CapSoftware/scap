@@ -1,19 +1,14 @@
-use std::time::Instant;
-use windows::Graphics::Capture;
-use windows_capture::{
-    capture::{WindowsCaptureHandler, WindowsCaptureSettings},
-    frame::Frame,
-    monitor::Monitor,
-    window::Window,
-};
-
+use std::{path::PathBuf, time::Instant};
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, HMONITOR, MONITORINFOEXW};
+use windows_capture::{
+    capture::WindowsCaptureHandler, frame::Frame, graphics_capture_api::GraphicsCaptureApi,
+    monitor::Monitor, settings::WindowsCaptureSettings, window::Window,
+};
 
 use crate::{Target, TargetKind};
 
 struct Recorder {
     frames: usize,
-    last_output: Instant,
 }
 
 fn get_monitor_name(h_monitor: HMONITOR) -> windows::core::Result<String> {
@@ -46,17 +41,21 @@ impl WindowsCaptureHandler for Recorder {
     type Flags = ();
 
     fn new(_: Self::Flags) -> Self {
-        Self {
-            frames: 0,
-            last_output: Instant::now(),
-        }
+        Self { frames: 0 }
     }
 
-    fn on_frame_arrived(&mut self, frame: &Frame) {
+    fn on_frame_arrived(&mut self, frame: Frame) {
         self.frames += 1;
 
         println!("frame: {}", self.frames);
         println!("size: {}x{}", frame.width(), frame.height());
+
+        // println!("buffer: {:?}", frame.buffer());
+
+        let filename = format!("./test/test-frame-{}.png", self.frames);
+        println!("filename: {}", filename);
+
+        frame.save_as_image(&filename).unwrap();
 
         // TODO: encode the frames received here into a video
     }
@@ -67,7 +66,8 @@ impl WindowsCaptureHandler for Recorder {
 }
 
 pub fn main() {
-    let settings = WindowsCaptureSettings::new(Monitor::get_primary(), true, false, ());
+    let settings =
+        WindowsCaptureSettings::new(Monitor::primary(), Some(true), Some(false), ()).unwrap();
 
     println!("Capture started. Press Enter to stop.");
     Recorder::start(settings).unwrap();
@@ -76,7 +76,7 @@ pub fn main() {
 }
 
 pub fn is_supported() -> bool {
-    Capture::GraphicsCaptureSession::IsSupported().unwrap()
+    GraphicsCaptureApi::is_supported().expect("Failed to check support")
 }
 
 pub fn has_permission() -> bool {
@@ -87,8 +87,7 @@ pub fn has_permission() -> bool {
 pub fn get_targets() -> Vec<Target> {
     let mut targets: Vec<Target> = Vec::new();
 
-    let displays = Monitor::list_monitors().unwrap();
-    let windows = Window::get_windows().unwrap();
+    let displays = Monitor::enumerate().expect("Failed to enumerate monitors");
 
     for display in displays {
         let id = display;
@@ -107,7 +106,7 @@ pub fn get_targets() -> Vec<Target> {
     }
 
     // TODO: complete windows implementation
-
+    let windows = Window::enumerate().expect("Failed to enumerate windows");
     for window in windows {
         let id = window;
         let target = Target {
