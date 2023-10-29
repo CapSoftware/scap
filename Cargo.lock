@@ -649,9 +649,9 @@ dependencies = [
 
 [[package]]
 name = "windows-capture"
-version = "1.0.20"
+version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56dc55230ed6cc3aac2ce46e42d1977fc57f052b0465b56be317c8bbe9315b6f"
+checksum = "28b2289ab5efcae9e44db4efad5f88f3015f657369c6a1d3ca2f0e5cedc7da6f"
 dependencies = [
  "image",
  "log",

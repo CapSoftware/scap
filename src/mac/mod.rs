@@ -15,7 +15,7 @@ use screencapturekit::{
     sc_stream_configuration::SCStreamConfiguration,
     sc_sys::SCFrameStatus,
 };
-use std::process::Command;
+use std::{path::PathBuf, process::Command};
 
 use crate::{Target, TargetKind};
 
@@ -119,7 +119,8 @@ impl StreamOutput for OutputHandler {
 
                             // Save the image to disk
                             let filename = format!("frame_{}.png", timestamp);
-                            img.save(filename).expect("Failed to save image");
+                            let folder = PathBuf::new().join("test").join(filename);
+                            img.save(folder).expect("Failed to save image");
 
                             // unlock base address
                             CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
