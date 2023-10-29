@@ -2,10 +2,9 @@ use core_graphics::access::ScreenCaptureAccess;
 use core_graphics::display::CGMainDisplayID;
 use core_video_sys::{
     CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRowOfPlane,
-    CVPixelBufferGetHeightOfPlane, CVPixelBufferGetPixelFormatType, CVPixelBufferGetWidthOfPlane,
-    CVPixelBufferLockBaseAddress, CVPixelBufferRef, CVPixelBufferUnlockBaseAddress,
+    CVPixelBufferGetHeightOfPlane, CVPixelBufferGetWidthOfPlane, CVPixelBufferLockBaseAddress,
+    CVPixelBufferRef, CVPixelBufferUnlockBaseAddress,
 };
-use image::RgbImage;
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
     sc_error_handler,
@@ -73,7 +72,7 @@ impl StreamOutput for OutputHandler {
                             CVPixelBufferLockBaseAddress(pixel_buffer, 0);
 
                             // Check the format of the pixel buffer
-                            // let format = CVPixelBufferGetPixelFormatType(pixel_buffer);
+                            // let format = core_video_sys::CVPixelBufferGetPixelFormatType(pixel_buffer);
 
                             // Currently: 875704438, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
                             // TODO: Capture in BRGA format instead
@@ -85,20 +84,10 @@ impl StreamOutput for OutputHandler {
                             let y_address = CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 0);
 
                             // Plane 2 — CbCr (Chroma)
-                            let c_width = CVPixelBufferGetWidthOfPlane(pixel_buffer, 1);
+                            // let c_width = CVPixelBufferGetWidthOfPlane(pixel_buffer, 1);
                             let c_height = CVPixelBufferGetHeightOfPlane(pixel_buffer, 1);
                             let c_address = CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 1);
                             let c_bytes_row = CVPixelBufferGetBytesPerRowOfPlane(pixel_buffer, 1);
-
-                            // Logs
-                            // println!("y_width: {:?}", y_width);
-                            // println!("y_height: {:?}", y_height);
-                            // println!("y_address: {:?}", y_address);
-                            // println!("y_bytes_per_row: {:?}", y_bytes_row);
-                            // println!("c_width: {:?}", c_width);
-                            // println!("c_height: {:?}", c_height);
-                            // println!("c_address: {:?}", c_address);
-                            // println!("c_bytes_per_row: {:?}", c_bytes_row);
 
                             let y_data = std::slice::from_raw_parts(
                                 y_address as *const u8,
@@ -110,12 +99,26 @@ impl StreamOutput for OutputHandler {
                                 c_height as usize * c_bytes_row as usize,
                             );
 
+                            // Logs
+                            // println!("y_width: {:?}", y_width);
+                            // println!("y_height: {:?}", y_height);
+                            // println!("y_address: {:?}", y_address);
+                            // println!("y_bytes_per_row: {:?}", y_bytes_row);
+                            // println!("c_width: {:?}", c_width);
+                            // println!("c_height: {:?}", c_height);
+                            // println!("c_address: {:?}", c_address);
+                            // println!("c_bytes_per_row: {:?}", c_bytes_row);
+
                             // println!("y_data: {:?}", y_data);
                             // println!("c_data: {:?}", c_data);
 
                             let rgb_data = ycbcr_to_rgb(&y_data, &c_data, y_width, y_height);
-                            let img = RgbImage::from_raw(y_width as u32, y_height as u32, rgb_data)
-                                .unwrap();
+                            let img = image::RgbImage::from_raw(
+                                y_width as u32,
+                                y_height as u32,
+                                rgb_data,
+                            )
+                            .unwrap();
 
                             // Save the image to disk
                             let filename = format!("frame_{}.png", timestamp);
