@@ -112,9 +112,9 @@ impl StreamOutput for OutputHandler {
                             // println!("y_data: {:?}", y_data);
                             // println!("c_data: {:?}", c_data);
 
-                            let rgb_data = ycbcr_to_rgb(&y_data, &c_data, y_width, y_height);
+                            let rgb_data = ycbcr_to_rgb(&y_data, &c_data, y_bytes_row, y_height);
                             let img = image::RgbImage::from_raw(
-                                y_width as u32,
+                                y_bytes_row as u32,
                                 y_height as u32,
                                 rgb_data,
                             )
@@ -181,7 +181,7 @@ pub fn main() {
 
 pub fn has_permission() -> bool {
     let access = ScreenCaptureAccess::default();
-    access.preflight()
+    access.request()
 }
 
 pub fn is_supported() -> bool {
