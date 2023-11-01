@@ -1,5 +1,5 @@
 use core_graphics::access::ScreenCaptureAccess;
-use core_graphics::display::CGMainDisplayID;
+use core_graphics::display::{CGDirectDisplayID, CGDisplay, CGMainDisplayID};
 use core_video_sys::{
     CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRowOfPlane,
     CVPixelBufferGetHeightOfPlane, CVPixelBufferGetWidthOfPlane, CVPixelBufferLockBaseAddress,
@@ -28,6 +28,7 @@ impl sc_error_handler::StreamErrorHandler for ConsoleErrorHandler {
 
 struct OutputHandler {}
 
+// Convert YCbCr to RGB
 fn ycbcr_to_rgb(y_data: &[u8], cbcr_data: &[u8], width: usize, height: usize) -> Vec<u8> {
     let mut rgb_data = Vec::with_capacity(width * height * 3);
 
@@ -50,6 +51,15 @@ fn ycbcr_to_rgb(y_data: &[u8], cbcr_data: &[u8], width: usize, height: usize) ->
         }
     }
     rgb_data
+}
+
+// Get the scale factor of given display
+fn get_scale_factor(display_id: CGDirectDisplayID) -> u32 {
+    let mode = CGDisplay::new(display_id).display_mode().unwrap();
+    let width = mode.width();
+    let pixel_width = mode.pixel_width();
+    let scale_factor = pixel_width / width;
+    scale_factor as u32
 }
 
 impl StreamOutput for OutputHandler {
@@ -112,9 +122,9 @@ impl StreamOutput for OutputHandler {
                             // println!("y_data: {:?}", y_data);
                             // println!("c_data: {:?}", c_data);
 
-                            let rgb_data = ycbcr_to_rgb(&y_data, &c_data, y_width, y_height);
+                            let rgb_data = ycbcr_to_rgb(&y_data, &c_data, y_bytes_row, y_height);
                             let img = image::RgbImage::from_raw(
-                                y_width as u32,
+                                y_bytes_row as u32,
                                 y_height as u32,
                                 rgb_data,
                             )
@@ -150,11 +160,13 @@ pub fn main() {
             panic!("Main display not found");
         });
 
-    let width = main_display.width;
-    let height = main_display.height;
+    let scale_factor = get_scale_factor(main_display_id);
+
+    let width = main_display.width * scale_factor;
+    let height = main_display.height * scale_factor;
 
     // Setup screencapturekit
-    let params = InitParams::Display(main_display.clone());
+    let params = InitParams::Display(main_display.to_owned());
     let filter = SCContentFilter::new(params);
 
     let stream_config = SCStreamConfiguration {
@@ -181,11 +193,11 @@ pub fn main() {
 
 pub fn has_permission() -> bool {
     let access = ScreenCaptureAccess::default();
-    access.preflight()
+    access.request()
 }
 
 pub fn is_supported() -> bool {
-    let min_suported_macos_version = 12.3;
+    let min_version = 12.3;
 
     let output = Command::new("sw_vers")
         .arg("-productVersion")
@@ -195,12 +207,7 @@ pub fn is_supported() -> bool {
     let os_version = String::from_utf8(output.stdout).expect("Output not UTF-8");
     let os_version = os_version.trim().parse::<f64>().unwrap();
 
-    if os_version < min_suported_macos_version {
-        println!("macOS version {} is not supported", os_version);
-        return false;
-    } else {
-        return true;
-    }
+    os_version < min_version
 }
 
 pub fn get_targets() -> Vec<Target> {
