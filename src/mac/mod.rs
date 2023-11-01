@@ -1,5 +1,5 @@
 use core_graphics::access::ScreenCaptureAccess;
-use core_graphics::display::CGMainDisplayID;
+use core_graphics::display::{CGDisplay, CGMainDisplayID};
 use core_video_sys::{
     CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRowOfPlane,
     CVPixelBufferGetHeightOfPlane, CVPixelBufferGetWidthOfPlane, CVPixelBufferLockBaseAddress,
@@ -150,8 +150,14 @@ pub fn main() {
             panic!("Main display not found");
         });
 
-    let width = main_display.width;
-    let height = main_display.height;
+    let main_display_mode = CGDisplay::new(main_display_id).display_mode().unwrap();
+
+    let pixel_width = main_display_mode.pixel_width();
+    let scale_factor_raw = pixel_width / main_display.width as u64;
+    let scale_factor = scale_factor_raw as u32;
+
+    let width = main_display.width * scale_factor;
+    let height = main_display.height * scale_factor;
 
     // Setup screencapturekit
     let params = InitParams::Display(main_display.clone());
