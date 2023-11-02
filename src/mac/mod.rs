@@ -40,24 +40,25 @@ fn ycbcr_to_rgb(
     let mut rgb_data = Vec::with_capacity(width * height * 3);
     let row = width + stride;
 
-    for j in 0..height {
-        for i in 0..row {
-            if i < width {
-                let y_idx = j * row + i;
-                let uv_idx = (j / 2) * row + i - i % 2;
+    for h in 0..height {
+        for w in 0..width {
+            let y_idx = h * row + w;
+            let uv_idx = (h / 2) * row + w - w % 2;
 
-                let y = y_data[y_idx] as f32;
-                let cb = cbcr_data[uv_idx] as f32 - 128.0;
-                let cr = cbcr_data[uv_idx + 1] as f32 - 128.0;
+            // let y = y_data[y_idx] as f32;
+            // let cb = cbcr_data[uv_idx] as f32 - 128.0;
+            // let cr = cbcr_data[uv_idx + 1] as f32 - 128.0;
+            let y = (y_data[y_idx] as f32 - 16.0) * (255.0 / (235.0 - 16.0));
+            let cb = (cbcr_data[uv_idx] as f32 - 16.0) * (255.0 / (240.0 - 16.0)) - 128.0;
+            let cr = (cbcr_data[uv_idx + 1] as f32 - 16.0) * (255.0 / (240.0 - 16.0)) - 128.0;
 
-                let r = (y + 1.402 * cr).max(0.0).min(255.0) as u8;
-                let g = (y - 0.344136 * cb - 0.714136 * cr).max(0.0).min(255.0) as u8;
-                let b = (y + 1.772 * cb).max(0.0).min(255.0) as u8;
+            let r = (y + 1.402 * cr).max(0.0).min(255.0) as u8;
+            let g = (y - 0.344136 * cb - 0.714136 * cr).max(0.0).min(255.0) as u8;
+            let b = (y + 1.772 * cb).max(0.0).min(255.0) as u8;
 
-                rgb_data.push(r);
-                rgb_data.push(g);
-                rgb_data.push(b);
-            }
+            rgb_data.push(r);
+            rgb_data.push(g);
+            rgb_data.push(b);
         }
     }
     rgb_data
