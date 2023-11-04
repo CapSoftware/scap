@@ -110,19 +110,25 @@ pub fn has_permission() -> bool {
     access.request()
 }
 
-// TODO: optimize this function
 pub fn is_supported() -> bool {
-    let min_version = 12.3;
+    /* 
+     Checks the product os version from the sw_vers
+     Returns true if the product version is greater than min_version
+    */
+
+    // min_version is vec<u8> form
+    let min_version: Vec<u8> = "12.3\n".as_bytes().to_vec();
 
     let output = Command::new("sw_vers")
         .arg("-productVersion")
         .output()
         .expect("Failed to execute sw_vers command");
 
-    let os_version = String::from_utf8(output.stdout).expect("Output not UTF-8");
-    let os_version = os_version.trim().parse::<f64>().unwrap();
+    // current os version received in vec<u8> format
+    let os_version = output.stdout;
 
     os_version >= min_version
+
 }
 
 pub fn get_targets() -> Vec<Target> {
