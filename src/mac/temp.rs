@@ -111,7 +111,8 @@ pub unsafe fn get_data_from_buffer(pixel_buffer: CVPixelBufferRef) -> (usize, us
     // println!("c_data: {:?}", c_data);
 
     // Convert YUV buffer to RGB
-    let data = ycbcr_to_rgb(&y_data, &c_data, y_width, y_height, y_stride);
+    let data = Vec::new();
+    // let data = ycbcr_to_rgb(&y_data, &c_data, y_width, y_height, y_stride);
 
     (y_width, y_height, data)
 }

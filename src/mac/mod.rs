@@ -1,8 +1,12 @@
+use crate::{Target, TargetKind};
 use core_graphics::{
     access::ScreenCaptureAccess,
     display::{CGDirectDisplayID, CGDisplay},
 };
 use core_video_sys::CVPixelBufferRef;
+use ffmpeg::codec::{encoder::video::Encoder, traits::Encoder as EncoderTrait};
+use ffmpeg::util::frame::video::Video;
+use ffmpeg_next as ffmpeg;
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
     sc_error_handler,
@@ -14,19 +18,15 @@ use screencapturekit::{
 };
 use std::{path::PathBuf, process::Command};
 
-use crate::{Target, TargetKind};
-
 mod temp;
 
-struct ConsoleErrorHandler;
+struct ErrorHandler;
 
-impl sc_error_handler::StreamErrorHandler for ConsoleErrorHandler {
+impl sc_error_handler::StreamErrorHandler for ErrorHandler {
     fn on_error(&self) {
         println!("Error!");
     }
 }
-
-struct OutputHandler {}
 
 // Get the scale factor of given display
 fn get_scale_factor(display_id: CGDirectDisplayID) -> u64 {
@@ -35,6 +35,19 @@ fn get_scale_factor(display_id: CGDirectDisplayID) -> u64 {
     let pixel_width = mode.pixel_width();
     pixel_width / width
 }
+
+// fn init_encoder(width: u32, height: u32) -> Result<Encoder, ffmpeg::Error> {
+//     let codec = ffmpeg::encoder::find(ffmpeg::codec::Id::H264).expect("Codec not found");
+
+//     let mut encoder = codec.video().unwrap().encoder().unwrap();
+
+//     // encoder.set_width(width);
+//     // encoder.set_height(height);
+//     // encoder.set_time_base(ffmpeg::Rational::new(1, 30)); // assuming 30 fps
+//     // encoder.open_as(codec)
+// }
+
+struct OutputHandler {}
 
 impl StreamOutput for OutputHandler {
     fn did_output_sample_buffer(&self, sample: CMSampleBuffer, of_type: SCStreamOutputType) {
@@ -53,13 +66,15 @@ impl StreamOutput for OutputHandler {
 
                         let (width, height, data) = unsafe { temp::get_data_from_buffer(buffer) };
 
-                        let img =
-                            image::RgbImage::from_raw(width as u32, height as u32, data).unwrap();
+                        println!("Frame: {}", timestamp);
 
-                        // Save the image to disk
-                        let filename = format!("frame_{}.png", timestamp);
-                        let folder = PathBuf::new().join("test").join(filename);
-                        img.save(folder).expect("Failed to save image");
+                        // FOR TESTING ONLY
+                        // Create an image and save frame to disk
+                        // let img =
+                        //     image::RgbImage::from_raw(width as u32, height as u32, data).unwrap();
+                        // let filename = format!("frame_{}.png", timestamp);
+                        // let folder = PathBuf::new().join("test").join(filename);
+                        // img.save(folder).expect("Failed to save image");
                     }
                 }
             }
@@ -74,12 +89,13 @@ pub fn main() {
     let display = temp::get_main_display();
     let display_id = display.display_id;
 
-    let scale_factor = get_scale_factor(display_id) as u32;
+    let scale = get_scale_factor(display_id) as u32;
+    let width = display.width * scale;
+    let height = display.height * scale;
 
-    let width = display.width * scale_factor;
-    let height = display.height * scale_factor;
+    // Setup FFmpeg here?
 
-    // Setup screencapturekit
+    // Setup ScreenCaptureKit
     let params = InitParams::Display(display.to_owned());
     let filter = SCContentFilter::new(params);
 
@@ -90,11 +106,10 @@ pub fn main() {
         ..Default::default()
     };
 
-    let error_handler = ConsoleErrorHandler;
-    let mut stream = SCStream::new(filter, stream_config, error_handler);
-    let output_handler = OutputHandler {};
-    stream.add_output(output_handler);
+    let mut stream = SCStream::new(filter, stream_config, ErrorHandler);
+    stream.add_output(OutputHandler {});
 
+    // Start Capture
     stream.start_capture();
     println!("Capture started. Press Enter to stop.");
 
