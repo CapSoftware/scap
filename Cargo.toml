@@ -13,7 +13,9 @@ keywords = ["screen", "recording", "video", "audio", "ffmpeg"]
 categories = []
 
 [dependencies]
+cpal = "0.15.2"
 ffmpeg-next = { git = "https://github.com/remotion-dev/rust-ffmpeg", rev = "98f1b3311325e925403f3cd804359d93ddcc42fb" }
+hound = "3.5.1"
 image = "0.24.7"
 
 [target.'cfg(target_os = "windows")'.dependencies]

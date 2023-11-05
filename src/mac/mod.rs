@@ -19,7 +19,7 @@ use screencapturekit::{
 use std::{path::PathBuf, process::Command};
 
 mod temp;
-
+mod audio;
 struct ErrorHandler;
 
 impl sc_error_handler::StreamErrorHandler for ErrorHandler {
@@ -70,8 +70,9 @@ impl StreamOutput for OutputHandler {
 
                         // FOR TESTING ONLY
                         // Create an image and save frame to disk
-                        // let img =
-                        //     image::RgbImage::from_raw(width as u32, height as u32, data).unwrap();
+                        // let x = image::RgbImage::from_raw(width as u32, height as u32, data);
+                        // let img = x.unwrap();
+
                         // let filename = format!("frame_{}.png", timestamp);
                         // let folder = PathBuf::new().join("test").join(filename);
                         // img.save(folder).expect("Failed to save image");
@@ -79,6 +80,7 @@ impl StreamOutput for OutputHandler {
                 }
             }
             SCStreamOutputType::Audio => {
+                println!("Audio frame found")
                 // TODO: Handle audios
             }
         }
@@ -100,23 +102,29 @@ pub fn main() {
     let filter = SCContentFilter::new(params);
 
     let stream_config = SCStreamConfiguration {
+
         shows_cursor: true,
         width,
         height,
         ..Default::default()
     };
 
+    
     let mut stream = SCStream::new(filter, stream_config, ErrorHandler);
     stream.add_output(OutputHandler {});
+    
+    let mut audio_recorder = audio::AudioRecorder::new();
 
     // Start Capture
     stream.start_capture();
+    audio_recorder.start_recording();
     println!("Capture started. Press Enter to stop.");
 
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).unwrap();
 
     stream.stop_capture();
+    audio_recorder.stop_recording();
     println!("Capture stopped.");
 }
 
