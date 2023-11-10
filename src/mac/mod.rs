@@ -4,9 +4,6 @@ use core_graphics::{
     display::{CGDirectDisplayID, CGDisplay},
 };
 use core_video_sys::CVPixelBufferRef;
-use ffmpeg::codec::{encoder::video::Encoder, traits::Encoder as EncoderTrait};
-use ffmpeg::util::frame::video::Video;
-use ffmpeg_next as ffmpeg;
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
     sc_error_handler,
@@ -16,7 +13,7 @@ use screencapturekit::{
     sc_stream_configuration::SCStreamConfiguration,
     sc_sys::SCFrameStatus,
 };
-use std::{path::PathBuf, process::Command};
+use std::process::Command;
 
 use crate::audio;
 
@@ -36,17 +33,6 @@ fn get_scale_factor(display_id: CGDirectDisplayID) -> u64 {
     let pixel_width = mode.pixel_width();
     pixel_width / width
 }
-
-// fn init_encoder(width: u32, height: u32) -> Result<Encoder, ffmpeg::Error> {
-//     let codec = ffmpeg::encoder::find(ffmpeg::codec::Id::H264).expect("Codec not found");
-
-//     let mut encoder = codec.video().unwrap().encoder().unwrap();
-
-//     // encoder.set_width(width);
-//     // encoder.set_height(height);
-//     // encoder.set_time_base(ffmpeg::Rational::new(1, 30)); // assuming 30 fps
-//     // encoder.open_as(codec)
-// }
 
 struct OutputHandler {}
 
@@ -160,12 +146,12 @@ pub fn get_targets() -> Vec<Target> {
 
     for display in displays {
         // println!("Display: {:?}", display);
-        let name = format!("Display {}", display.display_id); // TODO: get this from core-graphics
+        let title = format!("Display {}", display.display_id); // TODO: get this from core-graphics
 
         let target = Target {
             kind: TargetKind::Display,
             id: display.display_id,
-            name,
+            title,
         };
 
         targets.push(target);
