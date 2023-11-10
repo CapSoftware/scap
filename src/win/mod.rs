@@ -1,7 +1,4 @@
 use std::error::Error;
-
-// use std::{path::PathBuf, time::Instant};
-// use std::error::Error;
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, HMONITOR, MONITORINFOEXW};
 use windows_capture::{
     capture::WindowsCaptureHandler,
@@ -27,7 +24,7 @@ fn get_monitor_name(h_monitor: HMONITOR) -> windows::core::Result<String> {
         unsafe { GetMonitorInfoW(h_monitor, &mut monitor_info as *mut _ as *mut _).as_bool() };
 
     if success {
-        let name = unsafe {
+        let name = {
             let len = monitor_info
                 .szDevice
                 .iter()
@@ -45,7 +42,7 @@ fn get_monitor_name(h_monitor: HMONITOR) -> windows::core::Result<String> {
 }
 
 impl WindowsCaptureHandler for Recorder {
-    type Flags = String; // To Get The Message From The Settings
+    type Flags = String;
 
     fn new(message: Self::Flags) -> Result<Self, Box<dyn Error + Send + Sync>> {
         println!("Got The Message: {message}");
@@ -53,7 +50,6 @@ impl WindowsCaptureHandler for Recorder {
         Ok(Self { frames: 0 })
     }
 
-    // Called Every Time A New Frame Is Available
     fn on_frame_arrived(
         &mut self,
         mut frame: Frame,
@@ -67,23 +63,21 @@ impl WindowsCaptureHandler for Recorder {
         // println!("buffer: {:?}", frame.buffer());
 
         let filename = format!("./test/test-frame-{}.png", self.frames);
-        println!("filename: {}", filename);
 
         frame.save_as_image(&filename).unwrap();
 
         // TODO: encode the frames received here into a video
 
-        // Gracefully Stop The Capture Thread
-        // capture_control.stop();
+        // TEMP: remove this after manual stopping is implemented
+        if self.frames >= 120 {
+            capture_control.stop();
+        }
 
         Ok(())
     }
 
-    // Called When The Capture Item Closes Usually When The Window Closes, Capture
-    // Session Will End After This Function Ends
     fn on_closed(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
-        println!("Capture Session Closed");
-
+        println!("Closed");
         Ok(())
     }
 }
@@ -93,7 +87,7 @@ pub fn main() {
         Monitor::primary().unwrap(),
         Some(true),
         Some(false),
-        (ColorFormat::Rgba8),
+        ColorFormat::Rgba8,
         "It Works".to_string(),
     )
     .unwrap();
