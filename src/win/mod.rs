@@ -5,30 +5,35 @@ use windows_capture::{
     monitor::Monitor, settings::WindowsCaptureSettings, window::Window,
 };
 
+use crate::audio;
 use crate::{Target, TargetKind};
 
 struct Recorder {
     frames: usize,
 }
 
+// IMPROVE: get user-friendly monitor name
 fn get_monitor_name(h_monitor: HMONITOR) -> windows::core::Result<String> {
     let mut monitor_info = MONITORINFOEXW::default();
-
     monitor_info.monitorInfo.cbSize = std::mem::size_of::<MONITORINFOEXW>() as u32;
 
     let success =
         unsafe { GetMonitorInfoW(h_monitor, &mut monitor_info as *mut _ as *mut _).as_bool() };
 
     if success {
-        let name = unsafe {
-            let len = monitor_info
-                .szDevice
-                .iter()
-                .position(|&i| i == 0)
-                .unwrap_or(0);
-            String::from_utf16(&monitor_info.szDevice[..len])?
+        let len = monitor_info
+            .szDevice
+            .iter()
+            .position(|&i| i == 0)
+            .unwrap_or(0);
+        let name = String::from_utf16(&monitor_info.szDevice[..len]).unwrap();
+
+        let clean_name = match name.rfind('\\') {
+            Some(index) => name.chars().skip(index + 1).collect(),
+            None => name.to_string(),
         };
-        Ok(name)
+
+        Ok(clean_name)
     } else {
         Err(windows::core::Error::new(
             windows::core::HRESULT(0),
@@ -52,7 +57,7 @@ impl WindowsCaptureHandler for Recorder {
 
         // println!("buffer: {:?}", frame.buffer());
 
-        let filename = format!("./test/test-frame-{}.png", self.frames);
+        let filename = format!("./test/frame-{}.png", self.frames);
         println!("filename: {}", filename);
 
         frame.save_as_image(&filename).unwrap();
@@ -65,12 +70,26 @@ impl WindowsCaptureHandler for Recorder {
     }
 }
 
+fn remove_null_character(input: &str) -> String {
+    match input.strip_suffix('\0') {
+        Some(s) => s.to_string(),
+        None => input.to_string(),
+    }
+}
+
 pub fn main() {
     let settings =
         WindowsCaptureSettings::new(Monitor::primary(), Some(true), Some(false), ()).unwrap();
 
     println!("Capture started. Press Enter to stop.");
+
+    let mut audio_recorder = audio::AudioRecorder::new();
+
+    audio_recorder.start_recording();
+
     Recorder::start(settings).unwrap();
+
+    // audio_recorder.stop_recording();
 
     // TODO: figure out threading mechanism here
 }
@@ -91,28 +110,31 @@ pub fn get_targets() -> Vec<Target> {
 
     for display in displays {
         let id = display;
-
-        // TODO: get name;
-
         let name = get_monitor_name(display).unwrap();
-        println!("name: {}", name);
 
         let target = Target {
-            kind: TargetKind::Display,
             id: 2,
-            name,
+            title: name,
+            kind: TargetKind::Display,
         };
         targets.push(target);
     }
 
-    // TODO: complete windows implementation
     let windows = Window::enumerate().expect("Failed to enumerate windows");
     for window in windows {
-        let id = window;
+        let handle = window.as_raw_hwnd();
+
+        let title = window
+            .title()
+            .unwrap()
+            .strip_suffix('\0')
+            .unwrap()
+            .to_string();
+
         let target = Target {
-            kind: TargetKind::Window,
-            name: "".into(),
             id: 3,
+            kind: TargetKind::Window,
+            title,
         };
         targets.push(target);
     }
