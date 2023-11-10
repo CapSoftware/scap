@@ -4,6 +4,8 @@ mod mac;
 #[cfg(target_os = "windows")]
 mod win;
 
+mod audio;
+
 #[derive(Debug)]
 pub enum TargetKind {
     Display,
@@ -14,7 +16,7 @@ pub enum TargetKind {
 #[derive(Debug)]
 pub struct Target {
     pub kind: TargetKind,
-    pub name: String,
+    pub title: String,
     pub id: u32,
 }
 
@@ -23,6 +25,8 @@ pub struct Options {
     pub show_cursor: bool,
     pub show_highlight: bool,
     pub targets: Vec<Target>,
+
+    // excluded targets will only work on macOS
     pub excluded_targets: Option<Vec<Target>>,
 }
 

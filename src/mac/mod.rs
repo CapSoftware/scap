@@ -4,9 +4,6 @@ use core_graphics::{
     display::{CGDirectDisplayID, CGDisplay},
 };
 use core_video_sys::CVPixelBufferRef;
-use ffmpeg::codec::{encoder::video::Encoder, traits::Encoder as EncoderTrait};
-use ffmpeg::util::frame::video::Video;
-use ffmpeg_next as ffmpeg;
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
     sc_error_handler,
@@ -16,10 +13,11 @@ use screencapturekit::{
     sc_stream_configuration::SCStreamConfiguration,
     sc_sys::SCFrameStatus,
 };
-use std::{path::PathBuf, process::Command};
+use std::process::Command;
+
+use crate::audio;
 
 mod temp;
-
 struct ErrorHandler;
 
 impl sc_error_handler::StreamErrorHandler for ErrorHandler {
@@ -35,17 +33,6 @@ fn get_scale_factor(display_id: CGDirectDisplayID) -> u64 {
     let pixel_width = mode.pixel_width();
     pixel_width / width
 }
-
-// fn init_encoder(width: u32, height: u32) -> Result<Encoder, ffmpeg::Error> {
-//     let codec = ffmpeg::encoder::find(ffmpeg::codec::Id::H264).expect("Codec not found");
-
-//     let mut encoder = codec.video().unwrap().encoder().unwrap();
-
-//     // encoder.set_width(width);
-//     // encoder.set_height(height);
-//     // encoder.set_time_base(ffmpeg::Rational::new(1, 30)); // assuming 30 fps
-//     // encoder.open_as(codec)
-// }
 
 struct OutputHandler {}
 
@@ -70,8 +57,9 @@ impl StreamOutput for OutputHandler {
 
                         // FOR TESTING ONLY
                         // Create an image and save frame to disk
-                        // let img =
-                        //     image::RgbImage::from_raw(width as u32, height as u32, data).unwrap();
+                        // let x = image::RgbImage::from_raw(width as u32, height as u32, data);
+                        // let img = x.unwrap();
+
                         // let filename = format!("frame_{}.png", timestamp);
                         // let folder = PathBuf::new().join("test").join(filename);
                         // img.save(folder).expect("Failed to save image");
@@ -79,6 +67,7 @@ impl StreamOutput for OutputHandler {
                 }
             }
             SCStreamOutputType::Audio => {
+                println!("Audio frame found")
                 // TODO: Handle audios
             }
         }
@@ -109,14 +98,18 @@ pub fn main() {
     let mut stream = SCStream::new(filter, stream_config, ErrorHandler);
     stream.add_output(OutputHandler {});
 
+    let mut audio_recorder = audio::AudioRecorder::new();
+
     // Start Capture
     stream.start_capture();
+    audio_recorder.start_recording();
     println!("Capture started. Press Enter to stop.");
 
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).unwrap();
 
     stream.stop_capture();
+    audio_recorder.stop_recording();
     println!("Capture stopped.");
 }
 
@@ -126,7 +119,7 @@ pub fn has_permission() -> bool {
 }
 
 pub fn is_supported() -> bool {
-    /* 
+    /*
      Checks the product os version from the sw_vers
      Returns true if the product version is greater than min_version
     */
@@ -143,7 +136,6 @@ pub fn is_supported() -> bool {
     let os_version = output.stdout;
 
     os_version >= min_version
-
 }
 
 pub fn get_targets() -> Vec<Target> {
@@ -154,12 +146,12 @@ pub fn get_targets() -> Vec<Target> {
 
     for display in displays {
         // println!("Display: {:?}", display);
-        let name = format!("Display {}", display.display_id); // TODO: get this from core-graphics
+        let title = format!("Display {}", display.display_id); // TODO: get this from core-graphics
 
         let target = Target {
             kind: TargetKind::Display,
             id: display.display_id,
-            name,
+            title,
         };
 
         targets.push(target);
