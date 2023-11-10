@@ -1,8 +1,15 @@
-use std::{path::PathBuf, time::Instant};
+use std::error::Error;
+
+// use std::{path::PathBuf, time::Instant};
+// use std::error::Error;
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, HMONITOR, MONITORINFOEXW};
 use windows_capture::{
-    capture::WindowsCaptureHandler, frame::Frame, graphics_capture_api::GraphicsCaptureApi,
-    monitor::Monitor, settings::WindowsCaptureSettings, window::Window,
+    capture::WindowsCaptureHandler,
+    frame::Frame,
+    graphics_capture_api::{GraphicsCaptureApi, InternalCaptureControl},
+    monitor::Monitor,
+    settings::{ColorFormat, WindowsCaptureSettings},
+    window::Window,
 };
 
 use crate::{Target, TargetKind};
@@ -38,13 +45,20 @@ fn get_monitor_name(h_monitor: HMONITOR) -> windows::core::Result<String> {
 }
 
 impl WindowsCaptureHandler for Recorder {
-    type Flags = ();
+    type Flags = String; // To Get The Message From The Settings
 
-    fn new(_: Self::Flags) -> Self {
-        Self { frames: 0 }
+    fn new(message: Self::Flags) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        println!("Got The Message: {message}");
+
+        Ok(Self { frames: 0 })
     }
 
-    fn on_frame_arrived(&mut self, frame: Frame) {
+    // Called Every Time A New Frame Is Available
+    fn on_frame_arrived(
+        &mut self,
+        mut frame: Frame,
+        capture_control: InternalCaptureControl,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
         self.frames += 1;
 
         println!("frame: {}", self.frames);
@@ -58,21 +72,41 @@ impl WindowsCaptureHandler for Recorder {
         frame.save_as_image(&filename).unwrap();
 
         // TODO: encode the frames received here into a video
+
+        // Gracefully Stop The Capture Thread
+        // capture_control.stop();
+
+        Ok(())
     }
 
-    fn on_closed(&mut self) {
-        println!("Closed");
+    // Called When The Capture Item Closes Usually When The Window Closes, Capture
+    // Session Will End After This Function Ends
+    fn on_closed(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
+        println!("Capture Session Closed");
+
+        Ok(())
     }
 }
 
 pub fn main() {
-    let settings =
-        WindowsCaptureSettings::new(Monitor::primary(), Some(true), Some(false), ()).unwrap();
+    let settings = WindowsCaptureSettings::new(
+        Monitor::primary().unwrap(),
+        Some(true),
+        Some(false),
+        (ColorFormat::Rgba8),
+        "It Works".to_string(),
+    )
+    .unwrap();
 
+    Recorder::start_free_threaded(settings);
     println!("Capture started. Press Enter to stop.");
-    Recorder::start(settings).unwrap();
 
-    // TODO: figure out threading mechanism here
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
+
+    // TODO: find stopping mechanism
+
+    println!("Capture stopped.");
 }
 
 pub fn is_supported() -> bool {
