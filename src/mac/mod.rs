@@ -18,8 +18,9 @@ use screencapturekit::{
 };
 use std::{path::PathBuf, process::Command};
 
+use crate::audio;
+
 mod temp;
-mod audio;
 struct ErrorHandler;
 
 impl sc_error_handler::StreamErrorHandler for ErrorHandler {
@@ -102,17 +103,15 @@ pub fn main() {
     let filter = SCContentFilter::new(params);
 
     let stream_config = SCStreamConfiguration {
-
         shows_cursor: true,
         width,
         height,
         ..Default::default()
     };
 
-    
     let mut stream = SCStream::new(filter, stream_config, ErrorHandler);
     stream.add_output(OutputHandler {});
-    
+
     let mut audio_recorder = audio::AudioRecorder::new();
 
     // Start Capture
@@ -134,7 +133,7 @@ pub fn has_permission() -> bool {
 }
 
 pub fn is_supported() -> bool {
-    /* 
+    /*
      Checks the product os version from the sw_vers
      Returns true if the product version is greater than min_version
     */
@@ -151,7 +150,6 @@ pub fn is_supported() -> bool {
     let os_version = output.stdout;
 
     os_version >= min_version
-
 }
 
 pub fn get_targets() -> Vec<Target> {
