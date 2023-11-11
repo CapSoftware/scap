@@ -27,9 +27,7 @@ impl sc_error_handler::StreamErrorHandler for ErrorHandler {
 // Get the scale factor of given display
 fn get_scale_factor(display_id: CGDirectDisplayID) -> u64 {
     let mode = CGDisplay::new(display_id).display_mode().unwrap();
-    let width = mode.width();
-    let pixel_width = mode.pixel_width();
-    pixel_width / width
+    mode.pixel_width() / mode.width()
 }
 
 struct OutputHandler {}
