@@ -6,7 +6,7 @@ use core_graphics::{
 use core_video_sys::CVPixelBufferRef;
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
-    sc_error_handler,
+    sc_error_handler::StreamErrorHandler,
     sc_output_handler::{CMSampleBuffer, SCStreamOutputType, StreamOutput},
     sc_shareable_content::SCShareableContent,
     sc_stream::SCStream,
@@ -18,31 +18,27 @@ use std::process::Command;
 mod temp;
 struct ErrorHandler;
 
-impl sc_error_handler::StreamErrorHandler for ErrorHandler {
+impl StreamErrorHandler for ErrorHandler {
     fn on_error(&self) {
         println!("Error!");
     }
 }
 
-// Get the scale factor of given display
 fn get_scale_factor(display_id: CGDirectDisplayID) -> u64 {
     let mode = CGDisplay::new(display_id).display_mode().unwrap();
     mode.pixel_width() / mode.width()
 }
 
-struct OutputHandler {}
+struct Capturer {}
 
-impl StreamOutput for OutputHandler {
+impl StreamOutput for Capturer {
     fn did_output_sample_buffer(&self, sample: CMSampleBuffer, of_type: SCStreamOutputType) {
         match of_type {
             SCStreamOutputType::Screen => {
                 let frame_status = &sample.frame_status;
 
                 match frame_status {
-                    SCFrameStatus::Idle => {
-                        return;
-                    }
-                    _ => {
+                    SCFrameStatus::Complete => {
                         let ptr = sample.ptr;
                         let timestamp = ptr.get_presentation_timestamp().value;
                         let buffer = ptr.get_image_buffer().get_raw() as CVPixelBufferRef;
@@ -60,6 +56,7 @@ impl StreamOutput for OutputHandler {
                         // let folder = PathBuf::new().join("test").join(filename);
                         // img.save(folder).expect("Failed to save image");
                     }
+                    _ => {}
                 }
             }
             _ => {}
@@ -75,7 +72,6 @@ pub fn create_recorder() -> SCStream {
     let width = display.width * scale;
     let height = display.height * scale;
 
-    // Setup ScreenCaptureKit
     let params = InitParams::Display(display.to_owned());
     let filter = SCContentFilter::new(params);
 
@@ -87,7 +83,7 @@ pub fn create_recorder() -> SCStream {
     };
 
     let mut stream = SCStream::new(filter, stream_config, ErrorHandler);
-    stream.add_output(OutputHandler {});
+    stream.add_output(Capturer {});
 
     stream
 }

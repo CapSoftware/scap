@@ -11,8 +11,8 @@ use windows_capture::{
 
 use crate::{Target, TargetKind};
 
-struct Recorder {
-    frames: usize,
+struct Capturer {
+    frame_count: u32,
 }
 
 // IMPROVE: get user-friendly monitor name
@@ -45,7 +45,7 @@ fn get_monitor_name(h_monitor: HMONITOR) -> windows::core::Result<String> {
     }
 }
 
-impl WindowsCaptureHandler for Recorder {
+impl WindowsCaptureHandler for Capturer {
     type Flags = String;
 
     fn new(message: Self::Flags) -> Result<Self, Box<dyn Error + Send + Sync>> {

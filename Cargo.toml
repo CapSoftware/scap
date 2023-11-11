@@ -1,6 +1,6 @@
 [package]
 name = "cypher"
-description = "High-performance screen capture API for Rust."
+description = "Modern, high-performance screen capture library for Rust. Cross-platform."
 version = "0.0.2"
 edition = "2021"
 rust-version = "1.71"
