@@ -58,7 +58,7 @@ impl WindowsCaptureHandler for Recorder {
     fn on_frame_arrived(
         &mut self,
         mut frame: Frame,
-        capture_control: InternalCaptureControl,
+        _: InternalCaptureControl,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
         self.frames += 1;
 
@@ -67,18 +67,13 @@ impl WindowsCaptureHandler for Recorder {
 
         // println!("buffer: {:?}", frame.buffer());
 
-        let filename = format!("./test/frame-{}.png", self.frames);
-        println!("filename: {}", filename);
-
-        frame.save_as_image(&filename).unwrap();
+        // FOR TESTING ONLY
+        // Create an image and save frame to disk
+        // let filename = format!("./test/frame-{}.png", self.frames);
+        // println!("filename: {}", filename);
+        // frame.save_as_image(&filename).unwrap();
 
         // TODO: encode the frames received here into a video
-
-        // TEMP: remove this after manual stopping is implemented
-        if self.frames >= 120 {
-            capture_control.stop();
-        }
-
         Ok(())
     }
 
@@ -105,14 +100,17 @@ pub fn main() {
     )
     .unwrap();
 
-    Recorder::start_free_threaded(settings);
+    let mut audio_recorder = audio::AudioRecorder::new();
+
+    let stream = Recorder::start_free_threaded(settings);
+    audio_recorder.start_recording();
     println!("Capture started. Press Enter to stop.");
 
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).unwrap();
 
-    // TODO: find stopping mechanism
-
+    stream.stop().unwrap();
+    audio_recorder.stop_recording();
     println!("Capture stopped.");
 }
 
