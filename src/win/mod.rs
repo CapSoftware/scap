@@ -101,8 +101,6 @@ pub fn create_recorder() -> CaptureControl {
     let stream = Recorder::start_free_threaded(settings);
 
     stream
-
-    // stream.stop().unwrap();
 }
 
 pub fn is_supported() -> bool {

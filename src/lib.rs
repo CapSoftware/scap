@@ -57,8 +57,6 @@ impl Recorder {
     }
 
     pub fn start_capture(&mut self) {
-        println!("start capture");
-
         self.audio_recorder.start_recording();
 
         #[cfg(target_os = "macos")]
@@ -72,8 +70,6 @@ impl Recorder {
     }
 
     pub fn stop_capture(&mut self) {
-        println!("stop capture");
-
         self.audio_recorder.stop_recording();
 
         #[cfg(target_os = "macos")]
