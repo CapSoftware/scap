@@ -1,8 +1,12 @@
-use std::{path::PathBuf, time::Instant};
+use std::error::Error;
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, HMONITOR, MONITORINFOEXW};
 use windows_capture::{
-    capture::WindowsCaptureHandler, frame::Frame, graphics_capture_api::GraphicsCaptureApi,
-    monitor::Monitor, settings::WindowsCaptureSettings, window::Window,
+    capture::WindowsCaptureHandler,
+    frame::Frame,
+    graphics_capture_api::{GraphicsCaptureApi, InternalCaptureControl},
+    monitor::Monitor,
+    settings::{ColorFormat, WindowsCaptureSettings},
+    window::Window,
 };
 
 use crate::audio;
@@ -43,13 +47,19 @@ fn get_monitor_name(h_monitor: HMONITOR) -> windows::core::Result<String> {
 }
 
 impl WindowsCaptureHandler for Recorder {
-    type Flags = ();
+    type Flags = String;
 
-    fn new(_: Self::Flags) -> Self {
-        Self { frames: 0 }
+    fn new(message: Self::Flags) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        println!("Got The Message: {message}");
+
+        Ok(Self { frames: 0 })
     }
 
-    fn on_frame_arrived(&mut self, frame: Frame) {
+    fn on_frame_arrived(
+        &mut self,
+        mut frame: Frame,
+        _: InternalCaptureControl,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
         self.frames += 1;
 
         println!("frame: {}", self.frames);
@@ -57,16 +67,19 @@ impl WindowsCaptureHandler for Recorder {
 
         // println!("buffer: {:?}", frame.buffer());
 
-        let filename = format!("./test/frame-{}.png", self.frames);
-        println!("filename: {}", filename);
-
-        frame.save_as_image(&filename).unwrap();
+        // FOR TESTING ONLY
+        // Create an image and save frame to disk
+        // let filename = format!("./test/frame-{}.png", self.frames);
+        // println!("filename: {}", filename);
+        // frame.save_as_image(&filename).unwrap();
 
         // TODO: encode the frames received here into a video
+        Ok(())
     }
 
-    fn on_closed(&mut self) {
+    fn on_closed(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
         println!("Closed");
+        Ok(())
     }
 }
 
@@ -78,20 +91,27 @@ fn remove_null_character(input: &str) -> String {
 }
 
 pub fn main() {
-    let settings =
-        WindowsCaptureSettings::new(Monitor::primary(), Some(true), Some(false), ()).unwrap();
-
-    println!("Capture started. Press Enter to stop.");
+    let settings = WindowsCaptureSettings::new(
+        Monitor::primary().unwrap(),
+        Some(true),
+        Some(false),
+        ColorFormat::Rgba8,
+        "It Works".to_string(),
+    )
+    .unwrap();
 
     let mut audio_recorder = audio::AudioRecorder::new();
 
+    let stream = Recorder::start_free_threaded(settings);
     audio_recorder.start_recording();
+    println!("Capture started. Press Enter to stop.");
 
-    Recorder::start(settings).unwrap();
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
 
-    // audio_recorder.stop_recording();
-
-    // TODO: figure out threading mechanism here
+    stream.stop().unwrap();
+    audio_recorder.stop_recording();
+    println!("Capture stopped.");
 }
 
 pub fn is_supported() -> bool {
@@ -110,11 +130,11 @@ pub fn get_targets() -> Vec<Target> {
 
     for display in displays {
         let id = display;
-        let name = get_monitor_name(display).unwrap();
+        let title = get_monitor_name(display).unwrap();
 
         let target = Target {
             id: 2,
-            title: name,
+            title,
             kind: TargetKind::Display,
         };
         targets.push(target);
