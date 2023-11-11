@@ -35,7 +35,15 @@ fn main() {
         excluded_targets: None,
     };
 
-    // #4 Capture the screen (WIP)
-    let recorder = Recorder::init();
-    recorder.start_capture(options);
+    // #5 Create Recorder
+    let mut recorder = Recorder::init(options);
+
+    // #6 Start Capture
+    recorder.start_capture();
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
+
+    // #7 Stop Capture
+    recorder.stop_capture();
 }
