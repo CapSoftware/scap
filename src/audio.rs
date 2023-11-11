@@ -89,8 +89,6 @@ impl AudioRecorder {
 
     pub fn stop_recording(&mut self) {
         self.stream.pause().unwrap();
-        let stream = &self.stream;
-        drop(stream);
 
         // close the writer
         self.writer
