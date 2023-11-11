@@ -1,14 +1,14 @@
 [package]
-name = "cypher"
+name = "scap"
 description = "Modern, high-performance screen capture library for Rust. Cross-platform."
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 rust-version = "1.71"
 license = "MIT"
 authors = ["Siddharth Jha"]
 readme = "README.md"
-repository = "https://github.com/clearlysid/cypher"
-documentation = "https://docs.rs/cypher"
+repository = "https://github.com/clearlysid/scap"
+documentation = "https://docs.rs/scap"
 keywords = ["screen", "recording", "video", "audio", "ffmpeg"]
 categories = []
 

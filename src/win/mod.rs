@@ -12,7 +12,7 @@ use windows_capture::{
 use crate::{Target, TargetKind};
 
 struct Capturer {
-    frame_count: u32,
+    frames: u32,
 }
 
 // IMPROVE: get user-friendly monitor name

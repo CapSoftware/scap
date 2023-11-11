@@ -305,20 +305,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 
 [[package]]
-name = "cypher"
-version = "0.0.2"
-dependencies = [
- "core-graphics",
- "cpal",
- "hound",
- "image",
- "screencapturekit",
- "tao-core-video-sys",
- "windows 0.51.1",
- "windows-capture",
-]
-
-[[package]]
 name = "dasp_sample"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1025,6 +1011,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "scap"
+version = "0.0.3"
+dependencies = [
+ "core-graphics",
+ "cpal",
+ "hound",
+ "image",
+ "screencapturekit",
+ "tao-core-video-sys",
+ "windows 0.51.1",
+ "windows-capture",
 ]
 
 [[package]]

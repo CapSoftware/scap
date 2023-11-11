@@ -1,6 +1,6 @@
-<img src=".github/banner.png" alt="Cypher - Rust Screen Capture Library" />
+<img src=".github/banner.png" alt="Scap - Rust Screen Capture Library" />
 
-A modern, cross-platform, and high-performance library designed for screen capturing tasks. Cypher leverages the native operating system APIs to ensure optimal performance and quality. On macOS it uses Apple's [ScreencaptureKit](https://developer.apple.com/documentation/screencapturekit) and on Windows it uses [Windows.Graphics.Capture](https://learn.microsoft.com/en-us/uwp/api/windows.graphics.capture?view=winrt-22621) namespace.
+A modern, cross-platform, and high-performance library designed for screen capturing tasks. Scap leverages the native operating system APIs to ensure optimal performance and quality. On macOS it uses Apple's [ScreencaptureKit](https://developer.apple.com/documentation/screencapturekit) and on Windows it uses [Windows.Graphics.Capture](https://learn.microsoft.com/en-us/uwp/api/windows.graphics.capture?view=winrt-22621) namespace.
 
 > 🚧 Work-in-progress. Unsuitable for production use at the moment.
 

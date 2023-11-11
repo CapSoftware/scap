@@ -1,11 +1,11 @@
-use cypher::{Options, Recorder};
+use scap::{Options, Recorder};
 
 // This program is just a testbed for the library itself
 // Refer to the lib.rs file for the actual implementation
 
 fn main() {
     // #1 Check if the platform is supported
-    let supported = cypher::is_supported();
+    let supported = scap::is_supported();
     if !supported {
         println!("❌ Platform not supported");
         return;
@@ -14,7 +14,7 @@ fn main() {
     }
 
     // #2 Check if we have permission to capture the screen
-    let has_permission = cypher::has_permission();
+    let has_permission = scap::has_permission();
     if !has_permission {
         println!("❌ Permission not granted");
         return;
@@ -23,7 +23,7 @@ fn main() {
     }
 
     // #3 Get recording targets (WIP)
-    let targets = cypher::get_targets();
+    let targets = scap::get_targets();
     println!("🎯 Targets: {:?}", targets);
 
     // #4 Create Options
