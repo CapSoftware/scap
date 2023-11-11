@@ -4,7 +4,7 @@ modern, cross-platform, high-performance library built for screen capturing duti
 
 > 🚧 Work-in-progress. Unsuitable for production use at the moment.
 
-scap leverages native operating system APIs for optimal performance and quality — Apple's [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit) on macOS, [Windows.Graphics.Capture](https://learn.microsoft.com/en-us/uwp/api/windows.graphics.capture?view=winrt-22621) APIs on Windows. Linux support is planned, but not currently being worked on. PRs welcome!
+scap leverages native operating system APIs for optimal performance and quality: Apple's [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit) on macOS and [Graphics.Capture](https://learn.microsoft.com/en-us/uwp/api/windows.graphics.capture?view=winrt-22621) APIs on Windows. Linux support is planned but not underway — PRs welcome!
 
 ## features.
 
