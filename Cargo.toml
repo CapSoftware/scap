@@ -5,12 +5,22 @@ version = "0.0.3"
 edition = "2021"
 rust-version = "1.71"
 license = "MIT"
-authors = ["Siddharth Jha"]
+authors = ["Siddharth"]
 readme = "README.md"
 repository = "https://github.com/clearlysid/scap"
 documentation = "https://docs.rs/scap"
-keywords = ["screen", "recording", "video", "audio", "ffmpeg"]
-categories = []
+keywords = [
+	"screen",
+	"recording",
+	"video",
+	"audio",
+	"ffmpeg",
+	"capture",
+	"graphics",
+	"media",
+	"stream",
+]
+categories = ["graphics", "multimedia", "multimedia::video"]
 
 [dependencies]
 cpal = "0.15.2"
