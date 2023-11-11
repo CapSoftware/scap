@@ -39,11 +39,11 @@ fn main() {
     let mut recorder = Recorder::init(options);
 
     // #6 Start Capture
-    recorder.start_capture();
+    recorder.start_recording();
 
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).unwrap();
 
     // #7 Stop Capture
-    recorder.stop_capture();
+    recorder.stop_recording();
 }

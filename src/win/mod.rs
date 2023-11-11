@@ -107,11 +107,6 @@ pub fn is_supported() -> bool {
     GraphicsCaptureApi::is_supported().expect("Failed to check support")
 }
 
-pub fn has_permission() -> bool {
-    // TODO: add correct permission mechanism here
-    true
-}
-
 pub fn get_targets() -> Vec<Target> {
     let mut targets: Vec<Target> = Vec::new();
 

@@ -32,6 +32,7 @@ pub struct Options {
 
 pub struct Recorder {
     audio_recorder: audio::AudioRecorder,
+    options: Options,
 
     #[cfg(target_os = "macos")]
     recorder: screencapturekit::sc_stream::SCStream,
@@ -53,10 +54,11 @@ impl Recorder {
         Recorder {
             audio_recorder,
             recorder,
+            options,
         }
     }
 
-    pub fn start_capture(&mut self) {
+    pub fn start_recording(&mut self) {
         self.audio_recorder.start_recording();
 
         #[cfg(target_os = "macos")]
@@ -69,7 +71,7 @@ impl Recorder {
         }
     }
 
-    pub fn stop_capture(&mut self) {
+    pub fn stop_recording(&mut self) {
         self.audio_recorder.stop_recording();
 
         #[cfg(target_os = "macos")]
@@ -105,10 +107,8 @@ pub fn get_targets() -> Vec<Target> {
 
 pub fn has_permission() -> bool {
     #[cfg(target_os = "macos")]
-    let access = mac::has_permission();
+    return mac::has_permission();
 
-    #[cfg(target_os = "windows")]
-    let access = win::has_permission();
-
-    access
+    #[cfg(not(target_os = "macos"))]
+    true
 }
