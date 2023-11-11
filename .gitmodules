@@ -1,4 +1,0 @@
-
-[submodule "screencapturekit-rs"]
-	path = screencapturekit-rs
-	url = https://github.com/clearlysid/screencapturekit-rs
