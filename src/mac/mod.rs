@@ -15,8 +15,6 @@ use screencapturekit::{
 };
 use std::process::Command;
 
-use crate::audio;
-
 mod temp;
 struct ErrorHandler;
 
@@ -66,23 +64,18 @@ impl StreamOutput for OutputHandler {
                     }
                 }
             }
-            SCStreamOutputType::Audio => {
-                println!("Audio frame found")
-                // TODO: Handle audios
-            }
+            _ => {}
         }
     }
 }
 
-pub fn main() {
+pub fn create_recorder() -> SCStream {
     let display = temp::get_main_display();
     let display_id = display.display_id;
 
     let scale = get_scale_factor(display_id) as u32;
     let width = display.width * scale;
     let height = display.height * scale;
-
-    // Setup FFmpeg here?
 
     // Setup ScreenCaptureKit
     let params = InitParams::Display(display.to_owned());
@@ -98,19 +91,7 @@ pub fn main() {
     let mut stream = SCStream::new(filter, stream_config, ErrorHandler);
     stream.add_output(OutputHandler {});
 
-    let mut audio_recorder = audio::AudioRecorder::new();
-
-    // Start Capture
-    stream.start_capture();
-    audio_recorder.start_recording();
-    println!("Capture started. Press Enter to stop.");
-
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input).unwrap();
-
-    stream.stop_capture();
-    audio_recorder.stop_recording();
-    println!("Capture stopped.");
+    stream
 }
 
 pub fn has_permission() -> bool {
@@ -119,20 +100,12 @@ pub fn has_permission() -> bool {
 }
 
 pub fn is_supported() -> bool {
-    /*
-     Checks the product os version from the sw_vers
-     Returns true if the product version is greater than min_version
-    */
-
-    // min_version is vec<u8> form
     let min_version: Vec<u8> = "12.3\n".as_bytes().to_vec();
-
     let output = Command::new("sw_vers")
         .arg("-productVersion")
         .output()
         .expect("Failed to execute sw_vers command");
 
-    // current os version received in vec<u8> format
     let os_version = output.stdout;
 
     os_version >= min_version
