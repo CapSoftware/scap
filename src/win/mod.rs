@@ -1,7 +1,7 @@
 use std::error::Error;
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, HMONITOR, MONITORINFOEXW};
 use windows_capture::{
-    capture::WindowsCaptureHandler,
+    capture::{CaptureControl, WindowsCaptureHandler},
     frame::Frame,
     graphics_capture_api::{GraphicsCaptureApi, InternalCaptureControl},
     monitor::Monitor,
@@ -9,7 +9,6 @@ use windows_capture::{
     window::Window,
 };
 
-use crate::audio;
 use crate::{Target, TargetKind};
 
 struct Recorder {
@@ -63,7 +62,6 @@ impl WindowsCaptureHandler for Recorder {
         self.frames += 1;
 
         println!("frame: {}", self.frames);
-        println!("size: {}x{}", frame.width(), frame.height());
 
         // println!("buffer: {:?}", frame.buffer());
 
@@ -90,7 +88,7 @@ fn remove_null_character(input: &str) -> String {
     }
 }
 
-pub fn main() {
+pub fn create_recorder() -> CaptureControl {
     let settings = WindowsCaptureSettings::new(
         Monitor::primary().unwrap(),
         Some(true),
@@ -100,18 +98,11 @@ pub fn main() {
     )
     .unwrap();
 
-    let mut audio_recorder = audio::AudioRecorder::new();
-
     let stream = Recorder::start_free_threaded(settings);
-    audio_recorder.start_recording();
-    println!("Capture started. Press Enter to stop.");
 
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input).unwrap();
+    stream
 
-    stream.stop().unwrap();
-    audio_recorder.stop_recording();
-    println!("Capture stopped.");
+    // stream.stop().unwrap();
 }
 
 pub fn is_supported() -> bool {

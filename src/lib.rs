@@ -35,6 +35,9 @@ pub struct Recorder {
 
     #[cfg(target_os = "macos")]
     recorder: screencapturekit::sc_stream::SCStream,
+
+    #[cfg(target_os = "windows")]
+    recorder: Option<windows_capture::capture::CaptureControl>,
 }
 
 impl Recorder {
@@ -43,6 +46,9 @@ impl Recorder {
 
         #[cfg(target_os = "macos")]
         let recorder = mac::create_recorder();
+
+        #[cfg(target_os = "windows")]
+        let recorder = None;
 
         Recorder {
             audio_recorder,
@@ -58,8 +64,11 @@ impl Recorder {
         #[cfg(target_os = "macos")]
         self.recorder.start_capture();
 
-        // #[cfg(target_os = "windows")]
-        // win::main();
+        #[cfg(target_os = "windows")]
+        {
+            let recorder = win::create_recorder();
+            self.recorder = Some(recorder);
+        }
     }
 
     pub fn stop_capture(&mut self) {
@@ -70,8 +79,11 @@ impl Recorder {
         #[cfg(target_os = "macos")]
         self.recorder.stop_capture();
 
-        // #[cfg(target_os = "windows")]
-        // win::stop_capture();
+        // TODO: temporary workaround until I find a better way
+        #[cfg(target_os = "windows")]
+        if let Some(recorder) = std::mem::replace(&mut self.recorder, None) {
+            recorder.stop().unwrap();
+        }
     }
 }
 
