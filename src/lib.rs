@@ -31,29 +31,44 @@ pub struct Options {
 }
 
 pub struct Recorder {
-    pub id: String,
+    audio_recorder: audio::AudioRecorder,
+
+    #[cfg(target_os = "macos")]
+    recorder: screencapturekit::sc_stream::SCStream,
 }
 
 impl Recorder {
-    pub fn init() -> Self {
+    pub fn init(options: Options) -> Self {
+        let audio_recorder = audio::AudioRecorder::new();
+
+        #[cfg(target_os = "macos")]
+        let recorder = mac::create_recorder();
+
         Recorder {
-            id: String::from(""),
+            audio_recorder,
+            recorder,
         }
     }
 
-    pub fn start_capture(&self, _: Options) {
-        // TODO: process and pass on the options
-        #[cfg(target_os = "macos")]
-        mac::main();
+    pub fn start_capture(&mut self) {
+        println!("start capture");
 
-        #[cfg(target_os = "windows")]
-        win::main();
+        self.audio_recorder.start_recording();
+
+        #[cfg(target_os = "macos")]
+        self.recorder.start_capture();
+
+        // #[cfg(target_os = "windows")]
+        // win::main();
     }
 
-    pub fn stop_capture(&self) {
-        // TODO: add stop_capture() to mac and win modules
-        // #[cfg(target_os = "macos")]
-        // mac::stop_capture();
+    pub fn stop_capture(&mut self) {
+        println!("stop capture");
+
+        self.audio_recorder.stop_recording();
+
+        #[cfg(target_os = "macos")]
+        self.recorder.stop_capture();
 
         // #[cfg(target_os = "windows")]
         // win::stop_capture();
