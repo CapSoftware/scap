@@ -1,4 +1,4 @@
-use crate::{Target, TargetKind};
+use crate::{Options, Target, TargetKind};
 use core_graphics::{
     access::ScreenCaptureAccess,
     display::{CGDirectDisplayID, CGDisplay},
@@ -64,7 +64,9 @@ impl StreamOutput for Capturer {
     }
 }
 
-pub fn create_recorder() -> SCStream {
+pub fn create_recorder(options: &Options) -> SCStream {
+    println!("Options: {:?}", options);
+
     let display = temp::get_main_display();
     let display_id = display.display_id;
 

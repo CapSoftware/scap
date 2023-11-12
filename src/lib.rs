@@ -20,6 +20,7 @@ pub struct Target {
     pub id: u32,
 }
 
+#[derive(Debug)]
 pub struct Options {
     pub fps: u32,
     pub show_cursor: bool,
@@ -32,6 +33,7 @@ pub struct Options {
 
 pub struct Recorder {
     audio_recorder: audio::AudioRecorder,
+    options: Options,
 
     #[cfg(target_os = "macos")]
     recorder: screencapturekit::sc_stream::SCStream,
@@ -45,7 +47,7 @@ impl Recorder {
         let audio_recorder = audio::AudioRecorder::new();
 
         #[cfg(target_os = "macos")]
-        let recorder = mac::create_recorder();
+        let recorder = mac::create_recorder(&options);
 
         #[cfg(target_os = "windows")]
         let recorder = None;
@@ -53,6 +55,7 @@ impl Recorder {
         Recorder {
             audio_recorder,
             recorder,
+            options,
         }
     }
 
@@ -64,7 +67,7 @@ impl Recorder {
 
         #[cfg(target_os = "windows")]
         {
-            let recorder = win::create_recorder();
+            let recorder = win::create_recorder(&options);
             self.recorder = Some(recorder);
         }
     }

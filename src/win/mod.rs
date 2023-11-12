@@ -9,7 +9,7 @@ use windows_capture::{
     window::Window,
 };
 
-use crate::{Target, TargetKind};
+use crate::{Options, Target, TargetKind};
 
 struct Capturer {
     frames: u32,
@@ -88,7 +88,7 @@ fn remove_null_character(input: &str) -> String {
     }
 }
 
-pub fn create_recorder() -> CaptureControl {
+pub fn create_recorder(options: &Options) -> CaptureControl {
     let settings = WindowsCaptureSettings::new(
         Monitor::primary().unwrap(),
         Some(true),
