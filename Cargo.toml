@@ -9,17 +9,7 @@ authors = ["Siddharth"]
 readme = "README.md"
 repository = "https://github.com/clearlysid/scap"
 documentation = "https://docs.rs/scap"
-keywords = [
-	"screen",
-	"recording",
-	"video",
-	"audio",
-	"ffmpeg",
-	"capture",
-	"graphics",
-	"media",
-	"stream",
-]
+keywords = ["screen", "recording", "video", "audio", "capture", "media"]
 categories = ["graphics", "multimedia", "multimedia::video"]
 
 [dependencies]
@@ -37,4 +27,4 @@ windows = { version = "0.51", features = [
 [target.'cfg(target_os = "macos")'.dependencies]
 tao-core-video-sys = "0.2.0"
 core-graphics = "0.23.1"
-screencapturekit = { git = "https://github.com/clearlysid/screencapturekit-rs.git", rev = "56a6708" }
+screencapturekit = { git = "https://github.com/clearlysid/screencapturekit-rs.git", rev = "56a6708", version = "*" }
