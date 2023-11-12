@@ -28,4 +28,4 @@ windows = { version = "0.51", features = [
 tao-core-video-sys = "0.2.0"
 core-graphics = "0.23.1"
 # screencapturekit = { git = "https://github.com/clearlysid/screencapturekit-rs.git", rev = "56a6708", version = "*" }
-screencapturekit = { path = "src/mac/screencapturekit-rs/screencapturekit" }
+screencapturekit = { path = "src/mac/screencapturekit-rs/screencapturekit", version = "*" }
