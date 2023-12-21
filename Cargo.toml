@@ -15,7 +15,6 @@ categories = ["graphics", "multimedia", "multimedia::video"]
 [dependencies]
 cpal = "0.15.2"
 hound = "3.5.1"
-image = "0.24.7"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-capture = "1.0.26"
