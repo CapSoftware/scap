@@ -1,12 +1,21 @@
 <p align="center">
-<img src="./.github/banner.gif">
+	<p align="center">
+		<img src="./.github/banner.gif">
+	</p>
 
-A Rust library to leverage native OS APIs for optimal performance and high-quality screen recordings. We use Apple's [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit) on macOS and [Graphics.Capture](https://learn.microsoft.com/en-us/uwp/api/windows.graphics.capture?view=winrt-22621) APIs on Windows. Linux support is planned but not underway yet, PRs welcome!
+  <p align="center">
+    A Rust library to leverage native OS APIs for optimal performance and high-quality screen recordings. We use Apple's [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit) on macOS and [Graphics.Capture](https://learn.microsoft.com/en-us/uwp/api/windows.graphics.capture?view=winrt-22621) APIs on Windows.
+  </p>
 
-> 🚧 WIP. Unsuitable for production use, APIs are being iterated on.
+  <p align="center">
+Linux support is planned but not underway yet, PRs welcome!
+</p>
+
+  <p align="center">
+**🚧 WIP. Unsuitable for production use, APIs are being iterated on.**
+</p>
 
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/invite/SC468DK4du)
-![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)
 
 </p>
 
