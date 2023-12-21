@@ -1,9 +1,5 @@
-<center>
+<p align="center">
 <img src="./.github/banner.gif">
-
-![Windows 11](https://img.shields.io/badge/Windows%2011-%230079d5.svg?style=for-the-badge&logo=Windows%2011&logoColor=white)
-![macOS](https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0)
-![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
 
 A Rust library to leverage native OS APIs for optimal performance and high-quality screen recordings. We use Apple's [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit) on macOS and [Graphics.Capture](https://learn.microsoft.com/en-us/uwp/api/windows.graphics.capture?view=winrt-22621) APIs on Windows. Linux support is planned but not underway yet, PRs welcome!
 
@@ -12,7 +8,7 @@ A Rust library to leverage native OS APIs for optimal performance and high-quali
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/invite/SC468DK4du)
 ![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)
 
-</center>
+</p>
 
 ## features
 
