@@ -13,7 +13,8 @@ use screencapturekit::{
     sc_stream_configuration::SCStreamConfiguration,
     sc_sys::SCFrameStatus,
 };
-use std::{process::Command, sync::mpsc::Sender};
+use std::sync::mpsc::Sender;
+use sysinfo::System;
 
 mod temp;
 struct ErrorHandler;
@@ -101,13 +102,12 @@ pub fn has_permission() -> bool {
 }
 
 pub fn is_supported() -> bool {
-    let min_version: Vec<u8> = "12.3\n".as_bytes().to_vec();
-    let output = Command::new("sw_vers")
-        .arg("-productVersion")
-        .output()
-        .expect("Failed to execute sw_vers command");
+    let os_version = System::os_version()
+        .expect("Failed to get macOS version")
+        .as_bytes()
+        .to_vec();
 
-    let os_version = output.stdout;
+    let min_version: Vec<u8> = "12.3\n".as_bytes().to_vec();
 
     os_version >= min_version
 }
