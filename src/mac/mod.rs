@@ -13,7 +13,7 @@ use screencapturekit::{
     sc_stream_configuration::SCStreamConfiguration,
     sc_sys::SCFrameStatus,
 };
-use std::process::Command;
+use std::{process::Command, sync::mpsc::Sender};
 
 mod temp;
 struct ErrorHandler;
@@ -29,7 +29,9 @@ fn get_scale_factor(display_id: CGDirectDisplayID) -> u64 {
     mode.pixel_width() / mode.width()
 }
 
-struct Capturer {}
+struct Capturer {
+    tx: Sender<Vec<u8>>,
+}
 
 impl StreamOutput for Capturer {
     fn did_output_sample_buffer(&self, sample: CMSampleBuffer, of_type: SCStreamOutputType) {
@@ -40,21 +42,24 @@ impl StreamOutput for Capturer {
                 match frame_status {
                     SCFrameStatus::Complete => {
                         let ptr = sample.ptr;
-                        let timestamp = ptr.get_presentation_timestamp().value;
                         let buffer = ptr.get_image_buffer().get_raw() as CVPixelBufferRef;
-
-                        let (width, height, data) = unsafe { temp::get_data_from_buffer(buffer) };
-
-                        println!("Frame: {}", timestamp);
+                        let (_width, _height, data) = unsafe { temp::get_data_from_buffer(buffer) };
 
                         // FOR TESTING ONLY
+
+                        // Timestamp + Unique Value
+                        // let timestamp = ptr.get_presentation_timestamp().value;
+                        // println!("Frame: {}", timestamp);
+
                         // Create an image and save frame to disk
                         // let x = image::RgbImage::from_raw(width as u32, height as u32, data);
                         // let img = x.unwrap();
-
                         // let filename = format!("frame_{}.png", timestamp);
                         // let folder = PathBuf::new().join("test").join(filename);
                         // img.save(folder).expect("Failed to save image");
+
+                        // Send frame buffer to parent
+                        self.tx.send(data).expect("Failed to send data");
                     }
                     _ => {}
                 }
@@ -64,7 +69,7 @@ impl StreamOutput for Capturer {
     }
 }
 
-pub fn create_recorder(options: &Options) -> SCStream {
+pub fn create_recorder(options: &Options, tx: Sender<Vec<u8>>) -> SCStream {
     println!("Options: {:?}", options);
 
     let display = temp::get_main_display();
@@ -85,7 +90,7 @@ pub fn create_recorder(options: &Options) -> SCStream {
     };
 
     let mut stream = SCStream::new(filter, stream_config, ErrorHandler);
-    stream.add_output(Capturer {});
+    stream.add_output(Capturer { tx });
 
     stream
 }

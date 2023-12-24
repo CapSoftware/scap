@@ -6,6 +6,8 @@ mod win;
 
 mod audio;
 
+use std::sync::mpsc::{self, Receiver, Sender};
+
 #[derive(Debug)]
 pub enum TargetKind {
     Display,
@@ -34,7 +36,9 @@ pub struct Options {
 pub struct Recorder {
     audio_recorder: audio::AudioRecorder,
     options: Options,
+    tx_rx: (Sender<Vec<u8>>, Receiver<Vec<u8>>),
 
+    // private receiver here, transmitter
     #[cfg(target_os = "macos")]
     recorder: screencapturekit::sc_stream::SCStream,
 
@@ -46,8 +50,11 @@ impl Recorder {
     pub fn init(options: Options) -> Self {
         let audio_recorder = audio::AudioRecorder::new();
 
+        // start receiver here
+        let (tx, rx) = mpsc::channel();
+
         #[cfg(target_os = "macos")]
-        let recorder = mac::create_recorder(&options);
+        let recorder = mac::create_recorder(&options, tx.clone());
 
         #[cfg(target_os = "windows")]
         let recorder = None;
@@ -56,6 +63,7 @@ impl Recorder {
             audio_recorder,
             recorder,
             options,
+            tx_rx: (tx, rx),
         }
     }
 
@@ -67,8 +75,13 @@ impl Recorder {
 
         #[cfg(target_os = "windows")]
         {
-            let recorder = win::create_recorder(&options);
+            let recorder = win::create_recorder(&options, self.tx_rx.0);
             self.recorder = Some(recorder);
+        }
+
+        while let Ok(frame_buffer) = self.tx_rx.1.recv() {
+            // print first 12 units of frame buffer
+            println!("Got frame! {:?}", &frame_buffer[0..12]);
         }
     }
 
