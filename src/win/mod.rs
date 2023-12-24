@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::sync::mpsc::Sender;
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, HMONITOR, MONITORINFOEXW};
 use windows_capture::{
     capture::{CaptureControl, WindowsCaptureHandler},
@@ -12,7 +13,7 @@ use windows_capture::{
 use crate::{Options, Target, TargetKind};
 
 struct Capturer {
-    frames: u32,
+    tx: Sender<Vec<u8>>,
 }
 
 // IMPROVE: get user-friendly monitor name
@@ -51,7 +52,8 @@ impl WindowsCaptureHandler for Capturer {
     fn new(message: Self::Flags) -> Result<Self, Box<dyn Error + Send + Sync>> {
         println!("Got The Message: {message}");
 
-        Ok(Self { frames: 0 })
+        // TODO: get tx from parent here
+        Ok(Self { tx })
     }
 
     fn on_frame_arrived(
@@ -59,19 +61,21 @@ impl WindowsCaptureHandler for Capturer {
         mut frame: Frame,
         _: InternalCaptureControl,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
-        self.frames += 1;
-
-        println!("frame: {}", self.frames);
-
-        // println!("buffer: {:?}", frame.buffer());
+        let buffer = frame.buffer();
 
         // FOR TESTING ONLY
+
+        // Timestamp + Unique Value
+        // self.frames += 1;
+        // println!("frame: {}", self.frames);
+
         // Create an image and save frame to disk
         // let filename = format!("./test/frame-{}.png", self.frames);
         // println!("filename: {}", filename);
         // frame.save_as_image(&filename).unwrap();
 
-        // TODO: encode the frames received here into a video
+        // Send frame buffer to parent
+        self.tx.send(data).expect("Failed to send data");
         Ok(())
     }
 
@@ -88,7 +92,7 @@ fn remove_null_character(input: &str) -> String {
     }
 }
 
-pub fn create_recorder(options: &Options) -> CaptureControl {
+pub fn create_recorder(options: &Options, tx: Sender<Vec<u8>>) -> CaptureControl {
     let settings = WindowsCaptureSettings::new(
         Monitor::primary().unwrap(),
         Some(true),
