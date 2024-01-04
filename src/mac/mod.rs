@@ -1,9 +1,8 @@
-use crate::{Options, Target, TargetKind};
+use crate::{Options, Target, TargetKind, frame, device::display};
 use core_graphics::{
     access::ScreenCaptureAccess,
     display::{CGDirectDisplayID, CGDisplay},
 };
-use core_video_sys::CVPixelBufferRef;
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
     sc_error_handler::StreamErrorHandler,
@@ -25,13 +24,14 @@ impl StreamErrorHandler for ErrorHandler {
     }
 }
 
-fn get_scale_factor(display_id: CGDirectDisplayID) -> u64 {
-    let mode = CGDisplay::new(display_id).display_mode().unwrap();
-    mode.pixel_width() / mode.width()
+pub struct Capturer {
+    pub tx: Sender<frame::YUVFrame>,
 }
 
-struct Capturer {
-    tx: Sender<Vec<u8>>,
+impl Capturer {
+    pub fn new(tx: Sender<frame::YUVFrame>) -> Self {
+        Capturer { tx }
+    }
 }
 
 impl StreamOutput for Capturer {
@@ -42,9 +42,11 @@ impl StreamOutput for Capturer {
 
                 match frame_status {
                     SCFrameStatus::Complete => {
-                        let ptr = sample.ptr;
-                        let buffer = ptr.get_image_buffer().get_raw() as CVPixelBufferRef;
-                        let (_width, _height, data) = unsafe { temp::get_data_from_buffer(buffer) };
+                        unsafe {
+                            if let Some(yuvframe) = frame::create_yuv_frame(sample) {
+                                self.tx.send(yuvframe).unwrap_or(());
+                            }
+                        }
 
                         // FOR TESTING ONLY
 
@@ -60,7 +62,6 @@ impl StreamOutput for Capturer {
                         // img.save(folder).expect("Failed to save image");
 
                         // Send frame buffer to parent
-                        self.tx.send(data).expect("Failed to send data");
                     }
                     _ => {}
                 }
@@ -70,13 +71,13 @@ impl StreamOutput for Capturer {
     }
 }
 
-pub fn create_recorder(options: &Options, tx: Sender<Vec<u8>>) -> SCStream {
+pub fn create_recorder(options: &Options) -> SCStream {
     println!("Options: {:?}", options);
 
-    let display = temp::get_main_display();
+    let display = display::get_main_display();
     let display_id = display.display_id;
 
-    let scale = get_scale_factor(display_id) as u32;
+    let scale = display::get_scale_factor(display_id) as u32;
     let width = display.width * scale;
     let height = display.height * scale;
 
@@ -90,8 +91,7 @@ pub fn create_recorder(options: &Options, tx: Sender<Vec<u8>>) -> SCStream {
         ..Default::default()
     };
 
-    let mut stream = SCStream::new(filter, stream_config, ErrorHandler);
-    stream.add_output(Capturer { tx });
+    let stream = SCStream::new(filter, stream_config, ErrorHandler);
 
     stream
 }

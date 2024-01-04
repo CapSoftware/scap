@@ -33,6 +33,7 @@ fn main() {
         show_cursor: true,
         show_highlight: true,
         excluded_targets: None,
+        output_filename: "test/vid.mp4".to_string(),
     };
 
     // #5 Create Recorder
