@@ -11,7 +11,7 @@ mod mac;
 #[cfg(target_os = "windows")]
 mod win;
 
-use std::{time::Duration, fs::File};
+use std::{time::Duration, fs::File, thread, sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}};
 
 use ac_ffmpeg::{format::muxer::Muxer, time::{Timestamp, TimeBase}};
 use encoder::Encoder;
@@ -54,8 +54,8 @@ pub struct Options {
 }
 
 pub struct Recorder {
-    encoder: Encoder,
-    file_output_muxer: Muxer<File>,
+    encoder: Arc<Mutex<Encoder>>,
+    file_output_muxer: Arc<Mutex<Muxer<File>>>,
     audio_recorder: audio::AudioRecorder,
     options: Options,
 
@@ -65,7 +65,11 @@ pub struct Recorder {
 
     #[cfg(target_os = "windows")]
     recorder: Option<windows_capture::capture::CaptureControl>,
+
+    is_recording: Arc<AtomicBool>, // TODO: Use a better mechanism
 }
+
+unsafe impl Send for Recorder {}
 
 impl Recorder {
     pub fn init(options: Options) -> Self {
@@ -95,11 +99,12 @@ impl Recorder {
         let recorder = None;
 
         Recorder {
-            encoder,
-            file_output_muxer,
+            encoder: Arc::new(Mutex::new(encoder)),
+            file_output_muxer: Arc::new(Mutex::new(file_output_muxer)),
             audio_recorder,
             recorder,
             options,
+            is_recording: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -121,22 +126,28 @@ impl Recorder {
             self.recorder = Some(recorder);
         }
 
-        let duration = Duration::from_secs_f32(20.0);
-        let time_base = TimeBase::new(1, 25);
-        let mut frame_idx = 0;
-        let mut frame_timestamp = Timestamp::new(frame_idx, time_base);
-        let max_timestamp = Timestamp::from_millis(0) + duration;
-        while frame_timestamp < max_timestamp {
-            let frame = rx.recv().unwrap();
-            self.encoder
-                    .encode_and_save_to_file(FrameData::NV12(&frame), frame_timestamp, &mut self.file_output_muxer)
+        self.is_recording = Arc::new(AtomicBool::new(true));
+        let encoder = self.encoder.clone();
+        let file_output_muxer = self.file_output_muxer.clone();
+        let is_recording = self.is_recording.clone();
+
+        thread::spawn(move || {
+            let time_base = TimeBase::new(1, 25);
+            let mut frame_idx = 0;
+            let mut frame_timestamp = Timestamp::new(frame_idx, time_base);
+            while is_recording.load(Ordering::Relaxed) {
+                let frame = rx.recv().unwrap();
+                encoder.lock().unwrap()
+                    .encode_and_save_to_file(FrameData::NV12(&frame), frame_timestamp, &mut file_output_muxer.lock().unwrap())
                     .unwrap();
-            frame_idx += 1;
-            frame_timestamp = Timestamp::new(frame_idx, time_base);
-        }
+                frame_idx += 1;
+                frame_timestamp = Timestamp::new(frame_idx, time_base);
+            }
+        });
     }
 
     pub fn stop_capture(&mut self) {
+        self.is_recording.store(false, Ordering::Relaxed);
         self.audio_recorder.stop_recording();
 
         #[cfg(target_os = "macos")]
@@ -148,12 +159,12 @@ impl Recorder {
             recorder.stop().unwrap();
         }
 
-        self.encoder.flush().unwrap();
-        while let Some(packet) = self.encoder.take().unwrap() {
-            self.file_output_muxer.push(packet.with_stream_index(0)).unwrap();
+        self.encoder.lock().unwrap().flush().unwrap();
+        while let Some(packet) = self.encoder.lock().unwrap().take().unwrap() {
+            self.file_output_muxer.lock().unwrap().push(packet.with_stream_index(0)).unwrap();
         }
 
-        self.file_output_muxer.flush().unwrap();
+        self.file_output_muxer.lock().unwrap().flush().unwrap();
     }
 }
 
