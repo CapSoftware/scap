@@ -16,6 +16,10 @@ categories = ["graphics", "multimedia", "multimedia::video"]
 cpal = "0.15.2"
 hound = "3.5.1"
 sysinfo = "0.30.0"
+ac-ffmpeg = "0.18.1"
+bytes = "1.5.0"
+itertools = "0.12.0"
+anyhow = "1.0.78"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-capture = "1.0.26"
@@ -28,3 +32,4 @@ windows = { version = "0.51", features = [
 tao-core-video-sys = "0.2.0"
 core-graphics = "0.23.1"
 screencapturekit = { git = "https://github.com/clearlysid/screencapturekit-rs.git", rev = "56a6708", version = "*" }
+apple-sys = { version = "0.2.0", features = ["AVFAudio", "CoreMedia", "ScreenCaptureKit"] }
