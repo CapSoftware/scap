@@ -1,66 +1,33 @@
-use std::error::Error;
 use std::sync::mpsc::Sender;
-use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, HMONITOR, MONITORINFOEXW};
 use windows_capture::{
     capture::{CaptureControl, WindowsCaptureHandler},
     frame::Frame,
     graphics_capture_api::{GraphicsCaptureApi, InternalCaptureControl},
     monitor::Monitor,
-    settings::{ColorFormat, WindowsCaptureSettings},
+    settings::{ColorFormat, Settings},
     window::Window,
 };
 
-use crate::{Options, Target, TargetKind};
+use crate::{utils, Options, Target, TargetKind};
 
-struct Capturer {
-    tx: Sender<Vec<u8>>,
-}
-
-// IMPROVE: get user-friendly monitor name
-fn get_monitor_name(h_monitor: HMONITOR) -> windows::core::Result<String> {
-    let mut monitor_info = MONITORINFOEXW::default();
-    monitor_info.monitorInfo.cbSize = std::mem::size_of::<MONITORINFOEXW>() as u32;
-
-    let success =
-        unsafe { GetMonitorInfoW(h_monitor, &mut monitor_info as *mut _ as *mut _).as_bool() };
-
-    if success {
-        let len = monitor_info
-            .szDevice
-            .iter()
-            .position(|&i| i == 0)
-            .unwrap_or(0);
-        let name = String::from_utf16(&monitor_info.szDevice[..len]).unwrap();
-
-        let clean_name = match name.rfind('\\') {
-            Some(index) => name.chars().skip(index + 1).collect(),
-            None => name.to_string(),
-        };
-
-        Ok(clean_name)
-    } else {
-        Err(windows::core::Error::new(
-            windows::core::HRESULT(0),
-            "Failed to get monitor info".into(),
-        ))
-    }
+pub struct Capturer {
+    tx: Sender<Vec<u8>>, // Not a good idea to copy the entire buffer
 }
 
 impl WindowsCaptureHandler for Capturer {
-    type Flags = String;
+    type Flags = Sender<Vec<u8>>;
+    type Error = anyhow::Error;
 
-    fn new(message: Self::Flags) -> Result<Self, Box<dyn Error + Send + Sync>> {
-        println!("Got The Message: {message}");
-
+    fn new(tx: Self::Flags) -> Result<Self, Self::Error> {
         // TODO: get tx from parent here
         Ok(Self { tx })
     }
 
     fn on_frame_arrived(
         &mut self,
-        mut frame: Frame,
+        frame: &mut Frame,
         _: InternalCaptureControl,
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    ) -> Result<(), Self::Error> {
         let buffer = frame.buffer();
 
         // FOR TESTING ONLY
@@ -75,12 +42,17 @@ impl WindowsCaptureHandler for Capturer {
         // frame.save_as_image(&filename).unwrap();
 
         // Send frame buffer to parent
-        self.tx.send(data).expect("Failed to send data");
+        let mut data = frame.buffer()?;
+        let data = data.as_raw_buffer();
+        // let data = data.as_raw_nopadding_buffer()?; // Or without padding?
+
+        self.tx.send(data.to_vec()).expect("Failed to send data"); // still not a good idea to copy the entire buffer
         Ok(())
     }
 
-    fn on_closed(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
+    fn on_closed(&mut self) -> Result<(), Self::Error> {
         println!("Closed");
+
         Ok(())
     }
 }
@@ -92,19 +64,21 @@ fn remove_null_character(input: &str) -> String {
     }
 }
 
-pub fn create_recorder(options: &Options, tx: Sender<Vec<u8>>) -> CaptureControl {
-    let settings = WindowsCaptureSettings::new(
+pub fn create_recorder(
+    options: &Options,
+    tx: Sender<Vec<u8>>,
+) -> utils::Result<CaptureControl<Capturer, anyhow::Error>> {
+    let settings = Settings::new(
         Monitor::primary().unwrap(),
         Some(true),
         Some(false),
         ColorFormat::Rgba8,
-        "It Works".to_string(),
-    )
-    .unwrap();
+        tx,
+    )?;
 
-    let stream = Recorder::start_free_threaded(settings);
+    let capture_control = Capturer::start_free_threaded(settings)?;
 
-    stream
+    Ok(capture_control)
 }
 
 pub fn is_supported() -> bool {
@@ -113,6 +87,7 @@ pub fn is_supported() -> bool {
 
 pub fn has_permission() -> bool {
     // TODO: add correct permission mechanism here
+    // Its a win32 app, so it should be fine
     true
 }
 
@@ -123,7 +98,7 @@ pub fn get_targets() -> Vec<Target> {
 
     for display in displays {
         let id = display;
-        let title = get_monitor_name(display).unwrap();
+        let title = display.device_string().unwrap_or(String::from("Unknown"));
 
         let target = Target {
             id: 2,

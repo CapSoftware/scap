@@ -1,29 +1,50 @@
-mod encoder;
 mod audio;
-mod utils;
-mod output;
-mod frame;
 mod device;
-
+mod encoder;
+#[cfg(target_os = "macos")]
+mod frame;
 #[cfg(target_os = "macos")]
 mod mac;
+mod output;
+mod utils;
+pub struct YUVFrame {
+    pub display_time: u64,
+    pub width: i32,
+    pub height: i32,
+    pub luminance_bytes: Vec<u8>,
+    pub luminance_stride: i32,
+    pub chrominance_bytes: Vec<u8>,
+    pub chrominance_stride: i32,
+}
+
+pub enum FrameData<'a> {
+    NV12(&'a YUVFrame),
+    BGR0(&'a [u8]),
+}
 
 #[cfg(target_os = "windows")]
 mod win;
 
-use std::{time::Duration, fs::File, thread, sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}};
-
-use ac_ffmpeg::{format::muxer::Muxer, time::{Timestamp, TimeBase}};
-use encoder::Encoder;
-use crate::{
-    output::open_output,
-    frame::{
-        YUVFrame,
-        FrameData
+use std::{
+    fs::File,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
     },
-    encoder::config::{libx264, InputConfig},
-    device::display, mac::Capturer
+    thread,
 };
+
+use crate::{
+    device::display,
+    encoder::config::{libx264, InputConfig},
+    output::open_output,
+};
+use ac_ffmpeg::{
+    format::muxer::Muxer,
+    time::{TimeBase, Timestamp},
+};
+use encoder::Encoder;
+use win::Capturer;
 
 #[derive(Debug)]
 pub enum TargetKind {
@@ -64,7 +85,7 @@ pub struct Recorder {
     recorder: screencapturekit::sc_stream::SCStream,
 
     #[cfg(target_os = "windows")]
-    recorder: Option<windows_capture::capture::CaptureControl>,
+    recorder: Option<windows_capture::capture::CaptureControl<Capturer, anyhow::Error>>,
 
     is_recording: Arc<AtomicBool>, // TODO: Use a better mechanism
 }
@@ -82,15 +103,17 @@ impl Recorder {
 
         let config = libx264();
         let encoder = Encoder::new(
-            &InputConfig{ width: width as usize, height: height as usize },
-            &config
+            &InputConfig {
+                width: width as usize,
+                height: height as usize,
+            },
+            &config,
         );
 
         let codec_parameters = encoder.codec_parameters();
         let file_output_muxer = open_output(&options.output_filename, &[codec_parameters]).unwrap();
 
         let audio_recorder = audio::AudioRecorder::new();
-
 
         #[cfg(target_os = "macos")]
         let recorder = mac::create_recorder(&options);
@@ -122,7 +145,8 @@ impl Recorder {
 
         #[cfg(target_os = "windows")]
         {
-            let recorder = win::create_recorder(&options, tx);
+            let (tx, rx) = std::sync::mpsc::channel::<Vec<u8>>();
+            let recorder = win::create_recorder(&self.options, tx).unwrap();
             self.recorder = Some(recorder);
         }
 
@@ -137,8 +161,14 @@ impl Recorder {
             let mut frame_timestamp = Timestamp::new(frame_idx, time_base);
             while is_recording.load(Ordering::Relaxed) {
                 let frame = rx.recv().unwrap();
-                encoder.lock().unwrap()
-                    .encode_and_save_to_file(FrameData::NV12(&frame), frame_timestamp, &mut file_output_muxer.lock().unwrap())
+                encoder
+                    .lock()
+                    .unwrap()
+                    .encode_and_save_to_file(
+                        FrameData::NV12(&frame),
+                        frame_timestamp,
+                        &mut file_output_muxer.lock().unwrap(),
+                    )
                     .unwrap();
                 frame_idx += 1;
                 frame_timestamp = Timestamp::new(frame_idx, time_base);
@@ -161,7 +191,11 @@ impl Recorder {
 
         self.encoder.lock().unwrap().flush().unwrap();
         while let Some(packet) = self.encoder.lock().unwrap().take().unwrap() {
-            self.file_output_muxer.lock().unwrap().push(packet.with_stream_index(0)).unwrap();
+            self.file_output_muxer
+                .lock()
+                .unwrap()
+                .push(packet.with_stream_index(0))
+                .unwrap();
         }
 
         self.file_output_muxer.lock().unwrap().flush().unwrap();
