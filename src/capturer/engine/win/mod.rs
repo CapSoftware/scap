@@ -8,7 +8,7 @@ use windows_capture::{
     frame::Frame as Wframe,
     graphics_capture_api::{GraphicsCaptureApi, InternalCaptureControl},
     monitor::Monitor,
-    settings::{ColorFormat, WindowsCaptureSettings},
+    settings::{ColorFormat, Settings},
     window::Window,
 };
 
@@ -23,30 +23,33 @@ impl Capturer {
 }
 
 pub struct WinStream {
-    settings: WindowsCaptureSettings<mpsc::Sender<Frame>>,
+    settings: Settings<mpsc::Sender<Frame>>,
 }
 
 impl WindowsCaptureHandler for Capturer {
     type Flags = mpsc::Sender<Frame>;
+    type Error = Box<dyn std::error::Error + Send + Sync>;
 
-    fn new(tx: Self::Flags) -> Result<Self, Box<dyn Error + Send + Sync>> {
+
+    fn new(tx: Self::Flags) -> Result<Self, Self::Error> {
 
         Ok(Self { tx })
     }
 
     fn on_frame_arrived(
         &mut self,
-        mut frame: Wframe,
+        mut frame: &mut Wframe,
         _: InternalCaptureControl,
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    ) -> Result<(), Self::Error> {
 
-        let frame_buffer= frame.buffer().unwrap().as_raw_buffer();
-        let frame_data = frame_buffer.to_vec();
+        let mut frame_buffer= frame.buffer().unwrap();
+        let raw_frame_buffer = frame_buffer.as_raw_buffer();
+        let frame_data = raw_frame_buffer.to_vec();
         self.tx.send(Frame::BGR0(frame_data)).expect("Failed to send data");
         Ok(())
     }
 
-    fn on_closed(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
+    fn on_closed(&mut self) -> Result<(), Self::Error> {
         println!("Closed");
         Ok(())
     }
@@ -61,10 +64,10 @@ impl WinStream {
 }
 
 pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream {
-    let settings = WindowsCaptureSettings::new(
+    let settings = Settings::new(
         Monitor::primary().unwrap(),
         Some(true),
-        Some(false),
+        None,
         ColorFormat::Rgba8,
         tx,
     )

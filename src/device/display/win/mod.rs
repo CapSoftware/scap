@@ -54,7 +54,7 @@ pub fn get_targets() -> Vec<Target> {
     for display in displays {
         let id = cnt;
         cnt = cnt + 1;
-        let title = get_monitor_name(display).unwrap();
+        let title = get_monitor_name(display.as_raw_hmonitor()).unwrap();
 
         let target = Target {
             id,
@@ -69,8 +69,6 @@ pub fn get_targets() -> Vec<Target> {
 
         let title = window
             .title()
-            .unwrap()
-            .strip_suffix('\0')
             .unwrap()
             .to_string();
 
