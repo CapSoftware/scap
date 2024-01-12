@@ -16,7 +16,6 @@ pub struct Options {
 }
 
 pub struct Capturer {
-    options: Options,
     engine: engine::Engine,
     rx: mpsc::Receiver<Frame>,
 }
@@ -26,7 +25,7 @@ impl Capturer {
         let (tx, rx) = mpsc::channel::<Frame>();
         let engine = engine::Engine::new(&options, tx);
 
-        Capturer { options, engine, rx }
+        Capturer { engine, rx }
     }
 
     // TODO

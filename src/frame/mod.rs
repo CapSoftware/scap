@@ -9,7 +9,8 @@ pub struct YUVFrame {
 }
 
 pub enum Frame {
-    YUVFrame(YUVFrame)
+    YUVFrame(YUVFrame),
+    BGR0(Vec<u8>),
 }
 
 pub enum FrameData<'a> {

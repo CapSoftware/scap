@@ -48,6 +48,9 @@ fn main() {
             Frame::YUVFrame(frame) => {
                 println!("{}", frame.display_time)
             }
+            Frame::BGR0(_) => {
+                println!("Recvd windows frame");
+            }
         }
     }
 

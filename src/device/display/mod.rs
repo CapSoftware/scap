@@ -1,4 +1,3 @@
-use screencapturekit::sc_display::SCDisplay;
 
 #[cfg(target_os = "macos")]
 mod mac;
@@ -10,11 +9,6 @@ mod win;
 pub struct Target {
     pub title: String,
     pub id: u32,
-}
-
-#[derive(Clone, Debug)]
-pub enum Display {
-    Mac(SCDisplay)
 }
 
 pub fn has_permission() -> bool {
@@ -41,15 +35,23 @@ pub fn get_targets() -> Vec<Target> {
     return win::get_targets();
 }
 
-pub fn get_main_display() -> Display {
-    #[cfg(target_os = "macos")]
-    {
-        let sc_display = mac::get_main_display();
-        return Display::Mac(sc_display);
-    }
-}
-
 pub fn get_scale_factor(display_id: u32) -> u64 {
     #[cfg(target_os = "macos")]
     return mac::get_scale_factor(display_id);
+
+    #[cfg(target_os = "windows")]
+    return 1;
+}
+
+#[cfg(target_os = "macos")]
+use screencapturekit::sc_display::SCDisplay;
+
+#[cfg(target_os = "macos")]
+pub fn get_main_display() -> SCDisplay {
+
+    #[cfg(target_os = "macos")]
+    {
+        let sc_display = mac::get_main_display();
+        return sc_display;
+    }
 }

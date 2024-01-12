@@ -14,7 +14,7 @@ pub struct Engine {
     mac: screencapturekit::sc_stream::SCStream,
 
     #[cfg(target_os = "windows")]
-    win: Option<windows_capture::capture::CaptureControl>,
+    win: win::WinStream,
 }
 
 impl Engine {
@@ -46,6 +46,9 @@ impl Engine {
     }
 
     pub fn stop(&self) {
-        self.mac.stop_capture();
+        #[cfg(target_os = "macos")]
+        {
+            self.mac.stop_capture();
+        }
     }
 }

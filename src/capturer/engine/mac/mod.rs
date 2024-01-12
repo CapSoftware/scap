@@ -1,10 +1,10 @@
 use std::sync::mpsc;
 use std::{mem, slice};
 
-use screencapturekit::{sc_stream::SCStream, sc_content_filter::{InitParams, SCContentFilter}, sc_display::SCDisplay, sc_stream_configuration::SCStreamConfiguration, sc_error_handler::StreamErrorHandler, sc_output_handler::{StreamOutput, CMSampleBuffer, SCStreamOutputType}, sc_sys::SCFrameStatus};
+use screencapturekit::{sc_stream::SCStream, sc_content_filter::{InitParams, SCContentFilter}, sc_stream_configuration::SCStreamConfiguration, sc_error_handler::StreamErrorHandler, sc_output_handler::{StreamOutput, CMSampleBuffer, SCStreamOutputType}, sc_sys::SCFrameStatus};
 
 use crate::frame::{Frame, YUVFrame};
-use crate::{capturer::Options, device::display::{self, Display}};
+use crate::{capturer::Options, device::display::{self}};
 use apple_sys::{CoreMedia::{CFDictionaryGetValue, CFDictionaryRef, CFTypeRef, CFNumberGetValue, CFNumberType_kCFNumberSInt64Type}, ScreenCaptureKit::{SCStreamFrameInfoStatus, SCFrameStatus_SCFrameStatusComplete}};
 use screencapturekit::sc_sys::{CMSampleBufferGetImageBuffer, CMSampleBufferGetSampleAttachmentsArray, };
 use core_graphics::display::{CFArrayGetCount, CFArrayGetValueAtIndex, CFArrayRef, };
@@ -52,7 +52,7 @@ impl StreamOutput for Capturer {
 pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     println!("Options: {:?}", options);
 
-    let Display::Mac(display) = display::get_main_display();
+    let display = display::get_main_display();
     let display_id = display.display_id;
 
     let scale = display::get_scale_factor(display_id) as u32;

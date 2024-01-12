@@ -50,8 +50,10 @@ pub fn get_targets() -> Vec<Target> {
 
     let displays = Monitor::enumerate().expect("Failed to enumerate monitors");
 
+    let mut cnt = 1;
     for display in displays {
-        let id = display;
+        let id = cnt;
+        cnt = cnt + 1;
         let title = get_monitor_name(display).unwrap();
 
         let target = Target {
