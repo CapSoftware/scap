@@ -1,7 +1,7 @@
-use scap::{Options, Recorder};
-
 // This program is just a testbed for the library itself
 // Refer to the lib.rs file for the actual implementation
+
+use scap::{capturer::{Options, Capturer}, frame::Frame};
 
 fn main() {
     // #1 Check if the platform is supported
@@ -33,18 +33,24 @@ fn main() {
         show_cursor: true,
         show_highlight: true,
         excluded_targets: None,
-        output_filename: "test/vid.mp4".to_string(),
     };
 
     // #5 Create Recorder
-    let mut recorder = Recorder::init(options);
+    let recorder = Capturer::new(options);
 
     // #6 Start Capture
     recorder.start_capture();
 
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input).unwrap();
+    // #7 Capture 100 frames
+    for _ in 0..100 {
+        let frame = recorder.get_next_frame().expect("Error");
+        match frame {
+            Frame::YUVFrame(frame) => {
+                println!("{}", frame.display_time)
+            }
+        }
+    }
 
-    // #7 Stop Capture
+    // #8 Stop Capture
     recorder.stop_capture();
 }
