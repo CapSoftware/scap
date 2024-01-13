@@ -30,7 +30,6 @@ impl Capturer {
 
     // TODO
     // Prevent starting capture if already started
-    // Tx,Rx should be of type frame
     pub fn start_capture(&self) {
 
         self.engine.start();
