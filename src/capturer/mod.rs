@@ -2,7 +2,7 @@ mod engine;
 
 use std::sync::mpsc;
 
-use crate::{device::display, frame::Frame};
+use crate::{device::display, frame::{Frame, FrameType}};
 
 #[derive(Debug)]
 pub struct Options {
@@ -13,6 +13,7 @@ pub struct Options {
 
     // excluded targets will only work on macOS
     pub excluded_targets: Option<Vec<display::Target>>,
+    pub output_type: FrameType,
 }
 
 pub struct Capturer {

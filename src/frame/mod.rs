@@ -8,9 +8,23 @@ pub struct YUVFrame {
     pub chrominance_stride: i32,
 }
 
+pub struct RGBFrame {
+    pub width: i32,
+    pub height: i32,
+    pub data: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum FrameType {
+    YUVFrame,
+    BGR0,
+    RGB,
+}
+
 pub enum Frame {
     YUVFrame(YUVFrame),
     BGR0(Vec<u8>),
+    RGB(RGBFrame),
 }
 
 pub enum FrameData<'a> {

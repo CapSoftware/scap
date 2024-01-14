@@ -33,6 +33,7 @@ fn main() {
         show_cursor: true,
         show_highlight: true,
         excluded_targets: None,
+        output_type: scap::frame::FrameType::RGB,
     };
 
     // #5 Create Recorder
@@ -50,6 +51,9 @@ fn main() {
             }
             Frame::BGR0(_) => {
                 println!("Recvd windows frame");
+            }
+            Frame::RGB(frame) => {
+                println!("Recieved frame of width {} and height {}", frame.width, frame.height);
             }
         }
     }
