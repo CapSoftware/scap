@@ -2,9 +2,11 @@ mod engine;
 
 use std::sync::mpsc;
 
+use screencapturekit::sc_sys::geometry::CGRect;
+
 use crate::{device::display, frame::{Frame, FrameType}};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Options {
     pub fps: u32,
     pub show_cursor: bool,
@@ -14,6 +16,7 @@ pub struct Options {
     // excluded targets will only work on macOS
     pub excluded_targets: Option<Vec<display::Target>>,
     pub output_type: FrameType,
+    pub source_rect: Option<CGRect>
 }
 
 pub struct Capturer {

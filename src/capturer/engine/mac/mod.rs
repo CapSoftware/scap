@@ -75,10 +75,13 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     let params = InitParams::Display(display);
     let filter = SCContentFilter::new(params);
 
+    let source_rect = options.source_rect.unwrap_or_default();
+
     let stream_config = SCStreamConfiguration {
         shows_cursor: true,
         width,
         height,
+        source_rect,
         ..Default::default()
     };
 

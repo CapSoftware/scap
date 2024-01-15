@@ -14,8 +14,9 @@ pub struct RGBFrame {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum FrameType {
+    #[default]
     YUVFrame,
     BGR0,
     RGB,
