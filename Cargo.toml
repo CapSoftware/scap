@@ -31,3 +31,8 @@ tao-core-video-sys = "0.2.0"
 core-graphics = "0.23.1"
 screencapturekit = { git = "https://github.com/clearlysid/screencapturekit-rs.git", rev = "56a6708", version = "*" }
 apple-sys = { version = "0.2.0", features = ["CoreMedia", "ScreenCaptureKit"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+pipewire = "0.7.2"
+ashpd =  "0.6.8"
+async-std = "1.12.0"

@@ -26,6 +26,7 @@ pub enum Frame {
     YUVFrame(YUVFrame),
     BGR0(Vec<u8>),
     RGB(RGBFrame),
+    RGBx(Vec<u8>)
 }
 
 pub enum FrameData<'a> {

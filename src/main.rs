@@ -2,6 +2,7 @@
 // Refer to the lib.rs file for the actual implementation
 
 use scap::{capturer::{Options, Capturer}, frame::Frame};
+#[cfg(target_os = "macos")]
 use screencapturekit::sc_sys::geometry::{CGRect, CGPoint, CGSize};
 
 fn main() {
@@ -35,6 +36,7 @@ fn main() {
         show_highlight: true,
         excluded_targets: None,
         output_type: scap::frame::FrameType::YUVFrame,
+        #[cfg(target_os = "macos")]
         source_rect: Some(CGRect {
             origin: CGPoint { x: 0.0, y: 0.0 },
             size: CGSize { width: 100.0, height: 100.0 }
@@ -43,7 +45,7 @@ fn main() {
     };
 
     // #5 Create Recorder
-    let recorder = Capturer::new(options);
+    let mut recorder = Capturer::new(options);
 
     // #6 Start Capture
     recorder.start_capture();
@@ -60,6 +62,9 @@ fn main() {
             }
             Frame::RGB(frame) => {
                 println!("Recieved frame of width {} and height {}", frame.width, frame.height);
+            }
+            Frame::RGBx(_) => {
+                println!("Received RGBx frame");
             }
         }
     }

@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 
-use crate::frame::Frame;
 use super::Options;
+use crate::frame::Frame;
 
 #[cfg(target_os = "macos")]
 mod mac;
@@ -9,12 +9,18 @@ mod mac;
 #[cfg(target_os = "windows")]
 mod win;
 
+#[cfg(target_os = "linux")]
+mod linux;
+
 pub struct Engine {
     #[cfg(target_os = "macos")]
     mac: screencapturekit::sc_stream::SCStream,
 
     #[cfg(target_os = "windows")]
     win: win::WinStream,
+
+    #[cfg(target_os = "linux")]
+    linux: linux::LinuxCapturer,
 }
 
 impl Engine {
@@ -22,13 +28,19 @@ impl Engine {
         #[cfg(target_os = "macos")]
         {
             let mac = mac::create_capturer(&options, tx);
-            return Engine { mac }
+            return Engine { mac };
         }
 
         #[cfg(target_os = "windows")]
         {
             let win = win::create_capturer(&options, tx);
-            return Engine { win }
+            return Engine { win };
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            let linux = linux::create_capturer(&options, tx);
+            return Engine { linux };
         }
     }
 
@@ -43,12 +55,22 @@ impl Engine {
         {
             self.win.start_capture();
         }
+
+        #[cfg(target_os = "linux")]
+        {
+            self.linux.start_capture();
+        }
     }
 
-    pub fn stop(&self) {
+    pub fn stop(&mut self) {
         #[cfg(target_os = "macos")]
         {
             self.mac.stop_capture();
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            self.linux.stop_capture();
         }
     }
 }
