@@ -13,6 +13,9 @@ use pw::spa::format::MediaSubtype;
 use pw::spa::format::MediaType;
 use pw::spa::param::video::VideoFormat;
 use pw::spa::Direction;
+use pw::spa::pod::Pod;
+use pw::stream::StreamRef;
+use pw::stream::StreamState;
 
 use crate::{capturer::Options, frame::Frame};
 
@@ -26,6 +29,76 @@ static CAPTURER_STATE: AtomicU8 = AtomicU8::new(0);
 struct ListenerUserData {
     pub tx: mpsc::Sender<Frame>,
     pub format: spa::param::video::VideoInfoRaw,
+}
+
+fn param_changed_callback(_stream: &StreamRef,  id: u32, user_data: &mut ListenerUserData, param: Option<&Pod>) {
+    let Some(param) = param else {
+        return;
+    };
+    if id != pw::spa::param::ParamType::Format.as_raw() {
+        return;
+    }
+    let (media_type, media_subtype) =
+        match pw::spa::param::format_utils::parse_format(param) {
+            Ok(v) => v,
+            Err(_) => return,
+        };
+
+    if media_type != MediaType::Video || media_subtype != MediaSubtype::Raw {
+        return;
+    }
+
+    user_data
+        .format
+        .parse(param)
+        .expect("Failed to parse parameter");
+
+    println!("Got video format:");
+    println!(
+        "  format: {} ({:?})",
+        user_data.format.format().as_raw(),
+        user_data.format.format()
+    );
+    println!(
+        "  size: {}x{}",
+        user_data.format.size().width,
+        user_data.format.size().height
+    );
+    println!(
+        "  framerate: {}/{}",
+        user_data.format.framerate().num,
+        user_data.format.framerate().denom
+    );
+}
+
+fn state_changed_callback(old: StreamState, new: StreamState) {
+    println!(
+        "linux::pipewire::stream: State changed: {:?} -> {:?}",
+        old, new
+    );
+}
+
+fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
+    match stream.dequeue_buffer() {
+        None => println!("Out of buffers"),
+        Some(mut buffer) => {
+            let datas = buffer.datas_mut();
+            if datas.is_empty() {
+                return;
+            }
+
+            if let Some(frame_data) = (&mut datas[0]).data() {
+                match user_data.format.format() {
+                    VideoFormat::RGBx => {
+                        if let Err(e) = user_data.tx.send(Frame::RGBx(frame_data.to_vec())) {
+                            println!("{e}");
+                        }
+                    }
+                    _ => panic!("Unsupported frame format received"),
+                }
+            }
+        }
+    }
 }
 
 fn pipewire_capturer(
@@ -58,71 +131,9 @@ fn pipewire_capturer(
 
     let _listener = stream
         .add_local_listener_with_user_data(user_data.clone())
-        .state_changed(|old, new| {
-            println!(
-                "linux::pipewire::stream: State changed: {:?} -> {:?}",
-                old, new
-            );
-        })
-        .param_changed(|_, id, user_data: &mut ListenerUserData, param| {
-            let Some(param) = param else {
-                return;
-            };
-            if id != pw::spa::param::ParamType::Format.as_raw() {
-                return;
-            }
-            let (media_type, media_subtype) =
-                match pw::spa::param::format_utils::parse_format(param) {
-                    Ok(v) => v,
-                    Err(_) => return,
-                };
-
-            if media_type != MediaType::Video || media_subtype != MediaSubtype::Raw {
-                return;
-            }
-
-            user_data
-                .format
-                .parse(param)
-                .expect("Failed to parse parameter");
-
-            println!("Got video format:");
-            println!(
-                "  format: {} ({:?})",
-                user_data.format.format().as_raw(),
-                user_data.format.format()
-            );
-            println!(
-                "  size: {}x{}",
-                user_data.format.size().width,
-                user_data.format.size().height
-            );
-            println!(
-                "  framerate: {}/{}",
-                user_data.format.framerate().num,
-                user_data.format.framerate().denom
-            );
-        })
-        .process(|stream, user_data| match stream.dequeue_buffer() {
-            None => println!("Out of buffers"),
-            Some(mut buffer) => {
-                let datas = buffer.datas_mut();
-                if datas.is_empty() {
-                    return;
-                }
-
-                if let Some(frame_data) = (&mut datas[0]).data() {
-                    match user_data.format.format() {
-                        VideoFormat::RGBx => {
-                            if let Err(e) = user_data.tx.send(Frame::RGBx(frame_data.to_vec())) {
-                                println!("{e}");
-                            }
-                        }
-                        _ => panic!("Unsupported frame format received"),
-                    }
-                }
-            }
-        })
+        .state_changed(state_changed_callback)
+        .param_changed(param_changed_callback)
+        .process(process_callback)
         .register()?;
 
     let obj = pw::spa::pod::object!(
@@ -168,7 +179,7 @@ fn pipewire_capturer(
             Choice,
             Range,
             Fraction,
-            pw::spa::utils::Fraction { num: 25, denom: 1 },
+            pw::spa::utils::Fraction { num: options.fps, denom: 1 },
             pw::spa::utils::Fraction { num: 0, denom: 1 },
             pw::spa::utils::Fraction {
                 num: 1000,
