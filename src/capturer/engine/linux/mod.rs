@@ -1,5 +1,7 @@
 use std::sync::atomic::AtomicU8;
 use std::sync::mpsc;
+use std::sync::mpsc::SyncSender;
+use std::sync::mpsc::sync_channel;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
@@ -26,7 +28,7 @@ struct ListenerUserData {
     pub format: spa::param::video::VideoInfoRaw,
 }
 
-fn pipewire_capturer(options: Options, tx: mpsc::Sender<Frame>) -> Result<(), LinCapError> {
+fn pipewire_capturer(options: Options, tx: mpsc::Sender<Frame>, ready_sender: &SyncSender<bool>) -> Result<(), LinCapError> {
     assert!(!options.targets.is_empty());
 
     pw::init();
@@ -191,6 +193,8 @@ fn pipewire_capturer(options: Options, tx: mpsc::Sender<Frame>) -> Result<(), Li
             &mut params,
         )?;
 
+    ready_sender.send(true)?;
+
     while CAPTURER_STATE.load(std::sync::atomic::Ordering::Relaxed) == 0 {
         std::thread::sleep(Duration::from_millis(10));
     }
@@ -204,7 +208,7 @@ fn pipewire_capturer(options: Options, tx: mpsc::Sender<Frame>) -> Result<(), Li
 }
 
 pub struct LinuxCapturer {
-    capturer_join_handle: Option<JoinHandle<()>>,
+    capturer_join_handle: Option<JoinHandle<Result<(), LinCapError>>>,
 }
 
 impl LinuxCapturer {
@@ -219,9 +223,18 @@ impl LinuxCapturer {
             targets: options.targets.clone(),
             excluded_targets: None,
         };
+        let (ready_sender, ready_recv) = sync_channel(1);
         let capturer_join_handle = std::thread::spawn(move || {
-            pipewire_capturer(options, tx);
+            let res = pipewire_capturer(options, tx, &ready_sender);
+            if res.is_err() {
+                ready_sender.send(false)?;
+            }
+            res
         });
+
+        if !ready_recv.recv().expect("Failed to receive") {
+            panic!("Failed to setup capturer");
+        }
 
         Self {
             capturer_join_handle: Some(capturer_join_handle),
@@ -235,7 +248,9 @@ impl LinuxCapturer {
     pub fn stop_capture(&mut self) {
         CAPTURER_STATE.store(2, std::sync::atomic::Ordering::Relaxed);
         if let Some(handle) = self.capturer_join_handle.take() {
-            handle.join().expect("Failed to join capturer thread");
+            if let Err(e) = handle.join().expect("Failed to join capturer thread") {
+                eprintln!("Error occured capturing: {e}");
+            }
         }
     }
 }

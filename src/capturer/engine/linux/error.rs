@@ -27,3 +27,9 @@ impl From<pipewire::Error> for LinCapError {
         Self::new(e.to_string())
     }
 }
+
+impl From<std::sync::mpsc::SendError<bool>> for LinCapError {
+    fn from(e: std::sync::mpsc::SendError<bool>) -> Self {
+        Self::new(e.to_string())
+    }
+}
