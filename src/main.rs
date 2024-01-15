@@ -2,6 +2,7 @@
 // Refer to the lib.rs file for the actual implementation
 
 use scap::{capturer::{Options, Capturer}, frame::Frame};
+use screencapturekit::sc_sys::geometry::{CGRect, CGPoint, CGSize};
 
 fn main() {
     // #1 Check if the platform is supported
@@ -33,7 +34,12 @@ fn main() {
         show_cursor: true,
         show_highlight: true,
         excluded_targets: None,
-        output_type: scap::frame::FrameType::RGB,
+        output_type: scap::frame::FrameType::YUVFrame,
+        source_rect: Some(CGRect {
+            origin: CGPoint { x: 0.0, y: 0.0 },
+            size: CGSize { width: 100.0, height: 100.0 }
+        }),
+        ..Default::default()
     };
 
     // #5 Create Recorder
