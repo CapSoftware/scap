@@ -1,7 +1,7 @@
 use std::sync::atomic::AtomicU8;
 use std::sync::mpsc;
-use std::sync::mpsc::SyncSender;
 use std::sync::mpsc::sync_channel;
+use std::sync::mpsc::SyncSender;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
@@ -11,8 +11,8 @@ use pw::spa;
 use pw::spa::format::FormatProperties;
 use pw::spa::format::MediaSubtype;
 use pw::spa::format::MediaType;
-use pw::spa::Direction;
 use pw::spa::param::video::VideoFormat;
+use pw::spa::Direction;
 
 use crate::{capturer::Options, frame::Frame};
 
@@ -28,7 +28,11 @@ struct ListenerUserData {
     pub format: spa::param::video::VideoInfoRaw,
 }
 
-fn pipewire_capturer(options: Options, tx: mpsc::Sender<Frame>, ready_sender: &SyncSender<bool>) -> Result<(), LinCapError> {
+fn pipewire_capturer(
+    options: Options,
+    tx: mpsc::Sender<Frame>,
+    ready_sender: &SyncSender<bool>,
+) -> Result<(), LinCapError> {
     assert!(!options.targets.is_empty());
 
     pw::init();
@@ -117,7 +121,6 @@ fn pipewire_capturer(options: Options, tx: mpsc::Sender<Frame>, ready_sender: &S
                         _ => panic!("Unsupported frame format received"),
                     }
                 }
-
             }
         })
         .register()?;
@@ -185,13 +188,12 @@ fn pipewire_capturer(options: Options, tx: mpsc::Sender<Frame>, ready_sender: &S
 
     let mut params = [pw::spa::pod::Pod::from_bytes(&values).unwrap()];
 
-    stream
-        .connect(
-            Direction::Input,
-            Some(options.targets[0].id),
-            pw::stream::StreamFlags::AUTOCONNECT | pw::stream::StreamFlags::MAP_BUFFERS,
-            &mut params,
-        )?;
+    stream.connect(
+        Direction::Input,
+        Some(options.targets[0].id),
+        pw::stream::StreamFlags::AUTOCONNECT | pw::stream::StreamFlags::MAP_BUFFERS,
+        &mut params,
+    )?;
 
     ready_sender.send(true)?;
 
