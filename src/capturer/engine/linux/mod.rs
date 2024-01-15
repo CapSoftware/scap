@@ -14,6 +14,10 @@ use pw::spa::param::video::VideoFormat;
 
 use crate::{capturer::Options, frame::Frame};
 
+use self::error::LinCapError;
+
+mod error;
+
 static CAPTURER_STATE: AtomicU8 = AtomicU8::new(0);
 
 #[derive(Clone)]
@@ -22,14 +26,14 @@ struct ListenerUserData {
     pub format: spa::param::video::VideoInfoRaw,
 }
 
-fn pipewire_capturer(options: Options, tx: mpsc::Sender<Frame>) {
+fn pipewire_capturer(options: Options, tx: mpsc::Sender<Frame>) -> Result<(), LinCapError> {
     assert!(!options.targets.is_empty());
 
     pw::init();
 
-    let mainloop = pw::MainLoop::new().expect("Failed to create pw main loop");
-    let context = pw::Context::new(&mainloop).expect("Failed to create pw context");
-    let core = context.connect(None).expect("Failed to create pw core");
+    let mainloop = pw::MainLoop::new()?;
+    let context = pw::Context::new(&mainloop)?;
+    let core = context.connect(None)?;
 
     let user_data = ListenerUserData {
         tx,
@@ -44,8 +48,7 @@ fn pipewire_capturer(options: Options, tx: mpsc::Sender<Frame>) {
             *pw::keys::MEDIA_CATEGORY => "Capture",
             *pw::keys::MEDIA_ROLE => "Screen",
         },
-    )
-    .expect("Failed to create pw stream");
+    )?;
 
     let _listener = stream
         .add_local_listener_with_user_data(user_data.clone())
@@ -55,7 +58,7 @@ fn pipewire_capturer(options: Options, tx: mpsc::Sender<Frame>) {
                 old, new
             );
         })
-        .param_changed(|_, id, user_data, param| {
+        .param_changed(|_, id, user_data: &mut ListenerUserData, param| {
             let Some(param) = param else {
                 return;
             };
@@ -75,7 +78,7 @@ fn pipewire_capturer(options: Options, tx: mpsc::Sender<Frame>) {
             user_data
                 .format
                 .parse(param)
-                .expect("Failed to parse new format");
+                .expect("Failed to parse parameter");
 
             println!("Got video format:");
             println!(
@@ -115,8 +118,7 @@ fn pipewire_capturer(options: Options, tx: mpsc::Sender<Frame>) {
 
             }
         })
-        .register()
-        .expect("Failed to register pw event listeners");
+        .register()?;
 
     let obj = pw::spa::pod::object!(
         pw::spa::utils::SpaTypes::ObjectParamFormat,
@@ -187,8 +189,7 @@ fn pipewire_capturer(options: Options, tx: mpsc::Sender<Frame>) {
             Some(options.targets[0].id),
             pw::stream::StreamFlags::AUTOCONNECT | pw::stream::StreamFlags::MAP_BUFFERS,
             &mut params,
-        )
-        .expect("Failed to connect to pw stream");
+        )?;
 
     while CAPTURER_STATE.load(std::sync::atomic::Ordering::Relaxed) == 0 {
         std::thread::sleep(Duration::from_millis(10));
@@ -198,6 +199,8 @@ fn pipewire_capturer(options: Options, tx: mpsc::Sender<Frame>) {
     while CAPTURER_STATE.load(std::sync::atomic::Ordering::Relaxed) == 1 {
         mainloop.iterate(Duration::from_millis(100));
     }
+
+    Ok(())
 }
 
 pub struct LinuxCapturer {
