@@ -136,7 +136,6 @@ fn pipewire_capturer(
             Enum,
             Id,
             pw::spa::param::video::VideoFormat::RGB,
-            pw::spa::param::video::VideoFormat::RGB,
             pw::spa::param::video::VideoFormat::RGBA,
             pw::spa::param::video::VideoFormat::RGBx,
             pw::spa::param::video::VideoFormat::BGRx,
