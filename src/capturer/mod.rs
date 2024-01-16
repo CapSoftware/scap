@@ -3,8 +3,8 @@ mod engine;
 use std::sync::mpsc;
 
 use crate::{device::display, frame::{Frame, FrameType}};
-#[derive(Debug, Default, Clone)]
 
+#[derive(Debug, Default, Clone)]
 pub struct CGPoint {
     pub x: f64,
     pub y: f64,
