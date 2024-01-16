@@ -734,12 +734,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "objc-encode"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a34fdd0d389ac7d4a94d1afeb9e2acc8d74ecf6d730519dd1a8625e8e1ed822"
-
-[[package]]
 name = "objc-foundation"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1013,6 +1007,7 @@ dependencies = [
  "hound",
  "itertools",
  "screencapturekit",
+ "screencapturekit-sys",
  "sysinfo",
  "tao-core-video-sys",
  "windows 0.52.0",
@@ -1027,21 +1022,22 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "screencapturekit"
-version = "0.1.0"
-source = "git+https://github.com/clearlysid/screencapturekit-rs.git?rev=56a6708#56a670827eae874b79faf561984b225e7b4d5620"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61556af744e5bb01b041849376c14af60fd3ae7e5bdadc81af5dfd724a8c695d"
 dependencies = [
  "screencapturekit-sys",
 ]
 
 [[package]]
 name = "screencapturekit-sys"
-version = "0.1.0"
-source = "git+https://github.com/clearlysid/screencapturekit-rs.git?rev=56a6708#56a670827eae874b79faf561984b225e7b4d5620"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "515c440d672c709bc8c7a4b24011266a6577f9eb77617149db36402c824a48c3"
 dependencies = [
  "block",
  "dispatch",
  "objc",
- "objc-encode",
  "objc-foundation",
  "objc_id",
  "once_cell",

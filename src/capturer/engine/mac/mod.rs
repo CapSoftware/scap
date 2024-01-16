@@ -1,13 +1,16 @@
 use std::sync::mpsc;
 use std::{mem, slice};
 
-use screencapturekit::sc_sys::geometry::{CGSize, CGRect, CGPoint};
-use screencapturekit::{sc_stream::SCStream, sc_content_filter::{InitParams, SCContentFilter}, sc_stream_configuration::SCStreamConfiguration, sc_error_handler::StreamErrorHandler, sc_output_handler::{StreamOutput, CMSampleBuffer, SCStreamOutputType}, sc_sys::SCFrameStatus};
+use screencapturekit::cm_sample_buffer::CMSampleBuffer;
+use screencapturekit_sys::cm_sample_buffer_ref::{CMSampleBufferGetSampleAttachmentsArray, CMSampleBufferGetImageBuffer};
+use screencapturekit::sc_output_handler::SCStreamOutputType;
+use screencapturekit::{sc_stream::SCStream, sc_content_filter::{InitParams, SCContentFilter}, sc_stream_configuration::SCStreamConfiguration, sc_error_handler::StreamErrorHandler, sc_output_handler::StreamOutput};
+use screencapturekit_sys::os_types::geometry::{CGRect, CGPoint, CGSize};
+use screencapturekit_sys::sc_stream_frame_info::SCFrameStatus;
 
 use crate::frame::{Frame, YUVFrame, FrameType, RGBFrame};
 use crate::{capturer::Options, device::display::{self}};
 use apple_sys::{CoreMedia::{CFDictionaryGetValue, CFDictionaryRef, CFTypeRef, CFNumberGetValue, CFNumberType_kCFNumberSInt64Type}, ScreenCaptureKit::{SCStreamFrameInfoStatus, SCFrameStatus_SCFrameStatusComplete}};
-use screencapturekit::sc_sys::{CMSampleBufferGetImageBuffer, CMSampleBufferGetSampleAttachmentsArray, };
 use core_graphics::display::{CFArrayGetCount, CFArrayGetValueAtIndex, CFArrayRef, };
 use core_video_sys::{CVPixelBufferRef, CVPixelBufferLockBaseAddress, CVPixelBufferGetWidth, CVPixelBufferGetHeight, CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRowOfPlane, CVPixelBufferUnlockBaseAddress, CVPixelBufferGetWidthOfPlane, CVPixelBufferGetHeightOfPlane};
 
@@ -91,7 +94,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     };
 
     let mut stream = SCStream::new(filter, stream_config, ErrorHandler);
-    stream.add_output(Capturer::new(tx, options.output_type));
+    stream.add_output(Capturer::new(tx, options.output_type), SCStreamOutputType::Screen);
 
     stream
 }
@@ -134,7 +137,7 @@ pub fn ycbcr_to_rgb(
 
 pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame> {
     // Check that the frame status is complete
-    let buffer_ref = &(*sample_buffer.ptr);
+    let buffer_ref = &(*sample_buffer.sys_ref);
     {
         let attachments = CMSampleBufferGetSampleAttachmentsArray(buffer_ref, 0);
         if attachments.is_null() || CFArrayGetCount(attachments as CFArrayRef) == 0 {
@@ -161,7 +164,7 @@ pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame
     }
 
     //let epoch = CMSampleBufferGetPresentationTimeStamp(buffer_ref).epoch;
-    let epoch = sample_buffer.ptr.get_presentation_timestamp().value;
+    let epoch = sample_buffer.sys_ref.get_presentation_timestamp().value;
     let pixel_buffer = CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef;
 
     CVPixelBufferLockBaseAddress(pixel_buffer, 0);
@@ -203,7 +206,7 @@ pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame
 }
 
 pub unsafe fn create_rgb_frame(sample_buffer: CMSampleBuffer) -> Option<RGBFrame> {
-    let buffer_ref = &(*sample_buffer.ptr);
+    let buffer_ref = &(*sample_buffer.sys_ref);
     let pixel_buffer = CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef;
     // Lock the base address
     CVPixelBufferLockBaseAddress(pixel_buffer, 0);

@@ -29,5 +29,6 @@ windows = { version = "0.52", features = [
 [target.'cfg(target_os = "macos")'.dependencies]
 tao-core-video-sys = "0.2.0"
 core-graphics = "0.23.1"
-screencapturekit = { git = "https://github.com/clearlysid/screencapturekit-rs.git", rev = "56a6708", version = "*" }
+screencapturekit = "0.2.2"
+screencapturekit-sys = "0.2.2"
 apple-sys = { version = "0.2.0", features = ["CoreMedia", "ScreenCaptureKit"] }
