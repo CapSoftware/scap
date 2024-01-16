@@ -33,3 +33,9 @@ impl From<std::sync::mpsc::SendError<bool>> for LinCapError {
         Self::new(e.to_string())
     }
 }
+
+impl From<ashpd::Error> for LinCapError {
+    fn from(e: ashpd::Error) -> Self {
+        Self::new(e.to_string())
+    }
+}

@@ -8,7 +8,7 @@ use std::{
 };
 
 use ashpd::{
-    desktop::screencast::{CursorMode, Screencast, SourceType},
+    desktop::screencast::{CursorMode, Screencast},
     WindowIdentifier,
 };
 use pipewire as pw;
@@ -224,7 +224,7 @@ fn pipewire_capturer(
         std::io::Cursor::new(Vec::new()),
         &pw::spa::pod::Value::Object(obj),
     )
-    .unwrap()
+    .unwrap() // TODO: Remove
     .0
     .into_inner();
 
@@ -253,12 +253,11 @@ fn pipewire_capturer(
 
 async fn get_screencast_stream(_options: &Options) -> Result<Option<u32>, LinCapError> {
     let proxy = Screencast::new()
-        .await
-        .expect("Failed to create Screencast proxy");
+        .await?;
     let session = proxy
         .create_session()
-        .await
-        .expect("Failed to create Screencast session");
+        .await?;
+
     proxy
         .select_sources(
             &session,
@@ -267,20 +266,18 @@ async fn get_screencast_stream(_options: &Options) -> Result<Option<u32>, LinCap
             } else {
                 CursorMode::Hidden
             },
-            SourceType::Monitor | SourceType::Window,
-            true,
+            proxy.available_source_types().await?,
+            false,
             None,
             ashpd::desktop::screencast::PersistMode::DoNot,
         )
-        .await
-        .expect("Failed to select sources");
+        .await?;
 
     let response = proxy
         .start(&session, &WindowIdentifier::default())
         .await
         .expect("Failed to start")
-        .response()
-        .expect("Failed to get response");
+        .response()?;
 
     for stream in response.streams() {
         // Just return the first stream we get
