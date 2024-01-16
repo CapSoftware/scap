@@ -1,24 +1,33 @@
-use std::sync::atomic::AtomicU8;
-use std::sync::mpsc;
-use std::sync::mpsc::sync_channel;
-use std::sync::mpsc::SyncSender;
-use std::thread::JoinHandle;
-use std::time::Duration;
+use std::{
+    sync::{
+        atomic::AtomicU8,
+        mpsc::{self, sync_channel, SyncSender},
+    },
+    thread::JoinHandle,
+    time::Duration,
+};
 
+use ashpd::{
+    desktop::screencast::{CursorMode, Screencast, SourceType},
+    WindowIdentifier,
+};
 use pipewire as pw;
-use pw::properties;
-use pw::spa;
-use pw::spa::format::FormatProperties;
-use pw::spa::format::MediaSubtype;
-use pw::spa::format::MediaType;
-use pw::spa::param::video::VideoFormat;
-use pw::spa::Direction;
-use pw::spa::pod::Pod;
-use pw::stream::StreamRef;
-use pw::stream::StreamState;
+use pw::{
+    properties,
+    spa::{
+        self,
+        format::{FormatProperties, MediaSubtype, MediaType},
+        param::video::VideoFormat,
+        pod::Pod,
+        Direction,
+    },
+    stream::{StreamRef, StreamState},
+};
 
-use crate::frame::RGBFrame;
-use crate::{capturer::Options, frame::Frame};
+use crate::{
+    capturer::Options,
+    frame::{Frame, RGBFrame},
+};
 
 use self::error::LinCapError;
 
@@ -32,18 +41,22 @@ struct ListenerUserData {
     pub format: spa::param::video::VideoInfoRaw,
 }
 
-fn param_changed_callback(_stream: &StreamRef,  id: u32, user_data: &mut ListenerUserData, param: Option<&Pod>) {
+fn param_changed_callback(
+    _stream: &StreamRef,
+    id: u32,
+    user_data: &mut ListenerUserData,
+    param: Option<&Pod>,
+) {
     let Some(param) = param else {
         return;
     };
     if id != pw::spa::param::ParamType::Format.as_raw() {
         return;
     }
-    let (media_type, media_subtype) =
-        match pw::spa::param::format_utils::parse_format(param) {
-            Ok(v) => v,
-            Err(_) => return,
-        };
+    let (media_type, media_subtype) = match pw::spa::param::format_utils::parse_format(param) {
+        Ok(v) => v,
+        Err(_) => return,
+    };
 
     if media_type != MediaType::Video || media_subtype != MediaSubtype::Raw {
         return;
@@ -53,7 +66,6 @@ fn param_changed_callback(_stream: &StreamRef,  id: u32, user_data: &mut Listene
         .format
         .parse(param)
         .expect("Failed to parse format parameter");
-
 
     println!("Got video format:");
     println!(
@@ -94,13 +106,11 @@ fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
                 match user_data.format.format() {
                     VideoFormat::RGBx => {
                         let frame_size = user_data.format.size();
-                        if let Err(e) = user_data.tx.send(
-                            Frame::RGB(RGBFrame {
-                                width: frame_size.width as i32,
-                                height: frame_size.height as i32,
-                                data: frame_data.to_vec()
-                            })
-                        ) {
+                        if let Err(e) = user_data.tx.send(Frame::RGB(RGBFrame {
+                            width: frame_size.width as i32,
+                            height: frame_size.height as i32,
+                            data: frame_data.to_vec(),
+                        })) {
                             println!("{e}");
                         }
                     }
@@ -111,13 +121,13 @@ fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
     }
 }
 
+// TODO: Format negotiation
 fn pipewire_capturer(
     options: Options,
     tx: mpsc::Sender<Frame>,
     ready_sender: &SyncSender<bool>,
+    stream_id: u32,
 ) -> Result<(), LinCapError> {
-    assert!(!options.targets.is_empty());
-
     pw::init();
 
     let mainloop = pw::MainLoop::new()?;
@@ -189,7 +199,10 @@ fn pipewire_capturer(
             Choice,
             Range,
             Fraction,
-            pw::spa::utils::Fraction { num: options.fps, denom: 1 },
+            pw::spa::utils::Fraction {
+                num: options.fps,
+                denom: 1
+            },
             pw::spa::utils::Fraction { num: 0, denom: 1 },
             pw::spa::utils::Fraction {
                 num: 1000,
@@ -210,7 +223,7 @@ fn pipewire_capturer(
 
     stream.connect(
         Direction::Input,
-        Some(options.targets[0].id),
+        Some(stream_id),
         pw::stream::StreamFlags::AUTOCONNECT | pw::stream::StreamFlags::MAP_BUFFERS,
         &mut params,
     )?;
@@ -229,6 +242,45 @@ fn pipewire_capturer(
     Ok(())
 }
 
+async fn get_screencast_stream(_options: &Options) -> Result<Option<u32>, LinCapError> {
+    let proxy = Screencast::new()
+        .await
+        .expect("Failed to create Screencast proxy");
+    let session = proxy
+        .create_session()
+        .await
+        .expect("Failed to create Screencast session");
+    proxy
+        .select_sources(
+            &session,
+            if _options.show_cursor {
+                ashpd::desktop::screencast::CursorMode::Embedded
+            } else {
+                CursorMode::Hidden
+            },
+            SourceType::Monitor | SourceType::Window,
+            true,
+            None,
+            ashpd::desktop::screencast::PersistMode::DoNot,
+        )
+        .await
+        .expect("Failed to select sources");
+
+    let response = proxy
+        .start(&session, &WindowIdentifier::default())
+        .await
+        .expect("Failed to start")
+        .response()
+        .expect("Failed to get response");
+
+    for stream in response.streams() {
+        // Just return the first stream we get
+        return Ok(Some(stream.pipe_wire_node_id()));
+    }
+
+    Ok(None)
+}
+
 pub struct LinuxCapturer {
     capturer_join_handle: Option<JoinHandle<Result<(), LinCapError>>>,
 }
@@ -236,6 +288,12 @@ pub struct LinuxCapturer {
 impl LinuxCapturer {
     // TODO: Error handling
     pub fn new(options: &Options, tx: mpsc::Sender<Frame>) -> Self {
+        let Some(stream_id) = async_std::task::block_on(get_screencast_stream(options))
+            .expect("Failed to get stream id")
+        else {
+            panic!("No stream available");
+        };
+
         // TODO: Fix this hack
         let options = Options {
             fps: options.fps,
@@ -247,7 +305,7 @@ impl LinuxCapturer {
         };
         let (ready_sender, ready_recv) = sync_channel(1);
         let capturer_join_handle = std::thread::spawn(move || {
-            let res = pipewire_capturer(options, tx, &ready_sender);
+            let res = pipewire_capturer(options, tx, &ready_sender, stream_id);
             if res.is_err() {
                 ready_sender.send(false)?;
             }
