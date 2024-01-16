@@ -2,11 +2,24 @@ mod engine;
 
 use std::sync::mpsc;
 
-#[cfg(target_os = "macos")]
-use screencapturekit::sc_sys::geometry::CGRect;
-
 use crate::{device::display, frame::{Frame, FrameType}};
+#[derive(Debug, Default, Clone)]
 
+pub struct CGPoint {
+    pub x: f64,
+    pub y: f64,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct CGSize {
+    pub width: f64,
+    pub height: f64,
+}
+#[derive(Debug, Default, Clone)]
+pub struct CGRect {
+    pub origin: CGPoint,
+    pub size: CGSize,
+}
 #[derive(Debug, Default)]
 pub struct Options {
     pub fps: u32,
@@ -17,7 +30,6 @@ pub struct Options {
     // excluded targets will only work on macOS
     pub excluded_targets: Option<Vec<display::Target>>,
     pub output_type: FrameType,
-    #[cfg(target_os = "macos")]
     pub source_rect: Option<CGRect>
 }
 

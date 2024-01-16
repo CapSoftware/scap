@@ -302,6 +302,7 @@ impl LinuxCapturer {
             output_type: options.output_type,
             targets: options.targets.clone(),
             excluded_targets: None,
+            source_rect: None,
         };
         let (ready_sender, ready_recv) = sync_channel(1);
         let capturer_join_handle = std::thread::spawn(move || {
