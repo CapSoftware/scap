@@ -26,7 +26,7 @@ use pw::{
 
 use crate::{
     capturer::Options,
-    frame::{Frame, RGBFrame},
+    frame::{Frame, RGBFrame, RGBxFrame},
 };
 
 use self::error::LinCapError;
@@ -103,9 +103,18 @@ fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
             }
 
             if let Some(frame_data) = (&mut datas[0]).data() {
+                let frame_size = user_data.format.size();
                 match user_data.format.format() {
                     VideoFormat::RGBx => {
-                        let frame_size = user_data.format.size();
+                        if let Err(e) = user_data.tx.send(Frame::RGBx(RGBxFrame {
+                            width: frame_size.width as i32,
+                            height: frame_size.height as i32,
+                            data: frame_data.to_vec(),
+                        })) {
+                            println!("{e}");
+                        }
+                    }
+                    VideoFormat::RGB => {
                         if let Err(e) = user_data.tx.send(Frame::RGB(RGBFrame {
                             width: frame_size.width as i32,
                             height: frame_size.height as i32,
