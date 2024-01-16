@@ -63,9 +63,6 @@ fn main() {
             Frame::RGB(frame) => {
                 println!("Recieved frame of width {} and height {}", frame.width, frame.height);
             }
-            Frame::RGBx(_) => {
-                println!("Received RGBx frame");
-            }
         }
     }
 
