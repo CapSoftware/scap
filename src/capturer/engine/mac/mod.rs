@@ -1,6 +1,7 @@
 use std::sync::mpsc;
 use std::{mem, slice};
 
+use screencapturekit::sc_sys::geometry::{CGSize, CGRect, CGPoint};
 use screencapturekit::{sc_stream::SCStream, sc_content_filter::{InitParams, SCContentFilter}, sc_stream_configuration::SCStreamConfiguration, sc_error_handler::StreamErrorHandler, sc_output_handler::{StreamOutput, CMSampleBuffer, SCStreamOutputType}, sc_sys::SCFrameStatus};
 
 use crate::frame::{Frame, YUVFrame, FrameType, RGBFrame};
@@ -75,7 +76,11 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     let params = InitParams::Display(display);
     let filter = SCContentFilter::new(params);
 
-    let source_rect = options.source_rect.unwrap_or_default();
+    let source_rect = options.source_rect.clone().unwrap_or_default();
+    let source_rect = CGRect {
+        origin: CGPoint { x: source_rect.origin.x, y: source_rect.origin.y },
+        size: CGSize { width: source_rect.size.width, height: source_rect.size.height }
+    };
 
     let stream_config = SCStreamConfiguration {
         shows_cursor: true,
