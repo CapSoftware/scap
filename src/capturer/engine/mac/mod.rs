@@ -2,17 +2,18 @@ use std::sync::mpsc;
 use std::{mem, slice};
 
 use screencapturekit::cm_sample_buffer::CMSampleBuffer;
+use screencapturekit::sc_stream_configuration::PixelFormat;
 use screencapturekit_sys::cm_sample_buffer_ref::{CMSampleBufferGetSampleAttachmentsArray, CMSampleBufferGetImageBuffer};
 use screencapturekit::sc_output_handler::SCStreamOutputType;
 use screencapturekit::{sc_stream::SCStream, sc_content_filter::{InitParams, SCContentFilter}, sc_stream_configuration::SCStreamConfiguration, sc_error_handler::StreamErrorHandler, sc_output_handler::StreamOutput};
 use screencapturekit_sys::os_types::geometry::{CGRect, CGPoint, CGSize};
 use screencapturekit_sys::sc_stream_frame_info::SCFrameStatus;
 
-use crate::frame::{Frame, YUVFrame, FrameType, RGBFrame};
+use crate::frame::{Frame, YUVFrame, FrameType, RGBFrame, BGRFrame, convert_bgra_to_rgb};
 use crate::{capturer::Options, device::display::{self}};
 use apple_sys::{CoreMedia::{CFDictionaryGetValue, CFDictionaryRef, CFTypeRef, CFNumberGetValue, CFNumberType_kCFNumberSInt64Type}, ScreenCaptureKit::{SCStreamFrameInfoStatus, SCFrameStatus_SCFrameStatusComplete}};
 use core_graphics::display::{CFArrayGetCount, CFArrayGetValueAtIndex, CFArrayRef, };
-use core_video_sys::{CVPixelBufferRef, CVPixelBufferLockBaseAddress, CVPixelBufferGetWidth, CVPixelBufferGetHeight, CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRowOfPlane, CVPixelBufferUnlockBaseAddress, CVPixelBufferGetWidthOfPlane, CVPixelBufferGetHeightOfPlane};
+use core_video_sys::{CVPixelBufferRef, CVPixelBufferLockBaseAddress, CVPixelBufferGetWidth, CVPixelBufferGetHeight, CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRowOfPlane, CVPixelBufferUnlockBaseAddress, CVPixelBufferGetWidthOfPlane, CVPixelBufferGetHeightOfPlane, CVPixelBufferGetPixelFormatType, CVPixelBufferGetBaseAddress, CVPixelBufferGetBytesPerRow};
 
 struct ErrorHandler;
 impl StreamErrorHandler for ErrorHandler {
@@ -50,6 +51,10 @@ impl StreamOutput for Capturer {
                                 FrameType::RGB => {
                                     let rgbframe = create_rgb_frame(sample).unwrap();
                                     frame = Frame::RGB(rgbframe);
+                                }
+                                FrameType::BGR0 => {
+                                    let bgrframe = create_bgr_frame(sample).unwrap();
+                                    frame = Frame::BGR0(bgrframe);
                                 }
                                 _ => {
                                     panic!("Unimplemented Output format");
@@ -205,35 +210,38 @@ pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame
     .into()
 }
 
-pub unsafe fn create_rgb_frame(sample_buffer: CMSampleBuffer) -> Option<RGBFrame> {
+pub unsafe fn create_bgr_frame(sample_buffer: CMSampleBuffer) -> Option<BGRFrame> {
+
     let buffer_ref = &(*sample_buffer.sys_ref);
+    let epoch = sample_buffer.sys_ref.get_presentation_timestamp().value;
     let pixel_buffer = CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef;
-    // Lock the base address
+
     CVPixelBufferLockBaseAddress(pixel_buffer, 0);
 
-    // Check the format of the pixel buffer
-    // let format = core_video_sys::CVPixelBufferGetPixelFormatType(pixel_buffer);
+    let width = CVPixelBufferGetWidth(pixel_buffer);
+    let height = CVPixelBufferGetHeight(pixel_buffer);
+    if width == 0 || height == 0 {
+        return None;
+    }
 
-    // Currently: 875704438, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
-    // TODO: Capture in BRGA format instead
+    let base_address = CVPixelBufferGetBaseAddress(pixel_buffer);
+    let bytes_per_row = CVPixelBufferGetBytesPerRow(pixel_buffer);
 
-    // Plane 1 — Y (Luma)
-    let y_width = CVPixelBufferGetWidthOfPlane(pixel_buffer, 0);
-    let y_height = CVPixelBufferGetHeightOfPlane(pixel_buffer, 0);
-    let y_bytes_row = CVPixelBufferGetBytesPerRowOfPlane(pixel_buffer, 0);
-    let y_address = CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 0);
-    let y_stride = y_bytes_row - y_width;
+    let data = slice::from_raw_parts(
+        base_address as *mut u8,
+        bytes_per_row * height,
+    )
+    .to_vec();
 
-    // Plane 2 — CbCr (Chroma)
-    // let c_width = CVPixelBufferGetWidthOfPlane(pixel_buffer, 1);
-    let c_height = CVPixelBufferGetHeightOfPlane(pixel_buffer, 1);
-    let c_address = CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 1);
-    let c_bytes_row = CVPixelBufferGetBytesPerRowOfPlane(pixel_buffer, 1);
+    CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
 
-    let y_data = std::slice::from_raw_parts(
-        y_address as *const u8,
-        y_height as usize * y_bytes_row as usize,
-    );
+    Some(BGRFrame {
+        display_time: epoch as u64,
+        width: (bytes_per_row/4) as i32, // width does not give accurate results - https://stackoverflow.com/questions/19587185/cvpixelbuffergetbytesperrow-for-cvimagebufferref-returns-unexpected-wrong-valu
+        height: height as i32,
+        data,
+    })
+}
 
     let c_data = std::slice::from_raw_parts(
         c_address as *const u8,
