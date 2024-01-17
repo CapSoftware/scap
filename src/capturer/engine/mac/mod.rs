@@ -243,35 +243,35 @@ pub unsafe fn create_bgr_frame(sample_buffer: CMSampleBuffer) -> Option<BGRFrame
     })
 }
 
-    let c_data = std::slice::from_raw_parts(
-        c_address as *const u8,
-        c_height as usize * c_bytes_row as usize,
-    );
+pub unsafe fn create_rgb_frame(sample_buffer: CMSampleBuffer) -> Option<RGBFrame> {
+    let buffer_ref = &(*sample_buffer.sys_ref);
+    let epoch = sample_buffer.sys_ref.get_presentation_timestamp().value;
+    let pixel_buffer = CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef;
 
-    // unlock base address
+    CVPixelBufferLockBaseAddress(pixel_buffer, 0);
+
+    let width = CVPixelBufferGetWidth(pixel_buffer);
+    let height = CVPixelBufferGetHeight(pixel_buffer);
+    if width == 0 || height == 0 {
+        return None;
+    }
+
+    let base_address = CVPixelBufferGetBaseAddress(pixel_buffer);
+    let bytes_per_row = CVPixelBufferGetBytesPerRow(pixel_buffer);
+
+    let data = slice::from_raw_parts(
+        base_address as *mut u8,
+        bytes_per_row * height,
+    )
+    .to_vec();
+
     CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
 
-    // Logs
-    // println!("y_width: {:?}", y_width);
-    // println!("y_height: {:?}", y_height);
-    // println!("y_address: {:?}", y_address);
-    // println!("y_bytes_per_row: {:?}", y_bytes_row);
-    // println!("c_width: {:?}", c_width);
-    // println!("c_height: {:?}", c_height);
-    // println!("c_address: {:?}", c_address);
-    // println!("c_bytes_per_row: {:?}", c_bytes_row);
-
-    // println!("y_data: {:?}", y_data);
-    // println!("c_data: {:?}", c_data);
-
-    // Convert YUV buffer to RGB
-    // let data = Vec::new();
-    let data = ycbcr_to_rgb(&y_data, &c_data, y_width, y_height, y_stride);
-
     Some(RGBFrame {
-        width: y_width as i32,
-        height: y_height as i32,
-        data: data,
+        display_time: epoch as u64,
+        width: (bytes_per_row/4) as i32, // width does not give accurate results - https://stackoverflow.com/questions/19587185/cvpixelbuffergetbytesperrow-for-cvimagebufferref-returns-unexpected-wrong-valu
+        height: height as i32,
+        data: convert_bgra_to_rgb(data),
     })
     // (y_width, y_height, data)
 }
