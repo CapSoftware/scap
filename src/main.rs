@@ -66,6 +66,9 @@ fn main() {
             Frame::XBGR(frame) => {
                 println!("Recieved xRGB frame of width {} and height {}", frame.width, frame.height);
             }
+            Frame::BGRx(frame) => {
+                println!("Recieved BGRx frame of width {} and height {}", frame.width, frame.height);
+            }
         }
     }
 

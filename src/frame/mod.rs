@@ -26,6 +26,12 @@ pub struct XBGRFrame {
     pub data: Vec<u8>,
 }
 
+pub struct BGRxFrame {
+    pub width: i32,
+    pub height: i32,
+    pub data: Vec<u8>,
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub enum FrameType {
     #[default]
@@ -40,6 +46,7 @@ pub enum Frame {
     RGB(RGBFrame),
     RGBx(RGBxFrame),
     XBGR(XBGRFrame),
+    BGRx(BGRxFrame),
 }
 
 pub enum FrameData<'a> {
