@@ -48,7 +48,7 @@ fn main() {
     recorder.start_capture();
 
     // #7 Capture 100 frames
-    for _ in 0..100 {
+    for _ in 0..10 {
         let frame = recorder.get_next_frame().expect("Error");
         match frame {
             Frame::YUVFrame(frame) => {
@@ -62,6 +62,9 @@ fn main() {
             }
             Frame::RGBx(frame) => {
                 println!("Recieved RGBx frame of width {} and height {}", frame.width, frame.height);
+            }
+            Frame::XBGR(frame) => {
+                println!("Recieved xRGB frame of width {} and height {}", frame.width, frame.height);
             }
         }
     }
