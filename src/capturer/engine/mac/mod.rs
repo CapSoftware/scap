@@ -89,12 +89,18 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
         origin: CGPoint { x: source_rect.origin.x, y: source_rect.origin.y },
         size: CGSize { width: source_rect.size.width, height: source_rect.size.height }
     };
+    let pixel_format = match options.output_type {
+        FrameType::YUVFrame => PixelFormat::YCbCr420v,
+        FrameType::BGR0 => PixelFormat::ARGB8888,
+        FrameType::RGB => PixelFormat::ARGB8888,
+    };
 
     let stream_config = SCStreamConfiguration {
         shows_cursor: true,
         width,
         height,
         source_rect,
+        pixel_format,
         ..Default::default()
     };
 
