@@ -41,3 +41,17 @@ pub enum FrameData<'a> {
     BGR0(&'a [u8]),
 }
 
+pub fn remove_alpha_channel(frame_data: Vec<u8>) -> Vec<u8> {
+    let width = frame_data.len();
+    let width_without_alpha = (width / 4) * 3;
+
+    let mut data :Vec<u8> = vec![0; width_without_alpha];
+
+    for (src, dst) in frame_data.chunks_exact(4).zip(data.chunks_exact_mut(3)) {
+        dst[0] = src[0];
+        dst[1] = src[1];
+        dst[2] = src[2];
+    }
+
+    return data;
+}
