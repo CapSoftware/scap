@@ -65,6 +65,7 @@ fn param_changed_callback(
     user_data
         .format
         .parse(param)
+        // TODO: Tell library user of the error
         .expect("Failed to parse format parameter");
 
     println!("Got video format:");
@@ -83,7 +84,6 @@ fn param_changed_callback(
         user_data.format.framerate().num,
         user_data.format.framerate().denom
     );
-    println!("  Max framerate: {:?}", user_data.format.max_framerate());
 }
 
 fn state_changed_callback(old: StreamState, new: StreamState) {
@@ -223,8 +223,7 @@ fn pipewire_capturer(
     let values: Vec<u8> = pw::spa::pod::serialize::PodSerializer::serialize(
         std::io::Cursor::new(Vec::new()),
         &pw::spa::pod::Value::Object(obj),
-    )
-    .unwrap() // TODO: Remove
+    )?
     .0
     .into_inner();
 
@@ -275,8 +274,7 @@ async fn get_screencast_stream(_options: &Options) -> Result<Option<u32>, LinCap
 
     let response = proxy
         .start(&session, &WindowIdentifier::default())
-        .await
-        .expect("Failed to start")
+        .await?
         .response()?;
 
     for stream in response.streams() {

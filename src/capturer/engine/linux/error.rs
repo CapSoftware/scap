@@ -3,6 +3,8 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
+use pipewire::spa::pod::serialize::GenError;
+
 #[derive(Debug)]
 pub struct LinCapError {
     msg: String,
@@ -36,6 +38,12 @@ impl From<std::sync::mpsc::SendError<bool>> for LinCapError {
 
 impl From<ashpd::Error> for LinCapError {
     fn from(e: ashpd::Error) -> Self {
+        Self::new(e.to_string())
+    }
+}
+
+impl From<GenError> for LinCapError {
+    fn from(e: GenError) -> Self {
         Self::new(e.to_string())
     }
 }
