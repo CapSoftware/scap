@@ -197,8 +197,6 @@ fn pipewire_capturer(
             pw::spa::param::video::VideoFormat::RGBA,
             pw::spa::param::video::VideoFormat::RGBx,
             pw::spa::param::video::VideoFormat::BGRx,
-            pw::spa::param::video::VideoFormat::YUY2,
-            pw::spa::param::video::VideoFormat::I420,
         ),
         pw::spa::pod::property!(
             FormatProperties::VideoSize,
