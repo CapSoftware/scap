@@ -48,7 +48,7 @@ fn main() {
     recorder.start_capture();
 
     // #7 Capture 100 frames
-    for _ in 0..10 {
+    for _ in 0..100 {
         let frame = recorder.get_next_frame().expect("Error");
         match frame {
             Frame::YUVFrame(frame) => {

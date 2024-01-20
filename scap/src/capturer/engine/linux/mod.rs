@@ -116,6 +116,7 @@ fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
                     }
                     VideoFormat::RGB => {
                         if let Err(e) = user_data.tx.send(Frame::RGB(RGBFrame {
+                            display_time: 0, // TODO: Get current time
                             width: frame_size.width as i32,
                             height: frame_size.height as i32,
                             data: frame_data.to_vec(),

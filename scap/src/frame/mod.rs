@@ -9,6 +9,7 @@ pub struct YUVFrame {
 }
 
 pub struct RGBFrame {
+    pub display_time: u64,
     pub width: i32,
     pub height: i32,
     pub data: Vec<u8>,

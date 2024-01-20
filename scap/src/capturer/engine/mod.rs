@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 
-use super::Options;
 use crate::frame::Frame;
+use super::Options;
 
 #[cfg(target_os = "macos")]
 mod mac;
