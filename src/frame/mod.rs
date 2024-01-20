@@ -1,35 +1,34 @@
 use std::{mem, slice};
 
-use apple_sys::{CoreMedia::{CFDictionaryGetValue, CFDictionaryRef, CFTypeRef, CFNumberGetValue, CFNumberType_kCFNumberSInt64Type}, ScreenCaptureKit::{SCStreamFrameInfoStatus, SCFrameStatus_SCFrameStatusComplete}};
+use apple_sys::{
+    CoreMedia::{
+        CFDictionaryGetValue, CFDictionaryRef, CFNumberGetValue, CFNumberType_kCFNumberSInt64Type,
+        CFTypeRef,
+    },
+    ScreenCaptureKit::{SCFrameStatus_SCFrameStatusComplete, SCStreamFrameInfoStatus},
+};
+use core_graphics::{
+    access::ScreenCaptureAccess,
+    display::{CFArrayGetCount, CFArrayGetValueAtIndex, CFArrayRef, CGDirectDisplayID, CGDisplay},
+};
+use core_video_sys::{
+    CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRowOfPlane, CVPixelBufferGetHeight,
+    CVPixelBufferGetWidth, CVPixelBufferLockBaseAddress, CVPixelBufferRef,
+    CVPixelBufferUnlockBaseAddress,
+};
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
+    sc_display::SCDisplay,
     sc_error_handler::StreamErrorHandler,
     sc_output_handler::{CMSampleBuffer, SCStreamOutputType, StreamOutput},
     sc_shareable_content::SCShareableContent,
     sc_stream::SCStream,
     sc_stream_configuration::SCStreamConfiguration,
-    sc_sys::{SCFrameStatus, CMSampleBufferGetPresentationTimeStamp, CMSampleBufferGetImageBuffer, CMSampleBufferGetSampleAttachmentsArray, }, sc_display::SCDisplay,
+    sc_sys::{
+        CMSampleBufferGetImageBuffer, CMSampleBufferGetPresentationTimeStamp,
+        CMSampleBufferGetSampleAttachmentsArray, SCFrameStatus,
+    },
 };
-use core_graphics::{
-    access::ScreenCaptureAccess,
-    display::{CGDirectDisplayID, CGDisplay, CFArrayGetCount, CFArrayGetValueAtIndex, CFArrayRef, },
-};
-use core_video_sys::{CVPixelBufferRef, CVPixelBufferLockBaseAddress, CVPixelBufferGetWidth, CVPixelBufferGetHeight, CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRowOfPlane, CVPixelBufferUnlockBaseAddress};
-
-pub struct YUVFrame {
-    pub display_time: u64,
-    pub width: i32,
-    pub height: i32,
-    pub luminance_bytes: Vec<u8>,
-    pub luminance_stride: i32,
-    pub chrominance_bytes: Vec<u8>,
-    pub chrominance_stride: i32,
-}
-
-pub enum FrameData<'a> {
-    NV12(&'a YUVFrame),
-    BGR0(&'a [u8]),
-}
 
 pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame> {
     // Check that the frame status is complete
@@ -40,8 +39,10 @@ pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame
             return None;
         }
         let attachment = CFArrayGetValueAtIndex(attachments as CFArrayRef, 0) as CFDictionaryRef;
-        let frame_status_ref =
-            CFDictionaryGetValue(attachment as CFDictionaryRef, SCStreamFrameInfoStatus.0 as _) as CFTypeRef;
+        let frame_status_ref = CFDictionaryGetValue(
+            attachment as CFDictionaryRef,
+            SCStreamFrameInfoStatus.0 as _,
+        ) as CFTypeRef;
         if frame_status_ref.is_null() {
             return None;
         }

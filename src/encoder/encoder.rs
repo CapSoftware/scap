@@ -1,14 +1,14 @@
 use std::fs::File;
 
 use ac_ffmpeg::codec::video::VideoEncoder;
-use ac_ffmpeg::codec::{video, Encoder as FFmpegEncoder, CodecParameters};
+use ac_ffmpeg::codec::{video, CodecParameters, Encoder as FFmpegEncoder};
 use ac_ffmpeg::format::muxer::Muxer;
 use ac_ffmpeg::packet::Packet;
 use ac_ffmpeg::time::{TimeBase, Timestamp};
 
 use crate::encoder::utils;
-use crate::frame::FrameData;
 use crate::utils::Result;
+use crate::FrameData;
 
 use super::config::{EncoderConfig, InputConfig};
 use super::frame_pool::FramePool;
@@ -22,12 +22,12 @@ pub struct Encoder {
 
 impl Encoder {
     pub fn new(input_config: &InputConfig, encoder_config: &EncoderConfig) -> Self {
-        let width = if input_config.width % 2 == 0 { 
+        let width = if input_config.width % 2 == 0 {
             input_config.width
         } else {
             input_config.width + 1
         };
-        let height = if input_config.height % 2 == 0 { 
+        let height = if input_config.height % 2 == 0 {
             input_config.height
         } else {
             input_config.height + 1
@@ -58,21 +58,24 @@ impl Encoder {
         }
     }
 
-    pub fn encode_and_save_to_file(&mut self, frame_data: FrameData, frame_time: Timestamp, file_muxer: &mut Muxer<File> ) -> Result<()> {
+    pub fn encode_and_save_to_file(
+        &mut self,
+        frame_data: FrameData,
+        frame_time: Timestamp,
+        file_muxer: &mut Muxer<File>,
+    ) -> Result<()> {
         let mut frame = self.frame_pool.take();
-        frame = frame
-            .with_pts(frame_time)
-            .with_picture_type(
-                if self
-                    .encoder_config
-                    .force_idr
-                    .swap(false, std::sync::atomic::Ordering::Relaxed)
-                {
-                    video::frame::PictureType::I
-                } else {
-                    video::frame::PictureType::None
-                },
-            );
+        frame = frame.with_pts(frame_time).with_picture_type(
+            if self
+                .encoder_config
+                .force_idr
+                .swap(false, std::sync::atomic::Ordering::Relaxed)
+            {
+                video::frame::PictureType::I
+            } else {
+                video::frame::PictureType::None
+            },
+        );
 
         match frame_data {
             FrameData::NV12(nv12) => {
@@ -113,7 +116,7 @@ impl Encoder {
         Ok(())
     }
 
-    pub fn codec_parameters (&self) -> CodecParameters {
+    pub fn codec_parameters(&self) -> CodecParameters {
         return self.encoder.codec_parameters().into();
     }
 
