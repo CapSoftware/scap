@@ -62,7 +62,7 @@ impl Engine {
         }
     }
 
-    pub fn stop(&self) {
+    pub fn stop(&mut self) {
         #[cfg(target_os = "macos")]
         {
             self.mac.stop_capture();
