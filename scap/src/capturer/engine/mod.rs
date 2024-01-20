@@ -28,7 +28,7 @@ impl Engine {
         #[cfg(target_os = "macos")]
         {
             let mac = mac::create_capturer(&options, tx);
-            return Engine { mac };
+            return Engine { mac }
         }
 
         #[cfg(target_os = "windows")]
@@ -62,7 +62,7 @@ impl Engine {
         }
     }
 
-    pub fn stop(&mut self) {
+    pub fn stop(&self) {
         #[cfg(target_os = "macos")]
         {
             self.mac.stop_capture();

@@ -52,7 +52,6 @@ impl Capturer {
 
         self.engine.start();
     }
-
     pub fn stop_capture(&mut self) {
         self.engine.stop();
     }

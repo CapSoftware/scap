@@ -20,7 +20,6 @@ pub fn has_permission() -> bool {
 
     #[cfg(target_os = "windows")]
     return win::has_permission();
-
     #[cfg(target_os = "linux")]
     return linux::has_permission();
 }
@@ -31,7 +30,7 @@ pub fn is_supported() -> bool {
 
     #[cfg(target_os = "windows")]
     return win::is_supported();
-
+  
     #[cfg(target_os = "linux")]
     return linux::is_supported();
 }
