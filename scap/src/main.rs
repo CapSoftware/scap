@@ -42,7 +42,7 @@ fn main() {
     };
 
     // #5 Create Recorder
-    let recorder = Capturer::new(options);
+    let mut recorder = Capturer::new(options);
 
     // #6 Start Capture
     recorder.start_capture();
@@ -59,6 +59,15 @@ fn main() {
             }
             Frame::RGB(frame) => {
                 println!("Recieved frame of width {} and height {}", frame.width, frame.height);
+            }
+            Frame::RGBx(frame) => {
+                println!("Recieved RGBx frame of width {} and height {}", frame.width, frame.height);
+            }
+            Frame::XBGR(frame) => {
+                println!("Recieved xRGB frame of width {} and height {}", frame.width, frame.height);
+            }
+            Frame::BGRx(frame) => {
+                println!("Recieved BGRx frame of width {} and height {}", frame.width, frame.height);
             }
         }
     }
