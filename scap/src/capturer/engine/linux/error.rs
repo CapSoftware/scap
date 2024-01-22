@@ -1,6 +1,7 @@
 use std::{
     error::Error,
     fmt::{self, Display, Formatter},
+    sync::PoisonError,
 };
 
 use pipewire::spa::pod::serialize::GenError;
@@ -36,14 +37,20 @@ impl From<std::sync::mpsc::SendError<bool>> for LinCapError {
     }
 }
 
-impl From<ashpd::Error> for LinCapError {
-    fn from(e: ashpd::Error) -> Self {
+impl From<GenError> for LinCapError {
+    fn from(e: GenError) -> Self {
         Self::new(e.to_string())
     }
 }
 
-impl From<GenError> for LinCapError {
-    fn from(e: GenError) -> Self {
+impl From<dbus::Error> for LinCapError {
+    fn from(e: dbus::Error) -> Self {
+        Self::new(e.to_string())
+    }
+}
+
+impl<T> From<PoisonError<T>> for LinCapError {
+    fn from(e: PoisonError<T>) -> Self {
         Self::new(e.to_string())
     }
 }

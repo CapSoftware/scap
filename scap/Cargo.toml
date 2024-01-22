@@ -36,5 +36,5 @@ apple-sys = { version = "0.2.0", features = ["CoreMedia", "ScreenCaptureKit"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 pipewire = "0.7.2"
-ashpd =  "0.6.8"
-async-std = "1.12.0"
+dbus = "0.9.7"
+rand = "0.8.5"
