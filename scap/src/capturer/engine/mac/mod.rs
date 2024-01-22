@@ -84,10 +84,29 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     let params = InitParams::Display(display);
     let filter = SCContentFilter::new(params);
 
-    let source_rect = options.source_rect.clone().unwrap_or_default();
-    let source_rect = CGRect {
-        origin: CGPoint { x: source_rect.origin.x, y: source_rect.origin.y },
-        size: CGSize { width: source_rect.size.width, height: source_rect.size.height }
+    let source_rect = match &options.source_rect {
+        Some(val) => {
+            let input_width = if (val.size.width as i64) % 2 == 0 {
+                val.size.width as i64
+            } else {
+                (val.size.width as i64) + 1
+            };
+            let input_height= if (val.size.height as i64) % 2 == 0 {
+                val.size.height as i64
+            } else {
+                (val.size.height as i64)+ 1
+            };
+            CGRect {
+                origin: CGPoint { x: val.origin.x, y: val.origin.y },
+                size: CGSize { width: input_width as f64, height: input_height as f64}
+            }
+        },
+        None => {
+            CGRect {
+                origin: CGPoint { x: 0.0, y: 0.0 },
+                size: CGSize { width: width as f64, height: height as f64}
+            }
+        },
     };
     let pixel_format = match options.output_type {
         FrameType::YUVFrame => PixelFormat::YCbCr420v,
@@ -97,8 +116,8 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
 
     let stream_config = SCStreamConfiguration {
         shows_cursor: true,
-        width,
-        height,
+        width: source_rect.size.width as u32,
+        height: source_rect.size.height as u32,
         source_rect,
         pixel_format,
         ..Default::default()
