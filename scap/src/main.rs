@@ -1,7 +1,7 @@
 // This program is just a testbed for the library itself
 // Refer to the lib.rs file for the actual implementation
 
-use scap::{capturer::{Options, Capturer, CGRect, CGPoint, CGSize}, frame::Frame};
+use scap::{capturer::{Options, Capturer, CGRect, CGPoint, CGSize}, frame::{Frame, BGRFrame}};
 
 fn main() {
     // #1 Check if the platform is supported
@@ -54,8 +54,8 @@ fn main() {
             Frame::YUVFrame(frame) => {
                 println!("{}", frame.display_time)
             }
-            Frame::BGR0(_) => {
-                println!("Recvd windows frame");
+            Frame::BGR0(frame) => {
+                println!("Received frame of width {} and height {}", frame.width, frame.height);
             }
             Frame::RGB(frame) => {
                 println!("Recieved frame of width {} and height {}", frame.width, frame.height);

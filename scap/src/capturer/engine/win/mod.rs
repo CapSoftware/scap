@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 use std::error::Error;
 
-use crate::{capturer::Options, frame::Frame};
+use crate::{capturer::Options, frame::{Frame, BGRFrame}};
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, HMONITOR, MONITORINFOEXW};
 use windows_capture::{
     capture::{CaptureControl, WindowsCaptureHandler},
@@ -45,7 +45,13 @@ impl WindowsCaptureHandler for Capturer {
         let mut frame_buffer= frame.buffer().unwrap();
         let raw_frame_buffer = frame_buffer.as_raw_buffer();
         let frame_data = raw_frame_buffer.to_vec();
-        self.tx.send(Frame::BGR0(frame_data)).expect("Failed to send data");
+        let bgr_frame = BGRFrame {
+            display_time: 0,
+            width: frame.width() as i32,
+            height: frame.height() as i32,
+            data: frame_data,
+        };
+        self.tx.send(Frame::BGR0(bgr_frame)).expect("Failed to send data");
         Ok(())
     }
 
