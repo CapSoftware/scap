@@ -198,11 +198,6 @@ impl Stream {
     }
 }
 
-pub struct ScreenCastPortal<'a> {
-    proxy: Proxy<'a, &'a Connection>,
-    token: String,
-}
-
 macro_rules! match_response {
     ( $code:expr ) => {
         match $code {
@@ -222,6 +217,12 @@ macro_rules! match_response {
     };
 }
 
+pub struct ScreenCastPortal<'a> {
+    proxy: Proxy<'a, &'a Connection>,
+    token: String,
+    cursor_mode: u32,
+}
+
 impl<'a> ScreenCastPortal<'a> {
     pub fn new(connection: &'a Connection) -> Self {
         let proxy = connection.with_proxy(
@@ -232,7 +233,11 @@ impl<'a> ScreenCastPortal<'a> {
 
         let token = format!("scap_{}", rand::random::<u16>());
 
-        Self { proxy, token }
+        Self {
+            proxy,
+            token,
+            cursor_mode: 1,
+        }
     }
 
     fn create_session_args(&self) -> arg::PropMap {
@@ -261,7 +266,7 @@ impl<'a> ScreenCastPortal<'a> {
         map.insert(String::from("multiple"), Variant(Box::new(false)));
         map.insert(
             String::from("cursor_mode"),
-            Variant(Box::new(2_u32)), // TODO: https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.ScreenCast.html#org-freedesktop-portal-screencast-availablecursormodes
+            Variant(Box::new(self.cursor_mode)),
         );
         Ok(map)
     }
@@ -399,5 +404,18 @@ impl<'a> ScreenCastPortal<'a> {
         let session_handle = self.create_session()?;
         self.select_sources(session_handle.clone())?;
         self.start(session_handle)
+    }
+
+    pub fn show_cursor(mut self, mode: bool) -> Result<Self, LinCapError> {
+        let available_modes = self.proxy.available_cursor_modes()?;
+        if mode && available_modes & 1 == 1 {
+            self.cursor_mode = 1;
+            return Ok(self);
+        } else if !mode && available_modes & 2 == 1 {
+            self.cursor_mode = 2;
+            return Ok(self);
+        }
+
+        Err(LinCapError::new("Unsupported cursor mode".to_string()))
     }
 }

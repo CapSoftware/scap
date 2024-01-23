@@ -65,27 +65,9 @@ fn param_changed_callback(
         .parse(param)
         // TODO: Tell library user of the error
         .expect("Failed to parse format parameter");
-
-    println!("Got video format:");
-    println!(
-        "  format: {} ({:?})",
-        user_data.format.format().as_raw(),
-        user_data.format.format()
-    );
-    println!(
-        "  size: {}x{}",
-        user_data.format.size().width,
-        user_data.format.size().height
-    );
-    println!(
-        "  framerate: {}/{}",
-        user_data.format.framerate().num,
-        user_data.format.framerate().denom
-    );
 }
 
 fn state_changed_callback(_old: StreamState, new: StreamState) {
-    println!("State changed {_old:?} -> {new:?}");
     match new {
         StreamState::Error(e) => {
             eprintln!("pipewire: State changed to error({e})");
@@ -97,7 +79,7 @@ fn state_changed_callback(_old: StreamState, new: StreamState) {
 
 fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
     match stream.dequeue_buffer() {
-        None => println!("Out of buffers"),
+        None => eprintln!("Out of buffers"),
         Some(mut buffer) => {
             let datas = buffer.datas_mut();
             if datas.is_empty() {
@@ -113,7 +95,7 @@ fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
                             height: frame_size.height as i32,
                             data: frame_data.to_vec(),
                         })) {
-                            println!("{e}");
+                            eprintln!("{e}");
                         }
                     }
                     VideoFormat::RGB => {
@@ -123,7 +105,7 @@ fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
                             height: frame_size.height as i32,
                             data: frame_data.to_vec(),
                         })) {
-                            println!("{e}");
+                            eprintln!("{e}");
                         }
                     }
                     VideoFormat::xBGR => {
@@ -132,7 +114,7 @@ fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
                             height: frame_size.height as i32,
                             data: frame_data.to_vec(),
                         })) {
-                            println!("{e}");
+                            eprintln!("{e}");
                         }
                     }
                     VideoFormat::BGRx => {
@@ -141,7 +123,7 @@ fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
                             height: frame_size.height as i32,
                             data: frame_data.to_vec(),
                         })) {
-                            println!("{e}");
+                            eprintln!("{e}");
                         }
                     }
                     _ => panic!("Unsupported frame format received"),
@@ -284,6 +266,8 @@ impl LinuxCapturer {
         let connection =
             dbus::blocking::Connection::new_session().expect("Failed to create dbus connection");
         let stream_id = ScreenCastPortal::new(&connection)
+            .show_cursor(options.show_cursor)
+            .expect("Unsupported cursor mode")
             .create_stream()
             .expect("Failed to get screencast stream")
             .pw_node_id();
