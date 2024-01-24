@@ -26,7 +26,7 @@ use pw::{
 
 use crate::{
     capturer::Options,
-    frame::{Frame, RGBFrame, RGBxFrame, XBGRFrame, BGRxFrame},
+    frame::{BGRxFrame, Frame, RGBFrame, RGBxFrame, XBGRFrame},
 };
 
 use self::error::LinCapError;
@@ -268,11 +268,8 @@ fn pipewire_capturer(
 }
 
 async fn get_screencast_stream(_options: &Options) -> Result<Option<u32>, LinCapError> {
-    let proxy = Screencast::new()
-        .await?;
-    let session = proxy
-        .create_session()
-        .await?;
+    let proxy = Screencast::new().await?;
+    let session = proxy.create_session().await?;
 
     proxy
         .select_sources(

@@ -2,18 +2,40 @@ use std::sync::mpsc;
 use std::{mem, slice};
 
 use screencapturekit::cm_sample_buffer::CMSampleBuffer;
-use screencapturekit::sc_stream_configuration::PixelFormat;
-use screencapturekit_sys::cm_sample_buffer_ref::{CMSampleBufferGetSampleAttachmentsArray, CMSampleBufferGetImageBuffer};
 use screencapturekit::sc_output_handler::SCStreamOutputType;
-use screencapturekit::{sc_stream::SCStream, sc_content_filter::{InitParams, SCContentFilter}, sc_stream_configuration::SCStreamConfiguration, sc_error_handler::StreamErrorHandler, sc_output_handler::StreamOutput};
-use screencapturekit_sys::os_types::geometry::{CGRect, CGPoint, CGSize};
+use screencapturekit::sc_stream_configuration::PixelFormat;
+use screencapturekit::{
+    sc_content_filter::{InitParams, SCContentFilter},
+    sc_error_handler::StreamErrorHandler,
+    sc_output_handler::StreamOutput,
+    sc_stream::SCStream,
+    sc_stream_configuration::SCStreamConfiguration,
+};
+use screencapturekit_sys::cm_sample_buffer_ref::{
+    CMSampleBufferGetImageBuffer, CMSampleBufferGetSampleAttachmentsArray,
+};
+use screencapturekit_sys::os_types::geometry::{CGPoint, CGRect, CGSize};
 use screencapturekit_sys::sc_stream_frame_info::SCFrameStatus;
 
-use crate::frame::{Frame, YUVFrame, FrameType, RGBFrame, BGRFrame, convert_bgra_to_rgb};
-use crate::{capturer::Options, device::display::{self}};
-use apple_sys::{CoreMedia::{CFDictionaryGetValue, CFDictionaryRef, CFTypeRef, CFNumberGetValue, CFNumberType_kCFNumberSInt64Type}, ScreenCaptureKit::{SCStreamFrameInfoStatus, SCFrameStatus_SCFrameStatusComplete}};
-use core_graphics::display::{CFArrayGetCount, CFArrayGetValueAtIndex, CFArrayRef, };
-use core_video_sys::{CVPixelBufferRef, CVPixelBufferLockBaseAddress, CVPixelBufferGetWidth, CVPixelBufferGetHeight, CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRowOfPlane, CVPixelBufferUnlockBaseAddress, CVPixelBufferGetWidthOfPlane, CVPixelBufferGetHeightOfPlane, CVPixelBufferGetPixelFormatType, CVPixelBufferGetBaseAddress, CVPixelBufferGetBytesPerRow};
+use crate::frame::{convert_bgra_to_rgb, BGRFrame, Frame, FrameType, RGBFrame, YUVFrame};
+use crate::{
+    capturer::Options,
+    device::display::{self},
+};
+use apple_sys::{
+    CoreMedia::{
+        CFDictionaryGetValue, CFDictionaryRef, CFNumberGetValue, CFNumberType_kCFNumberSInt64Type,
+        CFTypeRef,
+    },
+    ScreenCaptureKit::{SCFrameStatus_SCFrameStatusComplete, SCStreamFrameInfoStatus},
+};
+use core_graphics::display::{CFArrayGetCount, CFArrayGetValueAtIndex, CFArrayRef};
+use core_video_sys::{
+    CVPixelBufferGetBaseAddress, CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRow,
+    CVPixelBufferGetBytesPerRowOfPlane, CVPixelBufferGetHeight, CVPixelBufferGetHeightOfPlane,
+    CVPixelBufferGetPixelFormatType, CVPixelBufferGetWidth, CVPixelBufferGetWidthOfPlane,
+    CVPixelBufferLockBaseAddress, CVPixelBufferRef, CVPixelBufferUnlockBaseAddress,
+};
 
 struct ErrorHandler;
 impl StreamErrorHandler for ErrorHandler {
@@ -40,29 +62,27 @@ impl StreamOutput for Capturer {
                 let frame_status = &sample.frame_status;
 
                 match frame_status {
-                    SCFrameStatus::Complete => {
-                        unsafe {
-                            let frame;
-                            match self.output_type {
-                                FrameType::YUVFrame => {
-                                    let yuvframe = create_yuv_frame(sample).unwrap();
-                                    frame = Frame::YUVFrame(yuvframe);
-                                }
-                                FrameType::RGB => {
-                                    let rgbframe = create_rgb_frame(sample).unwrap();
-                                    frame = Frame::RGB(rgbframe);
-                                }
-                                FrameType::BGR0 => {
-                                    let bgrframe = create_bgr_frame(sample).unwrap();
-                                    frame = Frame::BGR0(bgrframe);
-                                }
-                                _ => {
-                                    panic!("Unimplemented Output format");
-                                }
+                    SCFrameStatus::Complete => unsafe {
+                        let frame;
+                        match self.output_type {
+                            FrameType::YUVFrame => {
+                                let yuvframe = create_yuv_frame(sample).unwrap();
+                                frame = Frame::YUVFrame(yuvframe);
                             }
-                            self.tx.send(frame).unwrap_or(());
+                            FrameType::RGB => {
+                                let rgbframe = create_rgb_frame(sample).unwrap();
+                                frame = Frame::RGB(rgbframe);
+                            }
+                            FrameType::BGR0 => {
+                                let bgrframe = create_bgr_frame(sample).unwrap();
+                                frame = Frame::BGR0(bgrframe);
+                            }
+                            _ => {
+                                panic!("Unimplemented Output format");
+                            }
                         }
-                    }
+                        self.tx.send(frame).unwrap_or(());
+                    },
                     _ => {}
                 }
             }
@@ -91,21 +111,28 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
             } else {
                 (val.size.width as i64) + 1
             };
-            let input_height= if (val.size.height as i64) % 2 == 0 {
+            let input_height = if (val.size.height as i64) % 2 == 0 {
                 val.size.height as i64
             } else {
-                (val.size.height as i64)+ 1
+                (val.size.height as i64) + 1
             };
             CGRect {
-                origin: CGPoint { x: val.origin.x, y: val.origin.y },
-                size: CGSize { width: input_width as f64, height: input_height as f64}
+                origin: CGPoint {
+                    x: val.origin.x,
+                    y: val.origin.y,
+                },
+                size: CGSize {
+                    width: input_width as f64,
+                    height: input_height as f64,
+                },
             }
-        },
-        None => {
-            CGRect {
-                origin: CGPoint { x: 0.0, y: 0.0 },
-                size: CGSize { width: width as f64, height: height as f64}
-            }
+        }
+        None => CGRect {
+            origin: CGPoint { x: 0.0, y: 0.0 },
+            size: CGSize {
+                width: width as f64,
+                height: height as f64,
+            },
         },
     };
     let pixel_format = match options.output_type {
@@ -124,7 +151,10 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     };
 
     let mut stream = SCStream::new(filter, stream_config, ErrorHandler);
-    stream.add_output(Capturer::new(tx, options.output_type), SCStreamOutputType::Screen);
+    stream.add_output(
+        Capturer::new(tx, options.output_type),
+        SCStreamOutputType::Screen,
+    );
 
     stream
 }
@@ -174,8 +204,10 @@ pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame
             return None;
         }
         let attachment = CFArrayGetValueAtIndex(attachments as CFArrayRef, 0) as CFDictionaryRef;
-        let frame_status_ref =
-            CFDictionaryGetValue(attachment as CFDictionaryRef, SCStreamFrameInfoStatus.0 as _) as CFTypeRef;
+        let frame_status_ref = CFDictionaryGetValue(
+            attachment as CFDictionaryRef,
+            SCStreamFrameInfoStatus.0 as _,
+        ) as CFTypeRef;
         if frame_status_ref.is_null() {
             return None;
         }
@@ -236,7 +268,6 @@ pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame
 }
 
 pub unsafe fn create_bgr_frame(sample_buffer: CMSampleBuffer) -> Option<BGRFrame> {
-
     let buffer_ref = &(*sample_buffer.sys_ref);
     let epoch = sample_buffer.sys_ref.get_presentation_timestamp().value;
     let pixel_buffer = CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef;
@@ -252,17 +283,13 @@ pub unsafe fn create_bgr_frame(sample_buffer: CMSampleBuffer) -> Option<BGRFrame
     let base_address = CVPixelBufferGetBaseAddress(pixel_buffer);
     let bytes_per_row = CVPixelBufferGetBytesPerRow(pixel_buffer);
 
-    let data = slice::from_raw_parts(
-        base_address as *mut u8,
-        bytes_per_row * height,
-    )
-    .to_vec();
+    let data = slice::from_raw_parts(base_address as *mut u8, bytes_per_row * height).to_vec();
 
     CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
 
     Some(BGRFrame {
         display_time: epoch as u64,
-        width: (bytes_per_row/4) as i32, // width does not give accurate results - https://stackoverflow.com/questions/19587185/cvpixelbuffergetbytesperrow-for-cvimagebufferref-returns-unexpected-wrong-valu
+        width: (bytes_per_row / 4) as i32, // width does not give accurate results - https://stackoverflow.com/questions/19587185/cvpixelbuffergetbytesperrow-for-cvimagebufferref-returns-unexpected-wrong-valu
         height: height as i32,
         data,
     })
@@ -284,17 +311,13 @@ pub unsafe fn create_rgb_frame(sample_buffer: CMSampleBuffer) -> Option<RGBFrame
     let base_address = CVPixelBufferGetBaseAddress(pixel_buffer);
     let bytes_per_row = CVPixelBufferGetBytesPerRow(pixel_buffer);
 
-    let data = slice::from_raw_parts(
-        base_address as *mut u8,
-        bytes_per_row * height,
-    )
-    .to_vec();
+    let data = slice::from_raw_parts(base_address as *mut u8, bytes_per_row * height).to_vec();
 
     CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
 
     Some(RGBFrame {
         display_time: epoch as u64,
-        width: (bytes_per_row/4) as i32, // width does not give accurate results - https://stackoverflow.com/questions/19587185/cvpixelbuffergetbytesperrow-for-cvimagebufferref-returns-unexpected-wrong-valu
+        width: (bytes_per_row / 4) as i32, // width does not give accurate results - https://stackoverflow.com/questions/19587185/cvpixelbuffergetbytesperrow-for-cvimagebufferref-returns-unexpected-wrong-valu
         height: height as i32,
         data: convert_bgra_to_rgb(data),
     })
