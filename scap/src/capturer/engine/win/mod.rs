@@ -24,6 +24,7 @@ impl Capturer {
 
 pub struct WinStream {
     settings: Settings<mpsc::Sender<Frame>>,
+    capture_control: Option<CaptureControl<Capturer, Box<dyn std::error::Error + Send + Sync>>>,
 }
 
 impl WindowsCaptureHandler for Capturer {
@@ -63,9 +64,15 @@ impl WindowsCaptureHandler for Capturer {
 
 
 impl WinStream {
-    pub fn start_capture(&self) {
+    pub fn start_capture(&mut self) {
         // TODO: Prevent cloning the transmitter
-        Capturer::start_free_threaded(self.settings.clone());
+        let capture_control = Capturer::start_free_threaded(self.settings.clone()).unwrap();
+        self.capture_control = Some(capture_control);
+    }
+
+    pub fn stop_capture(&mut self) {
+        let mut capture_control = self.capture_control.take().unwrap();
+        capture_control.stop();
     }
 }
 
@@ -79,5 +86,5 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream 
     )
     .unwrap();
 
-    return WinStream { settings };
+    return WinStream { settings, capture_control: None };
 }
