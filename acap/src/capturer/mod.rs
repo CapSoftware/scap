@@ -1,16 +1,19 @@
 use std::sync::mpsc;
 
-use cpal::{Device, SupportedStreamConfig, traits::{HostTrait, DeviceTrait, StreamTrait}, Stream};
+use cpal::{
+    traits::{DeviceTrait, HostTrait, StreamTrait},
+    Device, Stream, SupportedStreamConfig,
+};
 
 use crate::frame::Frame;
 
 pub struct InputOptions {
-    pub target: Device
+    pub target: Device,
 }
 
 pub struct CapturerOptions {
     pub target: Device,
-    pub config: SupportedStreamConfig
+    pub config: SupportedStreamConfig,
 }
 pub struct Capturer {
     options: CapturerOptions,
@@ -45,26 +48,25 @@ impl Capturer {
         };
         let tx2 = self.tx.clone();
         let stream = match config.sample_format() {
-            cpal::SampleFormat::F32 => device.build_input_stream(
-                &config.into(),
-                move |data:&[f32], _: &_| {
-                    let data = data.to_vec();
+            cpal::SampleFormat::F32 => device
+                .build_input_stream(
+                    &config.into(),
+                    move |data: &[f32], _: &_| {
+                        let data = data.to_vec();
 
-                    let _ = &tx2.send(Frame {
-                        data
-                    });
-                },
-                err_fn,
-                None
-            ).unwrap(),
+                        let _ = &tx2.send(Frame { data });
+                    },
+                    err_fn,
+                    None,
+                )
+                .unwrap(),
             _ => panic!("Unknown stream format"),
         };
         let _ = stream.play();
         self.stream = Some(stream);
     }
 
-    pub fn pause_capture(&self) {
-    }
+    pub fn pause_capture(&self) {}
 
     pub fn stop_capture(self) {
         let stream = self.stream.unwrap();

@@ -1,4 +1,3 @@
-
 #[cfg(target_os = "macos")]
 mod mac;
 
@@ -30,7 +29,7 @@ pub fn is_supported() -> bool {
 
     #[cfg(target_os = "windows")]
     return win::is_supported();
-  
+
     #[cfg(target_os = "linux")]
     return linux::is_supported();
 }

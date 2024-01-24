@@ -15,6 +15,12 @@ pub struct RGBFrame {
     pub data: Vec<u8>,
 }
 
+pub struct RGB8Frame {
+    pub display_time: u64,
+    pub width: i32,
+    pub height: i32,
+}
+
 pub struct RGBxFrame {
     pub width: i32,
     pub height: i32,
@@ -36,7 +42,7 @@ pub struct BGRFrame {
     pub display_time: u64,
     pub width: i32,
     pub height: i32,
-    pub data: Vec<u8>
+    pub data: Vec<u8>,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -65,7 +71,7 @@ pub fn remove_alpha_channel(frame_data: Vec<u8>) -> Vec<u8> {
     let width = frame_data.len();
     let width_without_alpha = (width / 4) * 3;
 
-    let mut data :Vec<u8> = vec![0; width_without_alpha];
+    let mut data: Vec<u8> = vec![0; width_without_alpha];
 
     for (src, dst) in frame_data.chunks_exact(4).zip(data.chunks_exact_mut(3)) {
         dst[0] = src[0];
@@ -80,7 +86,7 @@ pub fn convert_bgra_to_rgb(frame_data: Vec<u8>) -> Vec<u8> {
     let width = frame_data.len();
     let width_without_alpha = (width / 4) * 3;
 
-    let mut data :Vec<u8> = vec![0; width_without_alpha];
+    let mut data: Vec<u8> = vec![0; width_without_alpha];
 
     for (src, dst) in frame_data.chunks_exact(4).zip(data.chunks_exact_mut(3)) {
         dst[0] = src[2];

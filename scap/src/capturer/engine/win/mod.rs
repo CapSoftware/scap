@@ -1,5 +1,5 @@
-use std::sync::mpsc;
 use std::error::Error;
+use std::sync::mpsc;
 
 use crate::{capturer::Options, frame::Frame};
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, HMONITOR, MONITORINFOEXW};
@@ -30,9 +30,7 @@ impl WindowsCaptureHandler for Capturer {
     type Flags = mpsc::Sender<Frame>;
     type Error = Box<dyn std::error::Error + Send + Sync>;
 
-
     fn new(tx: Self::Flags) -> Result<Self, Self::Error> {
-
         Ok(Self { tx })
     }
 
@@ -41,11 +39,12 @@ impl WindowsCaptureHandler for Capturer {
         mut frame: &mut Wframe,
         _: InternalCaptureControl,
     ) -> Result<(), Self::Error> {
-
-        let mut frame_buffer= frame.buffer().unwrap();
+        let mut frame_buffer = frame.buffer().unwrap();
         let raw_frame_buffer = frame_buffer.as_raw_buffer();
         let frame_data = raw_frame_buffer.to_vec();
-        self.tx.send(Frame::BGR0(frame_data)).expect("Failed to send data");
+        self.tx
+            .send(Frame::BGR0(frame_data))
+            .expect("Failed to send data");
         Ok(())
     }
 
@@ -54,7 +53,6 @@ impl WindowsCaptureHandler for Capturer {
         Ok(())
     }
 }
-
 
 impl WinStream {
     pub fn start_capture(&self) {
