@@ -16,18 +16,21 @@ pub struct RGBFrame {
 }
 
 pub struct RGBxFrame {
+    pub display_time: u64,
     pub width: i32,
     pub height: i32,
     pub data: Vec<u8>,
 }
 
 pub struct XBGRFrame {
+    pub display_time: u64,
     pub width: i32,
     pub height: i32,
     pub data: Vec<u8>,
 }
 
 pub struct BGRxFrame {
+    pub display_time: u64,
     pub width: i32,
     pub height: i32,
     pub data: Vec<u8>,
