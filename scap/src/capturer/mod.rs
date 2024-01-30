@@ -51,7 +51,7 @@ impl Capturer {
 
     // TODO
     // Prevent starting capture if already started
-    pub fn start_capture(&self) {
+    pub fn start_capture(&mut self) {
         self.engine.start();
     }
     pub fn stop_capture(&mut self) {

@@ -60,8 +60,11 @@ fn main() {
             Frame::YUVFrame(frame) => {
                 println!("{}", frame.display_time)
             }
-            Frame::BGR0(_) => {
-                println!("Recvd windows frame");
+            Frame::BGR0(frame) => {
+                println!(
+                    "Received frame of width {} and height {}",
+                    frame.width, frame.height
+                );
             }
             Frame::RGB(frame) => {
                 println!(

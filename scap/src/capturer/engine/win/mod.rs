@@ -1,7 +1,10 @@
 use std::error::Error;
 use std::sync::mpsc;
 
-use crate::{capturer::Options, frame::Frame};
+use crate::{
+    capturer::Options,
+    frame::{BGRFrame, Frame},
+};
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, HMONITOR, MONITORINFOEXW};
 use windows_capture::{
     capture::{CaptureControl, WindowsCaptureHandler},
@@ -24,6 +27,7 @@ impl Capturer {
 
 pub struct WinStream {
     settings: Settings<mpsc::Sender<Frame>>,
+    capture_control: Option<CaptureControl<Capturer, Box<dyn std::error::Error + Send + Sync>>>,
 }
 
 impl WindowsCaptureHandler for Capturer {
@@ -42,8 +46,14 @@ impl WindowsCaptureHandler for Capturer {
         let mut frame_buffer = frame.buffer().unwrap();
         let raw_frame_buffer = frame_buffer.as_raw_buffer();
         let frame_data = raw_frame_buffer.to_vec();
+        let bgr_frame = BGRFrame {
+            display_time: 0,
+            width: frame.width() as i32,
+            height: frame.height() as i32,
+            data: frame_data,
+        };
         self.tx
-            .send(Frame::BGR0(frame_data))
+            .send(Frame::BGR0(bgr_frame))
             .expect("Failed to send data");
         Ok(())
     }
@@ -55,9 +65,15 @@ impl WindowsCaptureHandler for Capturer {
 }
 
 impl WinStream {
-    pub fn start_capture(&self) {
+    pub fn start_capture(&mut self) {
         // TODO: Prevent cloning the transmitter
-        Capturer::start_free_threaded(self.settings.clone());
+        let capture_control = Capturer::start_free_threaded(self.settings.clone()).unwrap();
+        self.capture_control = Some(capture_control);
+    }
+
+    pub fn stop_capture(&mut self) {
+        let mut capture_control = self.capture_control.take().unwrap();
+        capture_control.stop();
     }
 }
 
@@ -71,5 +87,8 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream 
     )
     .unwrap();
 
-    return WinStream { settings };
+    return WinStream {
+        settings,
+        capture_control: None,
+    };
 }

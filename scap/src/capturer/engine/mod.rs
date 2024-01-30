@@ -44,7 +44,7 @@ impl Engine {
         }
     }
 
-    pub fn start(&self) {
+    pub fn start(&mut self) {
         #[cfg(target_os = "macos")]
         {
             // self.mac.add_output(Capturer::new(tx));
@@ -66,6 +66,11 @@ impl Engine {
         #[cfg(target_os = "macos")]
         {
             self.mac.stop_capture();
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            self.win.stop_capture();
         }
 
         #[cfg(target_os = "linux")]
