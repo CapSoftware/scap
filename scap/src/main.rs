@@ -1,7 +1,10 @@
 // This program is just a testbed for the library itself
 // Refer to the lib.rs file for the actual implementation
 
-use scap::{capturer::{Options, Capturer, CGRect, CGPoint, CGSize}, frame::Frame};
+use scap::{
+    capturer::{CGPoint, CGRect, CGSize, Capturer, Options},
+    frame::Frame,
+};
 
 fn main() {
     // #1 Check if the platform is supported
@@ -36,7 +39,10 @@ fn main() {
         output_type: scap::frame::FrameType::YUVFrame,
         source_rect: Some(CGRect {
             origin: CGPoint { x: 0.0, y: 0.0 },
-            size: CGSize { width: 100.0, height: 100.0 }
+            size: CGSize {
+                width: 100.0,
+                height: 100.0,
+            },
         }),
         ..Default::default()
     };
@@ -55,19 +61,34 @@ fn main() {
                 println!("{}", frame.display_time)
             }
             Frame::BGR0(frame) => {
-                println!("Received frame of width {} and height {}", frame.width, frame.height);
+                println!(
+                    "Received frame of width {} and height {}",
+                    frame.width, frame.height
+                );
             }
             Frame::RGB(frame) => {
-                println!("Recieved frame of width {} and height {}", frame.width, frame.height);
+                println!(
+                    "Recieved frame of width {} and height {}",
+                    frame.width, frame.height
+                );
             }
             Frame::RGBx(frame) => {
-                println!("Recieved RGBx frame of width {} and height {}", frame.width, frame.height);
+                println!(
+                    "Recieved RGBx frame of width {} and height {}",
+                    frame.width, frame.height
+                );
             }
             Frame::XBGR(frame) => {
-                println!("Recieved xRGB frame of width {} and height {}", frame.width, frame.height);
+                println!(
+                    "Recieved xRGB frame of width {} and height {}",
+                    frame.width, frame.height
+                );
             }
             Frame::BGRx(frame) => {
-                println!("Recieved BGRx frame of width {} and height {}", frame.width, frame.height);
+                println!(
+                    "Recieved BGRx frame of width {} and height {}",
+                    frame.width, frame.height
+                );
             }
         }
     }

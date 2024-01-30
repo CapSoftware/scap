@@ -1,7 +1,10 @@
-use std::sync::mpsc;
 use std::error::Error;
+use std::sync::mpsc;
 
-use crate::{capturer::Options, frame::{Frame, BGRFrame}};
+use crate::{
+    capturer::Options,
+    frame::{BGRFrame, Frame},
+};
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, HMONITOR, MONITORINFOEXW};
 use windows_capture::{
     capture::{CaptureControl, WindowsCaptureHandler},
@@ -31,9 +34,7 @@ impl WindowsCaptureHandler for Capturer {
     type Flags = mpsc::Sender<Frame>;
     type Error = Box<dyn std::error::Error + Send + Sync>;
 
-
     fn new(tx: Self::Flags) -> Result<Self, Self::Error> {
-
         Ok(Self { tx })
     }
 
@@ -42,8 +43,7 @@ impl WindowsCaptureHandler for Capturer {
         mut frame: &mut Wframe,
         _: InternalCaptureControl,
     ) -> Result<(), Self::Error> {
-
-        let mut frame_buffer= frame.buffer().unwrap();
+        let mut frame_buffer = frame.buffer().unwrap();
         let raw_frame_buffer = frame_buffer.as_raw_buffer();
         let frame_data = raw_frame_buffer.to_vec();
         let bgr_frame = BGRFrame {
@@ -52,7 +52,9 @@ impl WindowsCaptureHandler for Capturer {
             height: frame.height() as i32,
             data: frame_data,
         };
-        self.tx.send(Frame::BGR0(bgr_frame)).expect("Failed to send data");
+        self.tx
+            .send(Frame::BGR0(bgr_frame))
+            .expect("Failed to send data");
         Ok(())
     }
 
@@ -61,7 +63,6 @@ impl WindowsCaptureHandler for Capturer {
         Ok(())
     }
 }
-
 
 impl WinStream {
     pub fn start_capture(&mut self) {
@@ -86,5 +87,8 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream 
     )
     .unwrap();
 
-    return WinStream { settings, capture_control: None };
+    return WinStream {
+        settings,
+        capture_control: None,
+    };
 }

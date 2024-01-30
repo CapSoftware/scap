@@ -1,8 +1,8 @@
-use core_graphics::{display::{CGMainDisplayID, CGDirectDisplayID, CGDisplay}, access::ScreenCaptureAccess};
-use screencapturekit::{
-    sc_shareable_content::SCShareableContent,
-    sc_display::SCDisplay
+use core_graphics::{
+    access::ScreenCaptureAccess,
+    display::{CGDirectDisplayID, CGDisplay, CGMainDisplayID},
 };
+use screencapturekit::{sc_display::SCDisplay, sc_shareable_content::SCShareableContent};
 use sysinfo::System;
 
 use super::Target;

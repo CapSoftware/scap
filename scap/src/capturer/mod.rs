@@ -2,7 +2,10 @@ mod engine;
 
 use std::sync::mpsc;
 
-use crate::{device::display, frame::{Frame, FrameType}};
+use crate::{
+    device::display,
+    frame::{Frame, FrameType},
+};
 
 #[derive(Debug, Default, Clone)]
 pub struct CGPoint {
@@ -30,7 +33,7 @@ pub struct Options {
     // excluded targets will only work on macOS
     pub excluded_targets: Option<Vec<display::Target>>,
     pub output_type: FrameType,
-    pub source_rect: Option<CGRect>
+    pub source_rect: Option<CGRect>,
 }
 
 pub struct Capturer {
@@ -49,7 +52,6 @@ impl Capturer {
     // TODO
     // Prevent starting capture if already started
     pub fn start_capture(&mut self) {
-
         self.engine.start();
     }
     pub fn stop_capture(&mut self) {

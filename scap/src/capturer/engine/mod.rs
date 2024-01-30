@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 
-use crate::frame::Frame;
 use super::Options;
+use crate::frame::Frame;
 
 #[cfg(target_os = "macos")]
 mod mac;
@@ -28,7 +28,7 @@ impl Engine {
         #[cfg(target_os = "macos")]
         {
             let mac = mac::create_capturer(&options, tx);
-            return Engine { mac }
+            return Engine { mac };
         }
 
         #[cfg(target_os = "windows")]
