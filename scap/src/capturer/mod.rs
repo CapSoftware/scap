@@ -7,6 +7,35 @@ use crate::{
     frame::{Frame, FrameType},
 };
 
+#[derive(Debug, Clone, Copy, Default)]
+pub enum Resolution {
+    _480p,
+    _720p,
+    _1080p,
+    _1440p,
+    _2160p,
+    _4320p,
+
+    #[default]
+    Captured,
+}
+
+impl Resolution {
+    fn value(&self) -> [u32; 2] {
+        match *self {
+            Resolution::_480p => [640, 480],
+            Resolution::_720p => [1280, 720],
+            Resolution::_1080p => [1920, 1080],
+            Resolution::_1440p => [2560, 1440],
+            Resolution::_2160p => [3840, 2160],
+            Resolution::_4320p => [7680, 4320],
+            Resolution::Captured => {
+                panic!(".value should not be called when Resolution type is Captured")
+            }
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct CGPoint {
     pub x: f64,
@@ -33,6 +62,7 @@ pub struct Options {
     // excluded targets will only work on macOS
     pub excluded_targets: Option<Vec<display::Target>>,
     pub output_type: FrameType,
+    pub output_resolution: Resolution,
     pub source_rect: Option<CGRect>,
 }
 

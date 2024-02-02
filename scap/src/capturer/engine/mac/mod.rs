@@ -1,5 +1,5 @@
 use std::sync::mpsc;
-use std::{mem, slice};
+use std::{cmp, mem, slice};
 
 use screencapturekit::cm_sample_buffer::CMSampleBuffer;
 use screencapturekit::sc_output_handler::SCStreamOutputType;
@@ -20,6 +20,7 @@ use screencapturekit_sys::sc_stream_frame_info::SCFrameStatus;
 use crate::frame::{convert_bgra_to_rgb, BGRFrame, Frame, FrameType, RGBFrame, YUVFrame};
 use crate::{
     capturer::Options,
+    capturer::Resolution,
     device::display::{self},
 };
 use apple_sys::{
@@ -141,10 +142,21 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
         FrameType::RGB => PixelFormat::ARGB8888,
     };
 
+    // Calculate the output height & width based on the required resolution
+    let mut output_width = source_rect.size.width as u32;
+    let mut output_height = source_rect.size.height as u32;
+    match options.output_resolution {
+        Resolution::Captured => {}
+        _ => {
+            output_width = cmp::min(output_width, options.output_resolution.value()[0]);
+            output_height = cmp::min(output_width, options.output_resolution.value()[1]);
+        }
+    }
+
     let stream_config = SCStreamConfiguration {
         shows_cursor: true,
-        width: source_rect.size.width as u32,
-        height: source_rect.size.height as u32,
+        width: output_width,
+        height: output_height,
         source_rect,
         pixel_format,
         ..Default::default()
