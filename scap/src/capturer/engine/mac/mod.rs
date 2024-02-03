@@ -149,8 +149,11 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     match options.output_resolution {
         Resolution::Captured => {}
         _ => {
-            output_width = cmp::min(output_width, options.output_resolution.value()[0]);
-            output_height = cmp::min(output_width, options.output_resolution.value()[1]);
+            let [resolved_width, resolved_height] = options
+                .output_resolution
+                .value((source_rect.size.width as f32) / (source_rect.size.height as f32));
+            output_width = cmp::min(output_width, resolved_width);
+            output_height = cmp::min(output_height, resolved_height);
         }
     }
 
