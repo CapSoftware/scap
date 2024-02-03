@@ -52,7 +52,7 @@ pub struct CGRect {
     pub origin: CGPoint,
     pub size: CGSize,
 }
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Options {
     pub fps: u32,
     pub show_cursor: bool,
@@ -90,5 +90,9 @@ impl Capturer {
 
     pub fn get_next_frame(&self) -> Result<Frame, mpsc::RecvError> {
         self.rx.recv()
+    }
+
+    pub fn get_output_frame_size(&mut self) -> [u32; 2] {
+        self.engine.get_output_frame_size()
     }
 }
