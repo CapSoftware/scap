@@ -99,8 +99,8 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     let display_id = display.display_id;
 
     let scale = display::get_scale_factor(display_id) as u32;
-    let width = display.width * scale;
-    let height = display.height * scale;
+    let width = display.width;
+    let height = display.height;
 
     let params = InitParams::Display(display);
     let filter = SCContentFilter::new(params);
@@ -143,8 +143,9 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     };
 
     // Calculate the output height & width based on the required resolution
-    let mut output_width = source_rect.size.width as u32;
-    let mut output_height = source_rect.size.height as u32;
+    // Output width and height need to be multiplied by scale (or dpi)
+    let mut output_width = (source_rect.size.width as u32) * scale as u32;
+    let mut output_height = (source_rect.size.height as u32) * scale as u32;
     match options.output_resolution {
         Resolution::Captured => {}
         _ => {
