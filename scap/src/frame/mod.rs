@@ -99,3 +99,21 @@ pub fn convert_bgra_to_rgb(frame_data: Vec<u8>) -> Vec<u8> {
 
     return data;
 }
+
+pub fn get_cropped_data(data: Vec<u8>, cur_width: i32, height: i32, width: i32) -> Vec<u8> {
+    if data.len() as i32 != height * cur_width * 4 {
+        return data;
+    } else {
+        let mut cropped_data: Vec<u8> = vec![0; (4 * height * width).try_into().unwrap()];
+        let mut cropped_data_index = 0;
+
+        for i in 0..data.len() {
+            let x = i as i32 % (cur_width * 4);
+            if x < (width * 4) {
+                cropped_data[cropped_data_index] = data[i];
+                cropped_data_index += 1;
+            }
+        }
+        return cropped_data;
+    }
+}
