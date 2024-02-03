@@ -18,7 +18,8 @@ use screencapturekit_sys::os_types::geometry::{CGPoint, CGRect, CGSize};
 use screencapturekit_sys::sc_stream_frame_info::SCFrameStatus;
 
 use crate::frame::{
-    convert_bgra_to_rgb, get_cropped_data, BGRFrame, Frame, FrameType, RGBFrame, YUVFrame,
+    convert_bgra_to_rgb, get_cropped_data, remove_alpha_channel, BGRFrame, Frame, FrameType,
+    RGBFrame, YUVFrame,
 };
 use crate::{
     capturer::Options,
@@ -314,7 +315,7 @@ pub unsafe fn create_bgr_frame(sample_buffer: CMSampleBuffer) -> Option<BGRFrame
         display_time: epoch as u64,
         width: width as i32, // width does not give accurate results - https://stackoverflow.com/questions/19587185/cvpixelbuffergetbytesperrow-for-cvimagebufferref-returns-unexpected-wrong-valu
         height: height as i32,
-        data: cropped_data,
+        data: remove_alpha_channel(cropped_data),
     })
 }
 
