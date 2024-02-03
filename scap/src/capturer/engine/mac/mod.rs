@@ -17,7 +17,9 @@ use screencapturekit_sys::cm_sample_buffer_ref::{
 use screencapturekit_sys::os_types::geometry::{CGPoint, CGRect, CGSize};
 use screencapturekit_sys::sc_stream_frame_info::SCFrameStatus;
 
-use crate::frame::{convert_bgra_to_rgb, BGRFrame, Frame, FrameType, RGBFrame, YUVFrame};
+use crate::frame::{
+    convert_bgra_to_rgb, get_cropped_data, BGRFrame, Frame, FrameType, RGBFrame, YUVFrame,
+};
 use crate::{
     capturer::Options,
     capturer::Resolution,
@@ -93,8 +95,6 @@ impl StreamOutput for Capturer {
 }
 
 pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
-    println!("Options: {:?}", options);
-
     let display = display::get_main_display();
     let display_id = display.display_id;
 
@@ -301,13 +301,20 @@ pub unsafe fn create_bgr_frame(sample_buffer: CMSampleBuffer) -> Option<BGRFrame
 
     let data = slice::from_raw_parts(base_address as *mut u8, bytes_per_row * height).to_vec();
 
+    let cropped_data = get_cropped_data(
+        data,
+        (bytes_per_row / 4) as i32,
+        height as i32,
+        width as i32,
+    );
+
     CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
 
     Some(BGRFrame {
         display_time: epoch as u64,
-        width: (bytes_per_row / 4) as i32, // width does not give accurate results - https://stackoverflow.com/questions/19587185/cvpixelbuffergetbytesperrow-for-cvimagebufferref-returns-unexpected-wrong-valu
+        width: width as i32, // width does not give accurate results - https://stackoverflow.com/questions/19587185/cvpixelbuffergetbytesperrow-for-cvimagebufferref-returns-unexpected-wrong-valu
         height: height as i32,
-        data,
+        data: cropped_data,
     })
 }
 
@@ -329,13 +336,20 @@ pub unsafe fn create_rgb_frame(sample_buffer: CMSampleBuffer) -> Option<RGBFrame
 
     let data = slice::from_raw_parts(base_address as *mut u8, bytes_per_row * height).to_vec();
 
+    let cropped_data = get_cropped_data(
+        data,
+        (bytes_per_row / 4) as i32,
+        height as i32,
+        width as i32,
+    );
+
     CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
 
     Some(RGBFrame {
         display_time: epoch as u64,
-        width: (bytes_per_row / 4) as i32, // width does not give accurate results - https://stackoverflow.com/questions/19587185/cvpixelbuffergetbytesperrow-for-cvimagebufferref-returns-unexpected-wrong-valu
+        width: width as i32, // width does not give accurate results - https://stackoverflow.com/questions/19587185/cvpixelbuffergetbytesperrow-for-cvimagebufferref-returns-unexpected-wrong-valu
         height: height as i32,
-        data: convert_bgra_to_rgb(data),
+        data: convert_bgra_to_rgb(cropped_data),
     })
     // (y_width, y_height, data)
 }
