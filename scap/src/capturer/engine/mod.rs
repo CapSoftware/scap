@@ -38,13 +38,19 @@ impl Engine {
         #[cfg(target_os = "windows")]
         {
             let win = win::create_capturer(&options, tx);
-            return Engine { win };
+            return Engine {
+                win,
+                options: (*options).clone(),
+            };
         }
 
         #[cfg(target_os = "linux")]
         {
             let linux = linux::create_capturer(&options, tx);
-            return Engine { linux };
+            return Engine {
+                linux,
+                options: (*options).clone(),
+            };
         }
     }
 
@@ -87,6 +93,16 @@ impl Engine {
         #[cfg(target_os = "macos")]
         {
             mac::get_output_frame_size(&self.options)
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            return [0, 0];
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            return [0, 0];
         }
     }
 }
