@@ -1,6 +1,8 @@
 // This program is just a testbed for the library itself
 // Refer to the lib.rs file for the actual implementation
 
+use std::path::PathBuf;
+
 use scap::{
     capturer::{CGPoint, CGRect, CGSize, Capturer, Options},
     frame::Frame,
@@ -38,10 +40,10 @@ fn main() {
         excluded_targets: None,
         output_type: scap::frame::FrameType::YUVFrame,
         source_rect: Some(CGRect {
-            origin: CGPoint { x: 0.0, y: 0.0 },
+            origin: CGPoint { x: 500.0, y: 50.0 },
             size: CGSize {
-                width: 100.0,
-                height: 100.0,
+                width: 300.0,
+                height: 300.0,
             },
         }),
         ..Default::default()
@@ -54,7 +56,7 @@ fn main() {
     recorder.start_capture();
 
     // #7 Capture 100 frames
-    for _ in 0..100 {
+    for i in 0..100 {
         let frame = recorder.get_next_frame().expect("Error");
         match frame {
             Frame::YUVFrame(frame) => {
@@ -62,9 +64,16 @@ fn main() {
             }
             Frame::BGR0(frame) => {
                 println!(
-                    "Received frame of width {} and height {}",
+                    "Received BGR0 frame of width {} and height {}",
                     frame.width, frame.height
                 );
+                println!("Frame data => {:?}", frame.data.len());
+                let x =
+                    image::RgbaImage::from_raw(frame.width as u32, frame.height as u32, frame.data);
+                let img = x.unwrap();
+                let filename = format!("frame_{}.png", i);
+                let folder = PathBuf::new().join("test").join(filename);
+                img.save(folder).expect("Failed to save image");
             }
             Frame::RGB(frame) => {
                 println!(
@@ -77,6 +86,13 @@ fn main() {
                     "Recieved RGBx frame of width {} and height {}",
                     frame.width, frame.height
                 );
+                println!("Frame data => {:?}", frame.data.len());
+                let x =
+                    image::RgbaImage::from_raw(frame.width as u32, frame.height as u32, frame.data);
+                let img = x.unwrap();
+                let filename = format!("frame_{}.png", i);
+                let folder = PathBuf::new().join("test").join(filename);
+                img.save(folder).expect("Failed to save image");
             }
             Frame::XBGR(frame) => {
                 println!(
