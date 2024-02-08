@@ -334,6 +334,14 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
         }
     }
 
+    if output_width % 2 == 1 {
+        output_width = output_width - 1;
+    }
+
+    if output_height % 2 == 1 {
+        output_height = output_height - 1;
+    }
+
     return [output_width, output_height];
 }
 
