@@ -1,17 +1,13 @@
 use std::{
     mem::size_of,
     sync::{
-        atomic::AtomicU8,
+        atomic::{AtomicU8, AtomicBool},
         mpsc::{self, sync_channel, SyncSender},
     },
     thread::JoinHandle,
     time::Duration,
 };
 
-use ashpd::{
-    desktop::screencast::{CursorMode, Screencast},
-    WindowIdentifier,
-};
 use pipewire as pw;
 use pw::{
     properties,
@@ -34,11 +30,13 @@ use crate::{
     frame::{BGRxFrame, Frame, RGBFrame, RGBxFrame, XBGRFrame},
 };
 
-use self::error::LinCapError;
+use self::{error::LinCapError, portal::ScreenCastPortal};
 
 mod error;
+mod portal;
 
 static CAPTURER_STATE: AtomicU8 = AtomicU8::new(0);
+static STREAM_STATE_CHANGED_TO_ERROR: AtomicBool = AtomicBool::new(false);
 
 #[derive(Clone)]
 struct ListenerUserData {
@@ -72,30 +70,16 @@ fn param_changed_callback(
         .parse(param)
         // TODO: Tell library user of the error
         .expect("Failed to parse format parameter");
-
-    println!("Got video format:");
-    println!(
-        "  format: {} ({:?})",
-        user_data.format.format().as_raw(),
-        user_data.format.format()
-    );
-    println!(
-        "  size: {}x{}",
-        user_data.format.size().width,
-        user_data.format.size().height
-    );
-    println!(
-        "  framerate: {}/{}",
-        user_data.format.framerate().num,
-        user_data.format.framerate().denom
-    );
 }
 
-fn state_changed_callback(old: StreamState, new: StreamState) {
-    println!(
-        "linux::pipewire::stream: State changed: {:?} -> {:?}",
-        old, new
-    );
+fn state_changed_callback(_old: StreamState, new: StreamState) {
+    match new {
+        StreamState::Error(e) => {
+            eprintln!("pipewire: State changed to error({e})");
+            STREAM_STATE_CHANGED_TO_ERROR.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+        _ => {}
+    }
 }
 
 unsafe fn get_timestamp(buffer: *mut spa_buffer) -> i64 {
@@ -310,57 +294,33 @@ fn pipewire_capturer(
     }
 
     // User has called Capturer::start() and we start the main loop
-    while CAPTURER_STATE.load(std::sync::atomic::Ordering::Relaxed) == 1 {
+    while CAPTURER_STATE.load(std::sync::atomic::Ordering::Relaxed) == 1
+        && /* If the stream state got changed to `Error`, we exit. TODO: tell user that we exited */
+          !STREAM_STATE_CHANGED_TO_ERROR.load(std::sync::atomic::Ordering::Relaxed) {
         mainloop.iterate(Duration::from_millis(100));
     }
 
     Ok(())
 }
 
-async fn get_screencast_stream(_options: &Options) -> Result<Option<u32>, LinCapError> {
-    let proxy = Screencast::new().await?;
-    let session = proxy.create_session().await?;
-
-    proxy
-        .select_sources(
-            &session,
-            if _options.show_cursor {
-                ashpd::desktop::screencast::CursorMode::Embedded
-            } else {
-                CursorMode::Hidden
-            },
-            proxy.available_source_types().await?,
-            false,
-            None,
-            ashpd::desktop::screencast::PersistMode::DoNot,
-        )
-        .await?;
-
-    let response = proxy
-        .start(&session, &WindowIdentifier::default())
-        .await?
-        .response()?;
-
-    for stream in response.streams() {
-        // Just return the first stream we get
-        return Ok(Some(stream.pipe_wire_node_id()));
-    }
-
-    Ok(None)
-}
-
 pub struct LinuxCapturer {
     capturer_join_handle: Option<JoinHandle<Result<(), LinCapError>>>,
+    // The pipewire stream is deleted when the connection is dropped.
+    // That's why we keep it alive
+    _connection: dbus::blocking::Connection,
 }
 
 impl LinuxCapturer {
     // TODO: Error handling
     pub fn new(options: &Options, tx: mpsc::Sender<Frame>) -> Self {
-        let Some(stream_id) = async_std::task::block_on(get_screencast_stream(options))
-            .expect("Failed to get stream id")
-        else {
-            panic!("No stream available");
-        };
+        let connection =
+            dbus::blocking::Connection::new_session().expect("Failed to create dbus connection");
+        let stream_id = ScreenCastPortal::new(&connection)
+            .show_cursor(options.show_cursor)
+            .expect("Unsupported cursor mode")
+            .create_stream()
+            .expect("Failed to get screencast stream")
+            .pw_node_id();
 
         // TODO: Fix this hack
         let options = Options {
@@ -387,6 +347,7 @@ impl LinuxCapturer {
 
         Self {
             capturer_join_handle: Some(capturer_join_handle),
+            _connection: connection,
         }
     }
 
