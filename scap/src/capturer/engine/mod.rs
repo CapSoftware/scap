@@ -13,6 +13,7 @@ mod win;
 mod linux;
 
 pub struct Engine {
+    options: Options,
     #[cfg(target_os = "macos")]
     mac: screencapturekit::sc_stream::SCStream,
 
@@ -28,23 +29,32 @@ impl Engine {
         #[cfg(target_os = "macos")]
         {
             let mac = mac::create_capturer(&options, tx);
-            return Engine { mac };
+            return Engine {
+                mac,
+                options: (*options).clone(),
+            };
         }
 
         #[cfg(target_os = "windows")]
         {
             let win = win::create_capturer(&options, tx);
-            return Engine { win };
+            return Engine {
+                win,
+                options: (*options).clone(),
+            };
         }
 
         #[cfg(target_os = "linux")]
         {
             let linux = linux::create_capturer(&options, tx);
-            return Engine { linux };
+            return Engine {
+                linux,
+                options: (*options).clone(),
+            };
         }
     }
 
-    pub fn start(&self) {
+    pub fn start(&mut self) {
         #[cfg(target_os = "macos")]
         {
             // self.mac.add_output(Capturer::new(tx));
@@ -68,9 +78,31 @@ impl Engine {
             self.mac.stop_capture();
         }
 
+        #[cfg(target_os = "windows")]
+        {
+            self.win.stop_capture();
+        }
+
         #[cfg(target_os = "linux")]
         {
             self.linux.stop_capture();
+        }
+    }
+
+    pub fn get_output_frame_size(&mut self) -> [u32; 2] {
+        #[cfg(target_os = "macos")]
+        {
+            mac::get_output_frame_size(&self.options)
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            return [0, 0];
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            return [0, 0];
         }
     }
 }

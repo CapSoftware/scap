@@ -1,4 +1,5 @@
 use std::{
+    mem::size_of,
     sync::{
         atomic::{AtomicU8, AtomicBool},
         mpsc::{self, sync_channel, SyncSender},
@@ -13,8 +14,12 @@ use pw::{
     spa::{
         self,
         format::{FormatProperties, MediaSubtype, MediaType},
-        param::video::VideoFormat,
-        pod::Pod,
+        param::{video::VideoFormat, ParamType},
+        pod::{Pod, Property},
+        sys::{
+            spa_buffer, spa_meta_header, SPA_META_Header, SPA_PARAM_META_size, SPA_PARAM_META_type,
+        },
+        utils::SpaTypes,
         Direction,
     },
     stream::{StreamRef, StreamState},
@@ -77,60 +82,83 @@ fn state_changed_callback(_old: StreamState, new: StreamState) {
     }
 }
 
+unsafe fn get_timestamp(buffer: *mut spa_buffer) -> i64 {
+    let n_metas = (*buffer).n_metas;
+    if n_metas > 0 {
+        let mut meta_ptr = (*buffer).metas;
+        let metas_end = (*buffer).metas.wrapping_add(n_metas as usize);
+        while meta_ptr != metas_end {
+            if (*meta_ptr).type_ == SPA_META_Header {
+                let meta_header: &mut spa_meta_header =
+                    &mut *((*meta_ptr).data as *mut spa_meta_header);
+                return meta_header.pts;
+            }
+            meta_ptr = meta_ptr.wrapping_add(1);
+        }
+        0
+    } else {
+        0
+    }
+}
+
 fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
-    match stream.dequeue_buffer() {
-        None => eprintln!("Out of buffers"),
-        Some(mut buffer) => {
-            let datas = buffer.datas_mut();
-            if datas.is_empty() {
+    let buffer = unsafe { stream.dequeue_raw_buffer() };
+    if !buffer.is_null() {
+        'outside: {
+            let buffer = unsafe { (*buffer).buffer };
+            if buffer.is_null() {
+                break 'outside;
+            }
+            let timestamp = unsafe { get_timestamp(buffer) };
+
+            let n_datas = unsafe { (*buffer).n_datas };
+            if n_datas < 1 {
                 return;
             }
+            let frame_size = user_data.format.size();
+            let frame_data: Vec<u8> = unsafe {
+                std::slice::from_raw_parts(
+                    (*(*buffer).datas).data as *mut u8,
+                    (*(*buffer).datas).maxsize as usize,
+                )
+                .to_vec()
+            };
 
-            if let Some(frame_data) = (&mut datas[0]).data() {
-                let frame_size = user_data.format.size();
-                match user_data.format.format() {
-                    VideoFormat::RGBx => {
-                        if let Err(e) = user_data.tx.send(Frame::RGBx(RGBxFrame {
-                            width: frame_size.width as i32,
-                            height: frame_size.height as i32,
-                            data: frame_data.to_vec(),
-                        })) {
-                            eprintln!("{e}");
-                        }
-                    }
-                    VideoFormat::RGB => {
-                        if let Err(e) = user_data.tx.send(Frame::RGB(RGBFrame {
-                            display_time: 0, // TODO: Get current time
-                            width: frame_size.width as i32,
-                            height: frame_size.height as i32,
-                            data: frame_data.to_vec(),
-                        })) {
-                            eprintln!("{e}");
-                        }
-                    }
-                    VideoFormat::xBGR => {
-                        if let Err(e) = user_data.tx.send(Frame::XBGR(XBGRFrame {
-                            width: frame_size.width as i32,
-                            height: frame_size.height as i32,
-                            data: frame_data.to_vec(),
-                        })) {
-                            eprintln!("{e}");
-                        }
-                    }
-                    VideoFormat::BGRx => {
-                        if let Err(e) = user_data.tx.send(Frame::BGRx(BGRxFrame {
-                            width: frame_size.width as i32,
-                            height: frame_size.height as i32,
-                            data: frame_data.to_vec(),
-                        })) {
-                            eprintln!("{e}");
-                        }
-                    }
-                    _ => panic!("Unsupported frame format received"),
-                }
+            if let Err(e) = match user_data.format.format() {
+                VideoFormat::RGBx => user_data.tx.send(Frame::RGBx(RGBxFrame {
+                    display_time: timestamp as u64,
+                    width: frame_size.width as i32,
+                    height: frame_size.height as i32,
+                    data: frame_data,
+                })),
+                VideoFormat::RGB => user_data.tx.send(Frame::RGB(RGBFrame {
+                    display_time: timestamp as u64,
+                    width: frame_size.width as i32,
+                    height: frame_size.height as i32,
+                    data: frame_data,
+                })),
+                VideoFormat::xBGR => user_data.tx.send(Frame::XBGR(XBGRFrame {
+                    display_time: timestamp as u64,
+                    width: frame_size.width as i32,
+                    height: frame_size.height as i32,
+                    data: frame_data,
+                })),
+                VideoFormat::BGRx => user_data.tx.send(Frame::BGRx(BGRxFrame {
+                    display_time: timestamp as u64,
+                    width: frame_size.width as i32,
+                    height: frame_size.height as i32,
+                    data: frame_data,
+                })),
+                _ => panic!("Unsupported frame format received"),
+            } {
+                eprintln!("{e}");
             }
         }
+    } else {
+        eprintln!("Out of buffers");
     }
+
+    unsafe { stream.queue_raw_buffer(buffer) };
 }
 
 // TODO: Format negotiation
@@ -221,14 +249,36 @@ fn pipewire_capturer(
         ),
     );
 
+    let metas_obj = pw::spa::pod::object!(
+        SpaTypes::ObjectParamMeta,
+        ParamType::Meta,
+        Property::new(
+            SPA_PARAM_META_type,
+            pw::spa::pod::Value::Id(pw::spa::utils::Id(SPA_META_Header))
+        ),
+        Property::new(
+            SPA_PARAM_META_size,
+            pw::spa::pod::Value::Int(size_of::<pw::spa::sys::spa_meta_header>() as i32)
+        ),
+    );
+
     let values: Vec<u8> = pw::spa::pod::serialize::PodSerializer::serialize(
         std::io::Cursor::new(Vec::new()),
         &pw::spa::pod::Value::Object(obj),
     )?
     .0
     .into_inner();
+    let metas_values: Vec<u8> = pw::spa::pod::serialize::PodSerializer::serialize(
+        std::io::Cursor::new(Vec::new()),
+        &pw::spa::pod::Value::Object(metas_obj),
+    )?
+    .0
+    .into_inner();
 
-    let mut params = [pw::spa::pod::Pod::from_bytes(&values).unwrap()];
+    let mut params = [
+        pw::spa::pod::Pod::from_bytes(&values).unwrap(),
+        pw::spa::pod::Pod::from_bytes(&metas_values).unwrap(),
+    ];
 
     stream.connect(
         Direction::Input,
