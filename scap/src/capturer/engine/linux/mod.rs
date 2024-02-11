@@ -1,7 +1,7 @@
 use std::{
     mem::size_of,
     sync::{
-        atomic::{AtomicU8, AtomicBool},
+        atomic::{AtomicBool, AtomicU8},
         mpsc::{self, sync_channel, SyncSender},
     },
     thread::JoinHandle,
@@ -10,17 +10,21 @@ use std::{
 
 use pipewire as pw;
 use pw::{
-    properties,
+    context::Context,
+    main_loop::MainLoop,
+    properties::properties,
     spa::{
         self,
-        format::{FormatProperties, MediaSubtype, MediaType},
-        param::{video::VideoFormat, ParamType},
+        param::{
+            format::{FormatProperties, MediaSubtype, MediaType},
+            video::VideoFormat,
+            ParamType,
+        },
         pod::{Pod, Property},
         sys::{
             spa_buffer, spa_meta_header, SPA_META_Header, SPA_PARAM_META_size, SPA_PARAM_META_type,
         },
-        utils::SpaTypes,
-        Direction,
+        utils::{Direction, SpaTypes},
     },
     stream::{StreamRef, StreamState},
 };
@@ -46,8 +50,8 @@ struct ListenerUserData {
 
 fn param_changed_callback(
     _stream: &StreamRef,
-    id: u32,
     user_data: &mut ListenerUserData,
+    id: u32,
     param: Option<&Pod>,
 ) {
     let Some(param) = param else {
@@ -72,7 +76,12 @@ fn param_changed_callback(
         .expect("Failed to parse format parameter");
 }
 
-fn state_changed_callback(_old: StreamState, new: StreamState) {
+fn state_changed_callback(
+    _stream: &StreamRef,
+    _user_data: &mut ListenerUserData,
+    _old: StreamState,
+    new: StreamState,
+) {
     match new {
         StreamState::Error(e) => {
             eprintln!("pipewire: State changed to error({e})");
@@ -170,8 +179,8 @@ fn pipewire_capturer(
 ) -> Result<(), LinCapError> {
     pw::init();
 
-    let mainloop = pw::MainLoop::new()?;
-    let context = pw::Context::new(&mainloop)?;
+    let mainloop = MainLoop::new(None)?;
+    let context = Context::new(&mainloop)?;
     let core = context.connect(None)?;
 
     let user_data = ListenerUserData {
@@ -293,11 +302,14 @@ fn pipewire_capturer(
         std::thread::sleep(Duration::from_millis(10));
     }
 
+    let pw_loop = mainloop.loop_();
+
     // User has called Capturer::start() and we start the main loop
     while CAPTURER_STATE.load(std::sync::atomic::Ordering::Relaxed) == 1
         && /* If the stream state got changed to `Error`, we exit. TODO: tell user that we exited */
-          !STREAM_STATE_CHANGED_TO_ERROR.load(std::sync::atomic::Ordering::Relaxed) {
-        mainloop.iterate(Duration::from_millis(100));
+          !STREAM_STATE_CHANGED_TO_ERROR.load(std::sync::atomic::Ordering::Relaxed)
+    {
+        pw_loop.iterate(Duration::from_millis(100));
     }
 
     Ok(())
@@ -330,6 +342,7 @@ impl LinuxCapturer {
             output_type: options.output_type,
             targets: options.targets.clone(),
             excluded_targets: None,
+            output_resolution: crate::capturer::Resolution::Captured,
             source_rect: None,
         };
         let (ready_sender, ready_recv) = sync_channel(1);
