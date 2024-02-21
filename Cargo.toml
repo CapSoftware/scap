@@ -1,36 +1,6 @@
-[package]
-name = "scap"
-description = "Modern, high-performance screen capture library for Rust. Cross-platform."
-version = "0.0.3"
-edition = "2021"
-rust-version = "1.71"
-license = "MIT"
-authors = ["Siddharth <siddharth99c@gmail.com>"]
-readme = "README.md"
-repository = "https://github.com/clearlysid/scap"
-documentation = "https://docs.rs/scap"
-keywords = ["screen", "recording", "video", "audio", "capture", "media"]
-categories = ["graphics", "multimedia", "multimedia::video"]
+[workspace]
+resolver = "2"
 
-[dependencies]
-cpal = "0.15.2"
-hound = "3.5.1"
-sysinfo = "0.30.0"
-bytes = "1.5.0"
-itertools = "0.12.0"
-anyhow = "1.0.78"
-
-[target.'cfg(target_os = "windows")'.dependencies]
-windows-capture = "1.0.59"
-ac-ffmpeg = { git = "https://github.com/angelcam/rust-ac-ffmpeg", rev = "eb8e8a64e46339c44ad306085aa5a814c14aec72" }
-
-[target.'cfg(target_os = "macos")'.dependencies]
-ac-ffmpeg = "0.18.1" # This doesn't compile on windows
-tao-core-video-sys = "0.2.0"
-core-graphics = "0.23.1"
-screencapturekit = { git = "https://github.com/clearlysid/screencapturekit-rs.git", rev = "56a6708", version = "*" }
-apple-sys = { version = "0.2.0", features = [
-	"AVFAudio",
-	"CoreMedia",
-	"ScreenCaptureKit",
-] }
+members = [ "acap",
+  "scap"
+]
