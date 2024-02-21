@@ -1,3 +1,5 @@
+//! Cross Platform, Performant and High Quality screen recordings
+
 pub mod capturer;
 mod device;
 pub mod frame;
