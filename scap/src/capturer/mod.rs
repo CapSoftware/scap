@@ -52,6 +52,8 @@ pub struct CGRect {
     pub origin: CGPoint,
     pub size: CGSize,
 }
+
+/// Options passed to the screen capturer
 #[derive(Debug, Default, Clone)]
 pub struct Options {
     pub fps: u32,
@@ -66,12 +68,14 @@ pub struct Options {
     pub source_rect: Option<CGRect>,
 }
 
+/// Screen capturer class
 pub struct Capturer {
     engine: engine::Engine,
     rx: mpsc::Receiver<Frame>,
 }
 
 impl Capturer {
+    /// Create a new capturer instance with the provided options
     pub fn new(options: Options) -> Capturer {
         let (tx, rx) = mpsc::channel::<Frame>();
         let engine = engine::Engine::new(&options, tx);
@@ -81,17 +85,22 @@ impl Capturer {
 
     // TODO
     // Prevent starting capture if already started
+    /// Start capturing the frames
     pub fn start_capture(&mut self) {
         self.engine.start();
     }
+
+    /// Stop the capturer
     pub fn stop_capture(&mut self) {
         self.engine.stop();
     }
 
+    /// Get the next captured frame
     pub fn get_next_frame(&self) -> Result<Frame, mpsc::RecvError> {
         self.rx.recv()
     }
 
+    /// Get the dimensions the frames will be captured in
     pub fn get_output_frame_size(&mut self) -> [u32; 2] {
         self.engine.get_output_frame_size()
     }

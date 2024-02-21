@@ -13,6 +13,7 @@ pub struct Target {
     pub id: u32,
 }
 
+/// Checks if the user has permission to capture the screen
 pub fn has_permission() -> bool {
     #[cfg(target_os = "macos")]
     return mac::has_permission();
@@ -23,6 +24,7 @@ pub fn has_permission() -> bool {
     return linux::has_permission();
 }
 
+/// Checks if scap is supported on the current system
 pub fn is_supported() -> bool {
     #[cfg(target_os = "macos")]
     return mac::is_supported();
@@ -34,6 +36,7 @@ pub fn is_supported() -> bool {
     return linux::is_supported();
 }
 
+/// Returns a list of screens that can be captured
 pub fn get_targets() -> Vec<Target> {
     #[cfg(target_os = "macos")]
     return mac::get_targets();
