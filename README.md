@@ -97,6 +97,11 @@ The code in this repository is open-sourced under the MIT license. However, it m
   <tbody>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Pranav2612000"><img src="https://avatars.githubusercontent.com/u/20909078?v=4?s=100" width="100px;" alt="Pranav Joglekar"/><br /><sub><b>Pranav Joglekar</b></sub></a><br /><a href="#code-Pranav2612000" title="Code">💻</a></td>
+
+      <td align="center" valign="top" width="14.28%"><a href="http://dev-rohan.in"><img src="https://avatars.githubusercontent.com/u/48467821?v=4?s=100" width="100px;" alt="Rohan Punjani"/><br /><sub><b>Rohan Punjani</b></sub></a><br /><a href="#code-RohanPunjani" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://www.sid.me"><img src="https://avatars.githubusercontent.com/u/30227512?v=4?s=100" width="100px;" alt="Siddharth"/><br /><sub><b>Siddharth</b></sub></a><br /><a href="#code-clearlysid" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/NiiightmareXD"><img src="https://avatars.githubusercontent.com/u/90005793?v=4?s=100" width="100px;" alt="NiiightmareXD"/><br /><sub><b>NiiightmareXD</b></sub></a><br /><a href="#code-NiiightmareXD" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="http://bringeber.dev"><img src="https://avatars.githubusercontent.com/u/83474682?v=4?s=100" width="100px;" alt="MAlba124"/><br /><sub><b>MAlba124</b></sub></a><br /><a href="#code-MAlba124" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://peerlist.io/anubhavitis"><img src="https://avatars.githubusercontent.com/u/26124625?v=4?s=100" width="100px;" alt="Anubhav Singhal"/><br /><sub><b>Anubhav Singhal</b></sub></a><br /><a href="#code-anubhavitis" title="Code">💻</a></td>
     </tr>
   </tbody>
