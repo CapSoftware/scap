@@ -48,12 +48,20 @@ pub struct BGRFrame {
     pub data: Vec<u8>,
 }
 
+pub struct BGRAFrame {
+    pub display_time: u64,
+    pub width: i32,
+    pub height: i32,
+    pub data: Vec<u8>,
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub enum FrameType {
     #[default]
     YUVFrame,
     BGR0,
     RGB, // Prefer BGR0 because RGB is slower
+    BGRAFrame,
 }
 
 pub enum Frame {
@@ -63,6 +71,7 @@ pub enum Frame {
     XBGR(XBGRFrame),
     BGRx(BGRxFrame),
     BGR0(BGRFrame),
+    BGRA(BGRAFrame),
 }
 
 pub enum FrameData<'a> {
