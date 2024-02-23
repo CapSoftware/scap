@@ -36,7 +36,7 @@ fn main() {
         show_cursor: true,
         show_highlight: true,
         excluded_targets: None,
-        output_type: scap::frame::FrameType::YUVFrame,
+        output_type: scap::frame::FrameType::BGRAFrame,
         output_resolution: scap::capturer::Resolution::_720p,
         source_rect: Some(CGRect {
             origin: CGPoint { x: 0.0, y: 0.0 },
@@ -55,13 +55,15 @@ fn main() {
     recorder.start_capture();
 
     // #7 Capture 100 frames
-    for _ in 0..100 {
+    let mut start_time: u64 = 0;
+    for i in 0..100 {
         let frame = recorder.get_next_frame().expect("Error");
+
         match frame {
             Frame::YUVFrame(frame) => {
                 println!(
-                    "Received frame of width {} and height {}",
-                    frame.width, frame.height
+                    "Recieved frame {} of width {} and height {} and pts {}",
+                    i, frame.width, frame.height, frame.display_time
                 );
             }
             Frame::BGR0(frame) => {
@@ -71,9 +73,15 @@ fn main() {
                 );
             }
             Frame::RGB(frame) => {
+                if (start_time == 0) {
+                    start_time = frame.display_time;
+                }
                 println!(
-                    "Recieved frame of width {} and height {}",
-                    frame.width, frame.height
+                    "Recieved frame {} of width {} and height {} and time {}",
+                    i,
+                    frame.width,
+                    frame.height,
+                    frame.display_time - start_time
                 );
             }
             Frame::RGBx(frame) => {
@@ -92,6 +100,18 @@ fn main() {
                 println!(
                     "Recieved BGRx frame of width {} and height {}",
                     frame.width, frame.height
+                );
+            }
+            Frame::BGRA(frame) => {
+                if (start_time == 0) {
+                    start_time = frame.display_time;
+                }
+                println!(
+                    "Recieved frame {} of width {} and height {} and time {}",
+                    i,
+                    frame.width,
+                    frame.height,
+                    frame.display_time - start_time
                 );
             }
         }
