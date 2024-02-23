@@ -9,7 +9,7 @@ authors = ["Siddharth <siddharth99c@gmail.com>", "Pranav <pranav2000joglekar@gma
 readme = "../README.md"
 repository = "https://github.com/clearlysid/scap"
 documentation = "https://docs.rs/scap"
-keywords = ["screen", "recording", "video", "audio", "capture", "media"]
+keywords = ["screen", "recording", "video", "capture", "media"]
 categories = ["graphics", "multimedia", "multimedia::video"]
 
 [dependencies]
