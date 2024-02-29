@@ -97,7 +97,7 @@ impl Engine {
 
         #[cfg(target_os = "windows")]
         {
-            return [0, 0];
+            [self.options.source_rect.clone().unwrap().size.width as u32, self.options.source_rect.clone().unwrap().size.height as u32]
         }
 
         #[cfg(target_os = "linux")]
