@@ -97,7 +97,7 @@ impl Engine {
 
         #[cfg(target_os = "windows")]
         {
-            [self.options.source_rect.clone().unwrap().size.width as u32, self.options.source_rect.clone().unwrap().size.height as u32]
+            win::get_output_frame_size(&self.options)
         }
 
         #[cfg(target_os = "linux")]

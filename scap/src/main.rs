@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use scap::{
     capturer::{CGPoint, CGRect, CGSize, Capturer, Options},
-    frame::Frame,
+    frame::{Frame, FrameType},
 };
 
 fn main() {
@@ -38,12 +38,12 @@ fn main() {
         show_cursor: true,
         show_highlight: true,
         excluded_targets: None,
-        output_type: scap::frame::FrameType::BGRAFrame,
+        output_type: FrameType::BGRAFrame,
         output_resolution: scap::capturer::Resolution::_720p,
         source_rect: Some(CGRect {
             origin: CGPoint { x: 500.0, y: 50.0 },
             size: CGSize {
-                width: 2000.0,
+                width: 1500.0,
                 height: 1000.0,
             },
         }),
@@ -64,7 +64,7 @@ fn main() {
         match frame {
             Frame::YUVFrame(frame) => {
                 println!(
-                    "Recieved frame {} of width {} and height {} and pts {}",
+                    "Recieved YUV frame {} of width {} and height {} and pts {}",
                     i, frame.width, frame.height, frame.display_time
                 );
             }
@@ -86,7 +86,7 @@ fn main() {
                     start_time = frame.display_time;
                 }
                 println!(
-                    "Recieved frame {} of width {} and height {} and time {}",
+                    "Recieved RGB frame {} of width {} and height {} and time {}",
                     i,
                     frame.width,
                     frame.height,
@@ -123,7 +123,7 @@ fn main() {
                     start_time = frame.display_time;
                 }
                 println!(
-                    "Recieved frame {} of width {} and height {} and time {}",
+                    "Recieved BGRA frame {} of width {} and height {} and time {}",
                     i,
                     frame.width,
                     frame.height,

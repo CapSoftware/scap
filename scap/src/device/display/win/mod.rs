@@ -68,3 +68,10 @@ pub fn get_targets() -> Vec<Target> {
 
     targets
 }
+
+pub fn get_main_display() -> Monitor {
+    let displays = Monitor::enumerate().expect("Failed to enumerate monitors");
+    let display = displays.first().expect("No displays found");
+
+    *display
+}

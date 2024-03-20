@@ -70,3 +70,15 @@ pub fn get_main_display() -> SCDisplay {
         return sc_display;
     }
 }
+
+#[cfg(target_os = "windows")]
+use windows_capture::monitor::Monitor;
+
+#[cfg(target_os = "windows")]
+pub fn get_main_display() -> Monitor {
+    #[cfg(target_os = "windows")]
+    {
+        let display = win::get_main_display();
+        return display;
+    }
+}
