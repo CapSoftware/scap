@@ -3,7 +3,7 @@
 
 use scap::{
     capturer::{CGPoint, CGRect, CGSize, Capturer, Options},
-    frame::{Frame},
+    frame::Frame,
 };
 
 fn main() {
