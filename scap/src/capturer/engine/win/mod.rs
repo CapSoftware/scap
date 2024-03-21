@@ -6,14 +6,7 @@ use crate::{
     frame::{BGRAFrame, Frame},
     device::display::{self},
 };
-use windows::{
-    Wdk::System::SystemServices::OkControl, 
-    Win32::Graphics::Gdi::{
-        GetMonitorInfoW, 
-        HMONITOR, 
-        MONITORINFOEXW
-    }
-};
+use windows::Win32::Graphics::Gdi::{GetDC, GetDeviceCaps, ReleaseDC, LOGPIXELSX, LOGPIXELSY};
 use std::time::{SystemTime, UNIX_EPOCH};
 use windows_capture::{
     capture::{CaptureControl, WindowsCaptureHandler},
@@ -32,7 +25,6 @@ struct Capturer {
 
 impl Capturer {
     pub fn new(tx: mpsc::Sender<Frame>) -> Self {
-        println!("I am here inside impl_capturer_new");
         Capturer { tx, crop: None }
     }
 
@@ -52,7 +44,6 @@ impl WindowsCaptureHandler for Capturer {
     type Error = Box<dyn std::error::Error + Send + Sync>;
 
     fn new(flagValues: Self::Flags) -> Result<Self, Self::Error> {
-        println!("I am here inside WindowsCaptureHandler new");
         Ok(Self { tx:flagValues.tx, crop:flagValues.crop })
     }
 
@@ -74,12 +65,6 @@ impl WindowsCaptureHandler for Capturer {
                 // crop the frame
                 let mut cropped_buffer = frame.buffer_crop(start_x, start_y, end_x, end_y)
                     .expect("Failed to crop buffer");
-
-                println!("Frame Arrived: {}x{} and padding = {}",
-                    cropped_buffer.width(),
-                    cropped_buffer.height(),
-                    cropped_buffer.has_padding(),
-                );
 
                 // get raw frame buffer
                 let raw_frame_buffer = match cropped_buffer.as_raw_nopadding_buffer() {
@@ -104,10 +89,6 @@ impl WindowsCaptureHandler for Capturer {
                     .expect("Failed to send data");
             }
             None => {
-                println!("Frame Arrived: {}x{}",
-                    frame.width(),
-                    frame.height(),
-                );
 
                 // get raw frame buffer
                 let mut frame_buffer = frame.buffer().unwrap();
@@ -176,6 +157,7 @@ pub fn create_capturer(
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
+    let scale = get_scale_factor();
     let source_rect = get_source_rect(options);
 
     let mut output_width = source_rect.size.width as u32;
@@ -199,7 +181,6 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     if output_height % 2 == 1 {
         output_height -= 1;
     }
-    println!("Output frame size: [{}, {}]", output_width, output_height);
     [output_width, output_height]
 }
 
@@ -250,4 +231,22 @@ pub fn get_source_rect(options: &Options) -> CGRect {
     };
 
     source_rect
+}
+
+
+fn get_scale_factor() -> f64 {
+    unsafe {
+        let hdc = GetDC(None);
+
+        let dpi_x = GetDeviceCaps(hdc, LOGPIXELSX);
+        let dpi_y = GetDeviceCaps(hdc, LOGPIXELSY);
+
+        ReleaseDC(None, hdc);
+        
+        let scale_x = dpi_x as f64 / 96.0;
+        let scale_y = dpi_y as f64 / 96.0;
+        let scale = (scale_x + scale_y) / 2.0;
+        
+        return scale;
+    }
 }
