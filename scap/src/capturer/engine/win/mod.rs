@@ -3,7 +3,7 @@ use std::sync::mpsc;
 use std::{cmp};
 use crate::{
     capturer::{Options, CGSize, CGPoint, CGRect, Resolution},
-    frame::{BGRAFrame, Frame},
+    frame::{BGRAFrame, Frame, FrameType},
     device::display::{self},
 };
 use windows::Win32::Graphics::Gdi::{GetDC, GetDeviceCaps, ReleaseDC, LOGPIXELSX, LOGPIXELSY};
@@ -141,11 +141,16 @@ pub fn create_capturer(
     options: &Options,
     tx: mpsc::Sender<Frame>,
 ) -> WinStream {
+    let color_format = match options.output_type {
+        FrameType::BGRAFrame => ColorFormat::Bgra8,
+        _ => ColorFormat::Rgba8,
+    };
+
     let settings = Settings::new(
         Monitor::primary().unwrap(),
         Some(true),
         None,
-        ColorFormat::Bgra8,
+        color_format,
         FlagStruct { tx, crop: Some(get_source_rect(options))},
     
     ).unwrap();
