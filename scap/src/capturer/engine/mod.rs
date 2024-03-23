@@ -97,7 +97,7 @@ impl Engine {
 
         #[cfg(target_os = "windows")]
         {
-            return [0, 0];
+            win::get_output_frame_size(&self.options)
         }
 
         #[cfg(target_os = "linux")]

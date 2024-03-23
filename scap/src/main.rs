@@ -62,13 +62,13 @@ fn main() {
         match frame {
             Frame::YUVFrame(frame) => {
                 println!(
-                    "Recieved frame {} of width {} and height {} and pts {}",
+                    "Recieved YUV frame {} of width {} and height {} and pts {}",
                     i, frame.width, frame.height, frame.display_time
                 );
             }
             Frame::BGR0(frame) => {
                 println!(
-                    "Received frame of width {} and height {}",
+                    "Received BGR0 frame of width {} and height {}",
                     frame.width, frame.height
                 );
             }
@@ -77,7 +77,7 @@ fn main() {
                     start_time = frame.display_time;
                 }
                 println!(
-                    "Recieved frame {} of width {} and height {} and time {}",
+                    "Recieved RGB frame {} of width {} and height {} and time {}",
                     i,
                     frame.width,
                     frame.height,
@@ -107,7 +107,7 @@ fn main() {
                     start_time = frame.display_time;
                 }
                 println!(
-                    "Recieved frame {} of width {} and height {} and time {}",
+                    "Recieved BGRA frame {} of width {} and height {} and time {}",
                     i,
                     frame.width,
                     frame.height,
