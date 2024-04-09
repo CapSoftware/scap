@@ -50,7 +50,10 @@ pub fn get_targets() -> Vec<Target> {
     for display in displays {
         let id = cnt;
         cnt = cnt + 1;
-        let title = get_monitor_name(display.as_raw_hmonitor()).unwrap();
+
+        // TODO: get_monitor_name and as_raw_hmonitor are not implemented
+        // let title = get_monitor_name(display.as_raw_hmonitor()).unwrap();
+        let title = "Display 1".into();
 
         let target = Target { id, title };
         targets.push(target);
