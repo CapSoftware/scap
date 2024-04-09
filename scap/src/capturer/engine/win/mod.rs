@@ -1,20 +1,19 @@
+use crate::{
+    capturer::{CGPoint, CGRect, CGSize, Options, Resolution},
+    device::display::{self},
+    frame::{BGRAFrame, Frame, FrameType},
+};
+use std::cmp;
 use std::error::Error;
 use std::sync::mpsc;
-use std::{cmp};
-use crate::{
-    capturer::{Options, CGSize, CGPoint, CGRect, Resolution},
-    frame::{BGRAFrame, Frame, FrameType},
-    device::display::{self},
-};
-use windows::Win32::Graphics::Gdi::{GetDC, GetDeviceCaps, ReleaseDC, LOGPIXELSX, LOGPIXELSY};
 use std::time::{SystemTime, UNIX_EPOCH};
+use windows::Win32::Graphics::Gdi::{GetDC, GetDeviceCaps, ReleaseDC, LOGPIXELSX, LOGPIXELSY};
 use windows_capture::{
-    capture::{CaptureControl, WindowsCaptureHandler},
+    capture::{CaptureControl, GraphicsCaptureApiHandler},
     frame::Frame as Wframe,
-    graphics_capture_api::{GraphicsCaptureApi, InternalCaptureControl},
+    graphics_capture_api::InternalCaptureControl,
     monitor::Monitor,
-    settings::{ColorFormat, Settings},
-    window::Window,
+    settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings},
 };
 
 #[derive(Debug)]
@@ -39,12 +38,15 @@ pub struct WinStream {
     capture_control: Option<CaptureControl<Capturer, Box<dyn std::error::Error + Send + Sync>>>,
 }
 
-impl WindowsCaptureHandler for Capturer {
+impl GraphicsCaptureApiHandler for Capturer {
     type Flags = FlagStruct;
     type Error = Box<dyn std::error::Error + Send + Sync>;
 
     fn new(flagValues: Self::Flags) -> Result<Self, Self::Error> {
-        Ok(Self { tx:flagValues.tx, crop:flagValues.crop })
+        Ok(Self {
+            tx: flagValues.tx,
+            crop: flagValues.crop,
+        })
     }
 
     fn on_frame_arrived(
@@ -52,10 +54,8 @@ impl WindowsCaptureHandler for Capturer {
         mut frame: &mut Wframe,
         _: InternalCaptureControl,
     ) -> Result<(), Self::Error> {
-
         match &self.crop {
             Some(cropped_area) => {
-
                 // get the cropped area
                 let start_x = cropped_area.origin.x as u32;
                 let start_y = cropped_area.origin.y as u32;
@@ -63,14 +63,14 @@ impl WindowsCaptureHandler for Capturer {
                 let end_y = (cropped_area.origin.y + cropped_area.size.height) as u32;
 
                 // crop the frame
-                let mut cropped_buffer = frame.buffer_crop(start_x, start_y, end_x, end_y)
+                let mut cropped_buffer = frame
+                    .buffer_crop(start_x, start_y, end_x, end_y)
                     .expect("Failed to crop buffer");
 
                 // get raw frame buffer
                 let raw_frame_buffer = match cropped_buffer.as_raw_nopadding_buffer() {
                     Ok(buffer) => buffer,
                     Err(_) => return Err(("Failed to get raw buffer").into()),
-    
                 };
 
                 let current_time = SystemTime::now()
@@ -85,11 +85,11 @@ impl WindowsCaptureHandler for Capturer {
                     data: raw_frame_buffer.to_vec(),
                 };
 
-                self.tx.send(Frame::BGRA(bgr_frame))
+                self.tx
+                    .send(Frame::BGRA(bgr_frame))
                     .expect("Failed to send data");
             }
             None => {
-
                 // get raw frame buffer
                 let mut frame_buffer = frame.buffer().unwrap();
                 let raw_frame_buffer = frame_buffer.as_raw_buffer();
@@ -105,7 +105,8 @@ impl WindowsCaptureHandler for Capturer {
                     data: frame_data,
                 };
 
-                self.tx.send(Frame::BGRA(bgr_frame))
+                self.tx
+                    .send(Frame::BGRA(bgr_frame))
                     .expect("Failed to send data");
             }
         }
@@ -120,7 +121,6 @@ impl WindowsCaptureHandler for Capturer {
 
 impl WinStream {
     pub fn start_capture(&mut self) {
-
         let capture_control = Capturer::start_free_threaded(self.settings.clone()).unwrap();
         self.capture_control = Some(capture_control);
     }
@@ -137,10 +137,7 @@ struct FlagStruct {
     pub crop: Option<CGRect>,
 }
 
-pub fn create_capturer(
-    options: &Options,
-    tx: mpsc::Sender<Frame>,
-) -> WinStream {
+pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream {
     let color_format = match options.output_type {
         FrameType::BGRAFrame => ColorFormat::Bgra8,
         _ => ColorFormat::Rgba8,
@@ -148,12 +145,15 @@ pub fn create_capturer(
 
     let settings = Settings::new(
         Monitor::primary().unwrap(),
-        Some(true),
-        None,
+        CursorCaptureSettings::Default,
+        DrawBorderSettings::Default,
         color_format,
-        FlagStruct { tx, crop: Some(get_source_rect(options))},
-    
-    ).unwrap();
+        FlagStruct {
+            tx,
+            crop: Some(get_source_rect(options)),
+        },
+    )
+    .unwrap();
 
     return WinStream {
         settings,
@@ -238,7 +238,6 @@ pub fn get_source_rect(options: &Options) -> CGRect {
     source_rect
 }
 
-
 fn get_scale_factor() -> f64 {
     unsafe {
         let hdc = GetDC(None);
@@ -247,11 +246,11 @@ fn get_scale_factor() -> f64 {
         let dpi_y = GetDeviceCaps(hdc, LOGPIXELSY);
 
         ReleaseDC(None, hdc);
-        
+
         let scale_x = dpi_x as f64 / 96.0;
         let scale_y = dpi_y as f64 / 96.0;
         let scale = (scale_x + scale_y) / 2.0;
-        
+
         return scale;
     }
 }

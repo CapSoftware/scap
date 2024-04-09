@@ -7,7 +7,7 @@ rust-version = "1.71"
 license = "MIT"
 authors = ["Siddharth <siddharth99c@gmail.com>", "Pranav <pranav2000joglekar@gmail.com>"]
 readme = "../README.md"
-repository = "https://github.com/clearlysid/scap"
+repository = "https://github.com/helmerapp/scap"
 documentation = "https://docs.rs/scap"
 keywords = ["screen", "recording", "video", "capture", "media"]
 categories = ["graphics", "multimedia", "multimedia::video"]
@@ -21,7 +21,7 @@ itertools = "0.12.0"
 image = "0.24.8"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows-capture = "1.0.59"
+windows-capture = "1.0.68"
 windows = { version = "0.52", features = [
 	"Win32_Foundation",
 	"Win32_Graphics_Gdi",
