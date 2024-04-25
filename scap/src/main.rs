@@ -16,14 +16,16 @@ fn main() {
         println!("✅ Platform supported");
     }
 
-    // #2 Check if we have permission to capture the screen
-    let has_permission = scap::has_permission();
-    if !has_permission {
-        println!("❌ Permission not granted");
-        return;
-    } else {
-        println!("✅ Permission granted");
+    // #2 Check if we have permission to capture screen
+    // If we don't, request it.
+    if !scap::has_permission() {
+        println!("❌ Permission not granted. Requesting permission...");
+        if !scap::request_permission() {
+            println!("❌ Permission denied");
+            return;
+        }
     }
+    println!("✅ Permission granted");
 
     // #3 Get recording targets (WIP)
     let targets = scap::get_targets();
