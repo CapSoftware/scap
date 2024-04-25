@@ -8,8 +8,11 @@ use sysinfo::System;
 use super::Target;
 
 pub fn has_permission() -> bool {
-    let access = ScreenCaptureAccess::default();
-    access.request()
+    ScreenCaptureAccess::default().preflight()
+}
+
+pub fn request_permission() -> bool {
+    ScreenCaptureAccess::default().request()
 }
 
 pub fn is_supported() -> bool {
