@@ -119,7 +119,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     let [output_width, output_height] = get_output_frame_size(options);
 
     let stream_config = SCStreamConfiguration {
-        shows_cursor: true,
+        shows_cursor: options.show_cursor,
         width: output_width as u32,
         height: output_height as u32,
         source_rect,
