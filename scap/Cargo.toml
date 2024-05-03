@@ -30,8 +30,8 @@ windows = { version = "0.52", features = [
 [target.'cfg(target_os = "macos")'.dependencies]
 tao-core-video-sys = "0.2.0"
 core-graphics = "0.23.1"
-screencapturekit = "0.2.3"
-screencapturekit-sys = "0.2.3"
+screencapturekit = "0.2.8"
+screencapturekit-sys = "0.2.8"
 apple-sys = { version = "0.2.0", features = ["CoreMedia", "ScreenCaptureKit"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
