@@ -63,6 +63,8 @@ pub struct Options {
 
     // excluded targets will only work on macOS
     pub excluded_targets: Option<Vec<display::Target>>,
+    // excluded windows will only work on macOS
+    pub excluded_windows: Option<Vec<String>>,
     pub output_type: FrameType,
     pub output_resolution: Resolution,
     pub source_rect: Option<CGRect>,
