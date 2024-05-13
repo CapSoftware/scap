@@ -1,6 +1,6 @@
-<img src="./.github/banner.gif">
+![Github banner](./.github/banner.gif)
 
-A Rust library to leverage native OS APIs for optimal performance and high-quality screen recordings. We use Apple's [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit) on macOS and [Graphics.Capture](https://learn.microsoft.com/en-us/uwp/api/windows.graphics.capture?view=winrt-22621) APIs on Windows. Linux support is planned but not underway yet, PRs welcome!
+A Rust library for high-quality screen recordings that leverages native OS APIs for optimal performance: Apple's [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit) on macOS, [Graphics.Capture](https://learn.microsoft.com/en-us/uwp/api/windows.graphics.capture?view=winrt-22621) APIs on Windows and [Pipewire](https://pipewire.org) on Linux.
 
 **🚧 WIP. Unsuitable for production use, APIs are being iterated on.**
 
@@ -10,26 +10,29 @@ A Rust library to leverage native OS APIs for optimal performance and high-quali
 
 ## features
 
-1. Cross-platform support: Windows and Mac now, Linux soon.
+1. Cross-platform support: Windows, Mac and Linux!
 2. Check for support and user permissions.
 3. Utilize native OS APIs for screen capture.
-4. Different capture modes: audio, display or window.
+4. Different capture modes: Display or Windows.
 
 ## contributing
 
-I found most of Rust's tooling around screen capture either non-performant, outdated or very platform-specific. This project is my attempt to change that. It's early days and the code is fairly simple, I'll gladly accept any contributions/PRs.
+We found most of Rust's tooling around screen capture either non-performant, outdated or very platform-specific. This project is our attempt to change that. Contributions, PRs and Issues are most welcome!
 
-If you'd like to chip in, here's a kickstart guide:
+If you'd like to develop, here's a kickstart guide:
 
 1. Clone the repo and run it with `cargo run`.
-2. Explore the API and library code in `lib.rs`.
-3. Platform-specific code is in the `win` and `mac` modules.
-4. There's a small program in `main.rs` that "consumes" the library for dev-testing.
+2. Explore the API and library code in [lib.rs](./scap/src/lib.rs).
+3. Platform-specific code is in the `win`, `mac` and `linux` modules.
+4. There's a small program in [main.rs](./scap/src/main.rs) that "consumes" the library for dev-testing.
 
 ## usage
 
 ```rust
-use scap::{Options, Recorder};
+use scap::{
+    capturer::{CGPoint, CGRect, CGSize, Capturer, Options},
+    frame::Frame,
+};
 
 fn main() {
     // Check if the platform is supported
@@ -41,14 +44,16 @@ fn main() {
         println!("✅ Platform supported");
     }
 
-    // Check if we have permission to capture the screen
-    let has_permission = scap::has_permission();
-    if !has_permission {
-        println!("❌ Permission not granted");
-        return;
-    } else {
-        println!("✅ Permission granted");
+    // Check if we have permission to capture screen
+    // If we don't, request it.
+    if !scap::has_permission() {
+        println!("❌ Permission not granted. Requesting permission...");
+        if !scap::request_permission() {
+            println!("❌ Permission denied");
+            return;
+        }
     }
+    println!("✅ Permission granted");
 
     // Get recording targets (WIP)
     let targets = scap::get_targets();
@@ -61,28 +66,31 @@ fn main() {
         show_cursor: true,
         show_highlight: true,
         excluded_targets: None,
+        output_type: scap::frame::FrameType::BGRAFrame,
+        output_resolution: scap::capturer::Resolution::_720p,
+        source_rect: Some(CGRect {
+            origin: CGPoint { x: 0.0, y: 0.0 },
+            size: CGSize {
+                width: 2000.0,
+                height: 1000.0,
+            },
+        }),
+        ..Default::default()
     };
 
     // Create Recorder
-    let mut recorder = Recorder::init(options);
+    let mut capturer = Capturer::new(options);
 
     // Start Capture
-    recorder.start_capture();
+    capturer.start_capture();
 
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).unwrap();
 
     // Stop Capture
-    recorder.stop_capture();
+    capturer.stop_capture();
 }
 ```
-
-## roadmap
-
--   [x] Check for support and user permissions.
--   [x] Capture frames
--   [x] Capture targets: monitors, windows, region and audio.
--   [ ] Encoding: encode frames to file.
 
 ## license
 
