@@ -4,7 +4,6 @@ use crate::{
     frame::{BGRAFrame, Frame, FrameType},
 };
 use std::cmp;
-use std::error::Error;
 use std::sync::mpsc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use windows::Win32::Graphics::Gdi::{GetDC, GetDeviceCaps, ReleaseDC, LOGPIXELSX, LOGPIXELSY};
@@ -34,7 +33,7 @@ impl Capturer {
 }
 
 pub struct WinStream {
-    settings: Settings<FlagStruct>,
+    settings: Settings<FlagStruct, Monitor>,
     capture_control: Option<CaptureControl<Capturer, Box<dyn std::error::Error + Send + Sync>>>,
 }
 
@@ -42,10 +41,10 @@ impl GraphicsCaptureApiHandler for Capturer {
     type Flags = FlagStruct;
     type Error = Box<dyn std::error::Error + Send + Sync>;
 
-    fn new(flagValues: Self::Flags) -> Result<Self, Self::Error> {
+    fn new(flag_values: Self::Flags) -> Result<Self, Self::Error> {
         Ok(Self {
-            tx: flagValues.tx,
-            crop: flagValues.crop,
+            tx: flag_values.tx,
+            crop: flag_values.crop,
         })
     }
 
@@ -152,8 +151,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream 
             tx,
             crop: Some(get_source_rect(options)),
         },
-    )
-    .unwrap();
+    );
 
     return WinStream {
         settings,
