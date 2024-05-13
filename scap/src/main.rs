@@ -75,7 +75,7 @@ fn main() {
                 );
             }
             Frame::RGB(frame) => {
-                if (start_time == 0) {
+                if start_time == 0 {
                     start_time = frame.display_time;
                 }
                 println!(
