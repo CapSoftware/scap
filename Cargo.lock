@@ -275,11 +275,10 @@ dependencies = [
 
 [[package]]
 name = "core-foundation"
-version = "0.9.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91e195e091a93c46f7102ec7818a2aa394e1e1771c3ab4825963fa03e45afb8f"
+version = "0.10.0"
+source = "git+https://github.com/Pranav2612000/core-foundation-rs?branch=main#d9509ae650325e8c49823c25bc68a2629c51c9d5"
 dependencies = [
- "core-foundation-sys",
+ "core-foundation-sys 0.8.6 (git+https://github.com/Pranav2612000/core-foundation-rs?branch=main)",
  "libc",
 ]
 
@@ -290,12 +289,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06ea2b9bc92be3c2baa9334a323ebca2d6f074ff852cd1d7b11064035cd3868f"
 
 [[package]]
+name = "core-foundation-sys"
+version = "0.8.6"
+source = "git+https://github.com/Pranav2612000/core-foundation-rs?branch=main#d9509ae650325e8c49823c25bc68a2629c51c9d5"
+
+[[package]]
 name = "core-graphics"
-version = "0.23.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c07782be35f9e1140080c6b96f0d44b739e2278479f64e02fdab4e32dfd8b081"
+version = "0.24.0"
+source = "git+https://github.com/Pranav2612000/core-foundation-rs?branch=main#d9509ae650325e8c49823c25bc68a2629c51c9d5"
 dependencies = [
- "bitflags 1.3.2",
+ "bitflags 2.5.0",
  "core-foundation",
  "core-graphics-types",
  "foreign-types",
@@ -304,11 +307,10 @@ dependencies = [
 
 [[package]]
 name = "core-graphics-types"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45390e6114f68f718cc7a830514a96f903cccd70d02a8f6d9f643ac4ba45afaf"
+version = "0.2.0"
+source = "git+https://github.com/Pranav2612000/core-foundation-rs?branch=main#d9509ae650325e8c49823c25bc68a2629c51c9d5"
 dependencies = [
- "bitflags 1.3.2",
+ "bitflags 2.5.0",
  "core-foundation",
  "libc",
 ]
@@ -320,7 +322,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "321077172d79c662f64f5071a03120748d5bb652f5231570141be24cfcd2bace"
 dependencies = [
  "bitflags 1.3.2",
- "core-foundation-sys",
+ "core-foundation-sys 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "coreaudio-sys",
 ]
 
@@ -340,7 +342,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "873dab07c8f743075e57f524c583985fbaf745602acbe916a01539364369a779"
 dependencies = [
  "alsa",
- "core-foundation-sys",
+ "core-foundation-sys 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "coreaudio-rs",
  "dasp_sample",
  "jni",
@@ -1573,7 +1575,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "732ffa00f53e6b2af46208fba5718d9662a421049204e156328b66791ffa15ae"
 dependencies = [
  "cfg-if",
- "core-foundation-sys",
+ "core-foundation-sys 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc",
  "ntapi",
  "once_cell",
@@ -1601,7 +1603,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "271450eb289cb4d8d0720c6ce70c72c8c858c93dd61fc625881616752e6b98f6"
 dependencies = [
  "cfg-if",
- "core-foundation-sys",
+ "core-foundation-sys 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc",
  "objc",
 ]
