@@ -144,19 +144,25 @@ mod tests {
     #[test]
     fn test_remove_alpha_channel() {
         assert_eq!(remove_alpha_channel(vec![1, 2, 3, 0]), vec![1, 2, 3]);
-        assert_eq!(remove_alpha_channel(vec![1, 2, 3, 4, 5, 6, 7, 8]), vec![1, 2, 3, 5, 6, 7]);
+        assert_eq!(
+            remove_alpha_channel(vec![1, 2, 3, 4, 5, 6, 7, 8]),
+            vec![1, 2, 3, 5, 6, 7]
+        );
     }
 
     #[test]
     fn test_convert_bgra_to_rgb() {
         assert_eq!(convert_bgra_to_rgb(vec![1, 2, 3, 0]), vec![3, 2, 1]);
-        assert_eq!(convert_bgra_to_rgb(vec![1, 2, 3, 4, 5, 6, 7, 8]), vec![3, 2, 1, 7, 6, 5]);
+        assert_eq!(
+            convert_bgra_to_rgb(vec![1, 2, 3, 4, 5, 6, 7, 8]),
+            vec![3, 2, 1, 7, 6, 5]
+        );
     }
 
     macro_rules! rgba {
         ($n:expr) => {
             &mut vec![$n, $n, $n, $n]
-        }
+        };
     }
 
     #[test]
