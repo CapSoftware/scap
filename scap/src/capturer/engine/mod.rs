@@ -58,7 +58,7 @@ impl Engine {
         #[cfg(target_os = "macos")]
         {
             // self.mac.add_output(Capturer::new(tx));
-            self.mac.start_capture();
+            self.mac.start_capture().expect("Failed to start capture");
         }
 
         #[cfg(target_os = "windows")]
@@ -75,7 +75,7 @@ impl Engine {
     pub fn stop(&mut self) {
         #[cfg(target_os = "macos")]
         {
-            self.mac.stop_capture();
+            self.mac.stop_capture().expect("Failed to stop capture");
         }
 
         #[cfg(target_os = "windows")]
