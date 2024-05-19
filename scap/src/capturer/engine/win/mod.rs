@@ -1,5 +1,5 @@
 use crate::{
-    capturer::{CGPoint, CGRect, CGSize, Options, Resolution},
+    capturer::{Area, Options, Point, Resolution, Size},
     device::display::{self},
     frame::{BGRAFrame, Frame, FrameType},
 };
@@ -18,7 +18,7 @@ use windows_capture::{
 #[derive(Debug)]
 struct Capturer {
     pub tx: mpsc::Sender<Frame>,
-    pub crop: Option<CGRect>,
+    pub crop: Option<Area>,
 }
 
 impl Capturer {
@@ -26,7 +26,7 @@ impl Capturer {
         Capturer { tx, crop: None }
     }
 
-    pub fn with_crop(mut self, crop: Option<CGRect>) -> Self {
+    pub fn with_crop(mut self, crop: Option<Area>) -> Self {
         self.crop = crop;
         self
     }
@@ -133,7 +133,7 @@ impl WinStream {
 #[derive(Clone, Debug)]
 struct FlagStruct {
     pub tx: mpsc::Sender<Frame>,
-    pub crop: Option<CGRect>,
+    pub crop: Option<Area>,
 }
 
 pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream {
@@ -187,7 +187,7 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     [output_width, output_height]
 }
 
-pub fn get_source_rect(options: &Options) -> CGRect {
+pub fn get_source_rect(options: &Options) -> Area {
     let display = display::get_main_display();
     let width_result = display.width();
     let height_result = display.height();
@@ -213,20 +213,20 @@ pub fn get_source_rect(options: &Options) -> CGRect {
             } else {
                 (val.size.height as i64) + 1
             };
-            CGRect {
-                origin: CGPoint {
+            Area {
+                origin: Point {
                     x: val.origin.x,
                     y: val.origin.y,
                 },
-                size: CGSize {
+                size: Size {
                     width: input_width as f64,
                     height: input_height as f64,
                 },
             }
         }
-        None => CGRect {
-            origin: CGPoint { x: 0.0, y: 0.0 },
-            size: CGSize {
+        None => Area {
+            origin: Point { x: 0.0, y: 0.0 },
+            size: Size {
                 width: width as f64,
                 height: height as f64,
             },

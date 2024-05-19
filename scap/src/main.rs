@@ -2,7 +2,7 @@
 // Refer to the lib.rs file for the actual implementation
 
 use scap::{
-    capturer::{CGPoint, CGRect, CGSize, Capturer, Options},
+    capturer::{Area, Capturer, Options, Point, Size},
     frame::Frame,
 };
 
@@ -40,9 +40,9 @@ fn main() {
         excluded_targets: None,
         output_type: scap::frame::FrameType::BGRAFrame,
         output_resolution: scap::capturer::Resolution::_720p,
-        source_rect: Some(CGRect {
-            origin: CGPoint { x: 0.0, y: 0.0 },
-            size: CGSize {
+        source_rect: Some(Area {
+            origin: Point { x: 0.0, y: 0.0 },
+            size: Size {
                 width: 2000.0,
                 height: 1000.0,
             },
@@ -105,7 +105,7 @@ fn main() {
                 );
             }
             Frame::BGRA(frame) => {
-                if (start_time == 0) {
+                if start_time == 0 {
                     start_time = frame.display_time;
                 }
                 println!(

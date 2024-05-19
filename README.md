@@ -30,7 +30,7 @@ If you'd like to develop, here's a kickstart guide:
 
 ```rust
 use scap::{
-    capturer::{CGPoint, CGRect, CGSize, Capturer, Options},
+    capturer::{Point, Area, Size, Capturer, Options},
     frame::Frame,
 };
 
@@ -68,9 +68,9 @@ fn main() {
         excluded_targets: None,
         output_type: scap::frame::FrameType::BGRAFrame,
         output_resolution: scap::capturer::Resolution::_720p,
-        source_rect: Some(CGRect {
-            origin: CGPoint { x: 0.0, y: 0.0 },
-            size: CGSize {
+        source_rect: Some(Area {
+            origin: Point { x: 0.0, y: 0.0 },
+            size: Size {
                 width: 2000.0,
                 height: 1000.0,
             },
@@ -123,5 +123,5 @@ The code in this repository is open-sourced under the MIT license. However, it m
 
 This project builds on top of the fabulous work done by [@svtlabs](https://github.com/svtlabs) and [@NiiightmareXD](https://github.com/NiiightmareXD).
 
--   [screencapturekit-rs](https://github.com/svtlabs/screencapturekit-rs): Rust bindings for Apple's ScreencaptureKit API.
--   [windows-capture](https://github.com/NiiightmareXD/windows-capture): Rust library for Windows.Graphics.Capture.
+- [screencapturekit-rs](https://github.com/svtlabs/screencapturekit-rs): Rust bindings for Apple's ScreencaptureKit API.
+- [windows-capture](https://github.com/NiiightmareXD/windows-capture): Rust library for Windows.Graphics.Capture.
