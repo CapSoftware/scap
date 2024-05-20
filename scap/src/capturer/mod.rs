@@ -37,20 +37,20 @@ impl Resolution {
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct CGPoint {
+pub struct Point {
     pub x: f64,
     pub y: f64,
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct CGSize {
+pub struct Size {
     pub width: f64,
     pub height: f64,
 }
 #[derive(Debug, Default, Clone)]
-pub struct CGRect {
-    pub origin: CGPoint,
-    pub size: CGSize,
+pub struct Area {
+    pub origin: Point,
+    pub size: Size,
 }
 
 /// Options passed to the screen capturer
@@ -67,7 +67,7 @@ pub struct Options {
     pub excluded_windows: Option<Vec<String>>,
     pub output_type: FrameType,
     pub output_resolution: Resolution,
-    pub source_rect: Option<CGRect>,
+    pub source_rect: Option<Area>,
 }
 
 /// Screen capturer class
