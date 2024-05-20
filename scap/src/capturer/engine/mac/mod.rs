@@ -41,10 +41,6 @@ use core_video_sys::{
     CVPixelBufferLockBaseAddress, CVPixelBufferRef, CVPixelBufferUnlockBaseAddress,
 };
 
-// use core_video_sys::{
-//      CVPixelBufferGetHeightOfPlane, CVPixelBufferGetPixelFormatType, CVPixelBufferGetWidthOfPlane,
-// }
-
 struct ErrorHandler;
 impl StreamErrorHandler for ErrorHandler {
     fn on_error(&self) {
@@ -101,10 +97,9 @@ impl StreamOutput for Capturer {
 }
 
 pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
+    // TODO: identify targets to capture using options.targets
+    // scap currently only captures the main display
     let display = display::get_main_display();
-    // let display_id = display.display_id;
-
-    // let scale = display::get_scale_factor(display_id) as u32;
 
     let sc_shareable_content = SCShareableContent::current();
     let excluded_windows = sc_shareable_content
@@ -153,42 +148,6 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
 
     stream
 }
-
-// pub fn ycbcr_to_rgb(
-//     y_data: &[u8],
-//     cbcr_data: &[u8],
-//     width: usize,
-//     height: usize,
-//     stride: usize,
-// ) -> Vec<u8> {
-//     let mut rgb_data = Vec::with_capacity(width * height * 3);
-//     let row = width + stride;
-
-//     for h in 0..height {
-//         for w in 0..width {
-//             let y_idx = h * row + w;
-//             let uv_idx = (h / 2) * row + w - w % 2;
-
-//             // let y = y_data[y_idx] as f32;
-//             // let cb = cbcr_data[uv_idx] as f32 - 128.0;
-//             // let cr = cbcr_data[uv_idx + 1] as f32 - 128.0;
-
-//             // NOTE: The following values adjust for contrast and range
-//             let y = (y_data[y_idx] as f32 - 16.0) * (255.0 / (235.0 - 16.0));
-//             let cb = (cbcr_data[uv_idx] as f32 - 16.0) * (255.0 / (240.0 - 16.0)) - 128.0;
-//             let cr = (cbcr_data[uv_idx + 1] as f32 - 16.0) * (255.0 / (240.0 - 16.0)) - 128.0;
-
-//             let r = (y + 1.402 * cr).max(0.0).min(255.0) as u8;
-//             let g = (y - 0.344136 * cb - 0.714136 * cr).max(0.0).min(255.0) as u8;
-//             let b = (y + 1.772 * cb).max(0.0).min(255.0) as u8;
-
-//             rgb_data.push(r);
-//             rgb_data.push(g);
-//             rgb_data.push(b);
-//         }
-//     }
-//     rgb_data
-// }
 
 pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame> {
     // Check that the frame status is complete
