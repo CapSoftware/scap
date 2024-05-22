@@ -13,6 +13,39 @@ pub struct Target {
     pub id: u32,
 }
 
+#[derive(Debug, Clone)]
+pub struct DisplayPosition {
+    pub x: f64,
+    pub y: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct DisplaySize {
+    pub width: f64,
+    pub height: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct Display {
+    pub id: u32,
+    // origin of this display w.r.t. primary display
+    pub physical_position: DisplayPosition,
+    pub size: DisplaySize,
+    pub scale_factor: u64,
+}
+
+/// Returns all displays present in the system
+pub fn get_all_displays() -> Vec<Display> {
+    #[cfg(target_os = "macos")]
+    return mac::get_all_displays();
+
+    #[cfg(target_os = "windows")]
+    return vec![]; // TODO; Unimplemneted
+
+    #[cfg(target_os = "linux")]
+    return vec![]; // TODO; Unimplemneted
+}
+
 /// Checks if process has permission to capture the screen
 pub fn has_permission() -> bool {
     #[cfg(target_os = "macos")]
@@ -83,6 +116,14 @@ pub fn get_main_display() -> SCDisplay {
     {
         let sc_display = mac::get_main_display();
         return sc_display;
+    }
+}
+
+#[cfg(target_os = "macos")]
+pub fn get_display(display_id: u32) -> SCDisplay {
+    #[cfg(target_os = "macos")]
+    {
+        mac::get_display(display_id)
     }
 }
 

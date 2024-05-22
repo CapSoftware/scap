@@ -60,6 +60,8 @@ pub struct Options {
     pub show_cursor: bool,
     pub show_highlight: bool,
     pub targets: Vec<display::Target>,
+    // the display id to capture for screen recording; if unspecified, main display is used.
+    pub display_id: Option<u32>,
 
     // excluded targets will only work on macOS
     pub excluded_targets: Option<Vec<display::Target>>,
