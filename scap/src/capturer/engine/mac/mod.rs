@@ -27,14 +27,14 @@ use crate::{
     capturer::Resolution,
     device::display::{self},
 };
-use apple_sys::{
+use apple_sys_helmer_fork::{
     CoreMedia::{
         CFDictionaryGetValue, CFDictionaryRef, CFNumberGetValue, CFNumberType_kCFNumberSInt64Type,
         CFTypeRef,
     },
     ScreenCaptureKit::{SCFrameStatus_SCFrameStatusComplete, SCStreamFrameInfoStatus},
 };
-use core_graphics::display::{CFArrayGetCount, CFArrayGetValueAtIndex, CFArrayRef};
+use core_graphics_helmer_fork::display::{CFArrayGetCount, CFArrayGetValueAtIndex, CFArrayRef};
 use core_video_sys::{
     CVPixelBufferGetBaseAddress, CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRow,
     CVPixelBufferGetBytesPerRowOfPlane, CVPixelBufferGetHeight, CVPixelBufferGetWidth,
