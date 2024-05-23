@@ -34,7 +34,7 @@ tao-core-video-sys = "0.2.0"
 core-graphics-helmer-fork = "0.24.0"
 screencapturekit = "0.2.8"
 screencapturekit-sys = "0.2.8"
-apple-sys = { git = "https://github.com/Pranav2612000/apple-sys/", branch = "main", features = ["CoreMedia", "ScreenCaptureKit"] }
+apple-sys-helmer-fork = { version = "0.2.0", features = ["CoreMedia", "ScreenCaptureKit"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 pipewire = "0.8.0"

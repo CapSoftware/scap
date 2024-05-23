@@ -27,7 +27,7 @@ use crate::{
     capturer::Resolution,
     device::display::{self},
 };
-use apple_sys::{
+use apple_sys_helmer_fork::{
     CoreMedia::{
         CFDictionaryGetValue, CFDictionaryRef, CFNumberGetValue, CFNumberType_kCFNumberSInt64Type,
         CFTypeRef,
