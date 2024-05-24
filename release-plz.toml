@@ -1,6 +1,2 @@
 [workspace]
 release_always = false
-
-[[package]]
-name = "acap"
-release = false
