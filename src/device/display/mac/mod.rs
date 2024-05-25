@@ -63,7 +63,6 @@ pub fn get_display(display_id: CGDirectDisplayID) -> SCDisplay {
         .unwrap_or_else(|| {
             panic!("Main display not found");
         });
-
     display.to_owned()
 }
 

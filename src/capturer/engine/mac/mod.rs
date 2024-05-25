@@ -99,7 +99,6 @@ impl StreamOutput for Capturer {
 
 pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     // TODO: identify targets to capture using options.targets
-
     let display = get_display(options);
 
     let sc_shareable_content = SCShareableContent::current();

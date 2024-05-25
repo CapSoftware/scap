@@ -126,7 +126,6 @@ pub fn get_display(display_id: u32) -> SCDisplay {
         mac::get_display(display_id)
     }
 }
-
 #[cfg(target_os = "windows")]
 use windows_capture::monitor::Monitor;
 
