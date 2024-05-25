@@ -1510,7 +1510,7 @@ dependencies = [
 
 [[package]]
 name = "scap"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "apple-sys-helmer-fork",
  "bytes",
