@@ -21,6 +21,10 @@ jobs:
           fetch-depth: 0
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+      - name: Install dependencies for alsa
+        run: |
+          sudo apt-get install libsdl2-dev
+          sudo apt install libasound2-dev
       - name: Run release-plz
         uses: MarcoIeni/release-plz-action@v0.5
         env:
