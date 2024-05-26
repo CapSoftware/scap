@@ -1,30 +1,35 @@
 ![Github banner](./.github/banner.gif)
 
-A Rust library for high-quality screen recordings that leverages native OS APIs for optimal performance: Apple's [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit) on macOS, [Graphics.Capture](https://learn.microsoft.com/en-us/uwp/api/windows.graphics.capture?view=winrt-22621) APIs on Windows and [Pipewire](https://pipewire.org) on Linux.
-
-**🚧 WIP. Unsuitable for production use, APIs are being iterated on.**
-
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/invite/SC468DK4du)
+[![Twitter](https://img.shields.io/badge/twitter-blue?style=for-the-badge&logo=twitter&logoColor=white&labelColor=%231DA1F2&color=%231DA1F2)](https://www.x.com/helmerapp)
+![GitHub Repo stars](https://img.shields.io/github/stars/helmerapp/scap?style=for-the-badge&logo=github&label=Github%20Stars&labelColor=black)
+![docs.rs](https://img.shields.io/docsrs/scap?style=for-the-badge&logo=rust&logoColor=white&labelColor=black)
+![Crates.io MSRV](https://img.shields.io/crates/msrv/scap?style=for-the-badge&logo=rust&logoColor=white&labelColor=black)
+
+
+A Rust library for high-quality screen capture that leverages native OS APIs for optimal performance!
+1. macOS: [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit)
+2. Windows: [Windows.Graphics.Capture](https://learn.microsoft.com/en-us/uwp/api/windows.graphics.capture?view=winrt-22621)
+3. Linux: [Pipewire](https://pipewire.org)
 
 ---
 
 ## features
 
-1. Cross-platform support: Windows, Mac and Linux!
-2. Check for support and user permissions.
-3. Utilize native OS APIs for screen capture.
-4. Different capture modes: Display or Windows.
+1. Cross-platform across Windows, Mac and Linux!
+2. Checks for support and recording permissions.
+3. Query list of captureable targets (displays and windows).
+4. Exclude certain targets from being captured.
 
 ## contributing
 
-We found most of Rust's tooling around screen capture either non-performant, outdated or very platform-specific. This project is our attempt to change that. Contributions, PRs and Issues are most welcome!
+We found most of Rust's tooling around screen capture either very outdated, non-performant or platform-specific. This project is our attempt to change that. Contributions, PRs and Issues are most welcome!
 
-If you'd like to develop, here's a kickstart guide:
-
+If you want to contribute code, here's a quick primer:
 1. Clone the repo and run it with `cargo run`.
 2. Explore the API and library code in [lib.rs](./scap/src/lib.rs).
-3. Platform-specific code is in the `win`, `mac` and `linux` modules.
-4. There's a small program in [main.rs](./scap/src/main.rs) that "consumes" the library for dev-testing.
+3. Platform-specific code lives in the `win`, `mac` and `linux` modules.
+4. The [main.rs](./scap/src/main.rs) is a small program that "consumes" the library, for easy testing.
 
 ## usage
 
@@ -55,7 +60,7 @@ fn main() {
     }
     println!("✅ Permission granted");
 
-    // Get recording targets (WIP)
+    // Get capturing targets (WIP)
     let targets = scap::get_targets();
     println!("🎯 Targets: {:?}", targets);
 
@@ -78,7 +83,7 @@ fn main() {
         ..Default::default()
     };
 
-    // Create Recorder
+    // Create Capturer
     let mut capturer = Capturer::new(options);
 
     // Start Capture
@@ -94,9 +99,9 @@ fn main() {
 
 ## license
 
-The code in this repository is open-sourced under the MIT license. However, it may rely on dependencies that are licensed differently. Please consult their documentations for exact terms.
+The code in this repository is open-sourced under the MIT license, though it may be relying on dependencies that are licensed differently. Please consult their documentation for exact terms.
 
-## Contributors
+## contributors
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
@@ -121,7 +126,8 @@ The code in this repository is open-sourced under the MIT license. However, it m
 
 ## credits
 
-This project builds on top of the fabulous work done by [@svtlabs](https://github.com/svtlabs) and [@NiiightmareXD](https://github.com/NiiightmareXD).
+This project builds on top of the fabulous work done by:
 
-- [screencapturekit-rs](https://github.com/svtlabs/screencapturekit-rs): Rust bindings for Apple's ScreencaptureKit API.
-- [windows-capture](https://github.com/NiiightmareXD/windows-capture): Rust library for Windows.Graphics.Capture.
+- [@MAlba124](https://github.com/MAlba124) for Linux support via Pipewire
+- [@svtlabs](https://github.com/svtlabs) for [screencapturekit-rs](https://github.com/svtlabs/screencapturekit-rs)
+- [@NiiightmareXD](https://github.com/NiiightmareXD) for [windows-capture](https://github.com/NiiightmareXD/windows-capture)
