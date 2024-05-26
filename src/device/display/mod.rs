@@ -8,42 +8,16 @@ mod win;
 mod linux;
 
 #[derive(Debug, Clone)]
-pub struct Target {
-    pub title: String,
-    pub id: u32,
-}
-
-#[derive(Debug, Clone)]
-pub struct DisplayPosition {
-    pub x: f64,
-    pub y: f64,
-}
-
-#[derive(Debug, Clone)]
-pub struct DisplaySize {
-    pub width: f64,
-    pub height: f64,
-}
-
-#[derive(Debug, Clone)]
-pub struct Display {
-    pub id: u32,
-    // origin of this display w.r.t. primary display
-    pub physical_position: DisplayPosition,
-    pub size: DisplaySize,
-    pub scale_factor: u64,
-}
-
-/// Returns all displays present in the system
-pub fn get_all_displays() -> Vec<Display> {
-    #[cfg(target_os = "macos")]
-    return mac::get_all_displays();
-
-    #[cfg(target_os = "windows")]
-    return vec![]; // TODO; Unimplemneted
-
-    #[cfg(target_os = "linux")]
-    return vec![]; // TODO; Unimplemneted
+pub enum Target {
+    Display {
+        id: u32,
+        title: String,
+        // origin of this display w.r.t. primary display
+        physical_position: Point,
+        size: Size,
+        scale_factor: u64,
+    },
+    Window {},
 }
 
 /// Checks if process has permission to capture the screen
@@ -128,6 +102,8 @@ pub fn get_display(display_id: u32) -> SCDisplay {
 }
 #[cfg(target_os = "windows")]
 use windows_capture::monitor::Monitor;
+
+use crate::capturer::{Point, Size};
 
 #[cfg(target_os = "windows")]
 pub fn get_main_display() -> Monitor {

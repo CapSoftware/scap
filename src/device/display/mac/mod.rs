@@ -6,7 +6,9 @@ use itertools::Itertools;
 use screencapturekit::{sc_display::SCDisplay, sc_shareable_content::SCShareableContent};
 use sysinfo::System;
 
-use super::{Display, DisplayPosition, DisplaySize, Target};
+use crate::capturer::{Point, Size};
+
+use super::Target;
 
 pub fn has_permission() -> bool {
     ScreenCaptureAccess::default().preflight()
@@ -28,24 +30,10 @@ pub fn is_supported() -> bool {
 }
 
 pub fn get_targets() -> Vec<Target> {
-    let mut targets: Vec<Target> = Vec::new();
-
-    let content = SCShareableContent::current();
-    let displays = content.displays;
-
-    for display in displays {
-        // println!("Display: {:?}", display);
-        let title = format!("Display {}", display.display_id); // TODO: get this from core-graphics
-
-        let target = Target {
-            id: display.display_id,
-            title,
-        };
-
-        targets.push(target);
-    }
-
-    targets
+    return get_displays()
+        .into_iter()
+        .chain(get_windows().into_iter())
+        .collect();
 }
 
 pub fn get_main_display() -> SCDisplay {
@@ -66,24 +54,30 @@ pub fn get_display(display_id: CGDirectDisplayID) -> SCDisplay {
     display.to_owned()
 }
 
-pub fn get_all_displays() -> Vec<Display> {
-    let content = SCShareableContent::current();
-    let displays = content.displays;
+pub fn get_scale_factor(display_id: CGDirectDisplayID) -> u64 {
+    let mode = CGDisplay::new(display_id).display_mode().unwrap();
+    mode.pixel_width() / mode.width()
+}
 
-    displays
+/// returns all physical screens presently connected.
+fn get_displays() -> Vec<Target> {
+    SCShareableContent::current()
+        .displays
         .iter()
         .map(|display| {
             let bounds = CGDisplay::new(display.display_id as CGDirectDisplayID).bounds();
             let scale = get_scale_factor(display.display_id);
-            Display {
+            let scale_f64 = scale as f64;
+            Target::Display {
                 id: display.display_id,
-                physical_position: DisplayPosition {
-                    x: bounds.origin.x,
-                    y: bounds.origin.y,
+                title: format!("Display {}", display.display_id), // TODO: get this from core-graphics
+                physical_position: Point {
+                    x: bounds.origin.x * scale_f64,
+                    y: bounds.origin.y * scale_f64,
                 },
-                size: DisplaySize {
-                    width: bounds.size.width,
-                    height: bounds.size.height,
+                size: Size {
+                    width: bounds.size.width * scale_f64,
+                    height: bounds.size.height * scale_f64,
                 },
                 scale_factor: scale,
             }
@@ -91,7 +85,7 @@ pub fn get_all_displays() -> Vec<Display> {
         .collect_vec()
 }
 
-pub fn get_scale_factor(display_id: CGDirectDisplayID) -> u64 {
-    let mode = CGDisplay::new(display_id).display_mode().unwrap();
-    mode.pixel_width() / mode.width()
+/// return all open windows across all displays.
+fn get_windows() -> Vec<Target> {
+    return Vec::new();
 }
