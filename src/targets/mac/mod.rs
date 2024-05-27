@@ -9,7 +9,7 @@ use super::Target;
 
 pub use core_graphics_helmer_fork::display::CGDisplay;
 
-fn get_localized_display_name(display_id: CGDirectDisplayID) -> Option<String> {
+fn get_display_name(display_id: CGDirectDisplayID) -> Option<String> {
     unsafe {
         // Get all screens
         let screens: id = NSScreen::screens(nil);
@@ -45,8 +45,8 @@ pub fn get_targets() -> Vec<Target> {
     // Add displays to targets
     for display in content.displays {
         let id: CGDirectDisplayID = display.display_id;
-        let title = get_localized_display_name(id).unwrap_or_else(|| "Unknown Display".to_string());
-        let raw_handle = CGDisplay::new(display.display_id);
+        let raw_handle = CGDisplay::new(id);
+        let title = get_display_name(id).unwrap_or_else(|| format!("Unknown Display {}", id));
 
         let target = Target::Display(super::Display {
             id,
