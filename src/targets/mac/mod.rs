@@ -28,7 +28,9 @@ pub fn get_targets() -> Vec<Target> {
 
     // Add windows to targets
     for window in content.windows {
-        // println!("Window: {:?}", window);
+        if window.title.is_none() {
+            continue;
+        }
 
         let title = window.title.expect("Window title not found");
 
