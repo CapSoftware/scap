@@ -14,11 +14,7 @@ pub struct Window {
 
     #[cfg(target_os = "windows")]
     pub raw_handle: win::HWND,
-
-    #[cfg(target_os = "macos")]
-    pub raw_handle: u32,
     // TODO: linux
-    // #[cfg(target_os = "linux")]
 }
 
 #[derive(Debug, Clone)]
@@ -30,7 +26,8 @@ pub struct Display {
     pub raw_handle: win::HMONITOR,
 
     #[cfg(target_os = "macos")]
-    pub raw_handle: u32,
+    pub raw_handle: mac::CGDisplay,
+    // TODO: linux
 }
 
 #[derive(Debug, Clone)]
