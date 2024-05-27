@@ -1,7 +1,10 @@
 use super::Target;
+use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MONITORINFOEXW};
+use windows_capture::{monitor::Monitor, window::Window};
 
-use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, HMONITOR, MONITORINFOEXW};
-use windows_capture::{graphics_capture_api::GraphicsCaptureApi, monitor::Monitor, window::Window};
+pub use windows::Win32::{Foundation::HWND, Graphics::Gdi::HMONITOR};
+
+use windows::Win32::Graphics::Gdi::{GetDC, GetDeviceCaps, ReleaseDC, LOGPIXELSX, LOGPIXELSY};
 
 fn get_monitor_name(h_monitor: HMONITOR) -> windows::core::Result<String> {
     let mut monitor_info = MONITORINFOEXW::default();
@@ -32,15 +35,6 @@ fn get_monitor_name(h_monitor: HMONITOR) -> windows::core::Result<String> {
     }
 }
 
-pub fn is_supported() -> bool {
-    GraphicsCaptureApi::is_supported().expect("Failed to check support")
-}
-
-// TODO: add correct permission mechanism here
-pub fn has_permission() -> bool {
-    true
-}
-
 pub fn get_targets() -> Vec<Target> {
     let mut targets: Vec<Target> = Vec::new();
 
@@ -51,11 +45,15 @@ pub fn get_targets() -> Vec<Target> {
         let id = cnt;
         cnt = cnt + 1;
 
-        // TODO: get_monitor_name and as_raw_hmonitor are not implemented
-        // let title = get_monitor_name(display.as_raw_hmonitor()).unwrap();
-        let title = "Display 1".into();
+        // let title = display.name().expect("Failed to get monitor name");
+        let title = get_monitor_name(HMONITOR(display.as_raw_hmonitor()))
+            .expect("Failed to get monitor name");
 
-        let target = Target { id, title };
+        let target = Target::Display(super::Display {
+            id,
+            title,
+            raw_handle: HMONITOR(display.as_raw_hmonitor()),
+        });
         targets.push(target);
     }
 
@@ -65,7 +63,11 @@ pub fn get_targets() -> Vec<Target> {
 
         let title = window.title().unwrap().to_string();
 
-        let target = Target { id: 3, title };
+        let target = Target::Window(super::Window {
+            id: 3,
+            title,
+            raw_handle: HWND(handle),
+        });
         targets.push(target);
     }
 
@@ -77,4 +79,21 @@ pub fn get_main_display() -> Monitor {
     let display = displays.first().expect("No displays found");
 
     *display
+}
+
+pub fn get_scale_factor() -> f64 {
+    unsafe {
+        let hdc = GetDC(None);
+
+        let dpi_x = GetDeviceCaps(hdc, LOGPIXELSX);
+        let dpi_y = GetDeviceCaps(hdc, LOGPIXELSY);
+
+        ReleaseDC(None, hdc);
+
+        let scale_x = dpi_x as f64 / 96.0;
+        let scale_y = dpi_y as f64 / 96.0;
+        let scale = (scale_x + scale_y) / 2.0;
+
+        return scale;
+    }
 }

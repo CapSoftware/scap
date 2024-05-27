@@ -1,12 +1,11 @@
 use crate::{
     capturer::{Area, Options, Point, Resolution, Size},
-    device::display::{self},
     frame::{BGRAFrame, Frame, FrameType},
+    targets,
 };
 use std::cmp;
 use std::sync::mpsc;
 use std::time::{SystemTime, UNIX_EPOCH};
-use windows::Win32::Graphics::Gdi::{GetDC, GetDeviceCaps, ReleaseDC, LOGPIXELSX, LOGPIXELSY};
 use windows_capture::{
     capture::{CaptureControl, GraphicsCaptureApiHandler},
     frame::Frame as Wframe,
@@ -19,17 +18,6 @@ use windows_capture::{
 struct Capturer {
     pub tx: mpsc::Sender<Frame>,
     pub crop: Option<Area>,
-}
-
-impl Capturer {
-    pub fn new(tx: mpsc::Sender<Frame>) -> Self {
-        Capturer { tx, crop: None }
-    }
-
-    pub fn with_crop(mut self, crop: Option<Area>) -> Self {
-        self.crop = crop;
-        self
-    }
 }
 
 pub struct WinStream {
@@ -50,7 +38,7 @@ impl GraphicsCaptureApiHandler for Capturer {
 
     fn on_frame_arrived(
         &mut self,
-        mut frame: &mut Wframe,
+        frame: &mut Wframe,
         _: InternalCaptureControl,
     ) -> Result<(), Self::Error> {
         match &self.crop {
@@ -160,7 +148,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream 
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
-    let scale = get_scale_factor();
+    // let scale = get_scale_factor();
     let source_rect = get_source_rect(options);
 
     let mut output_width = source_rect.size.width as u32;
@@ -188,7 +176,7 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
 }
 
 pub fn get_source_rect(options: &Options) -> Area {
-    let display = display::get_main_display();
+    let display = targets::get_main_display();
     let width_result = display.width();
     let height_result = display.height();
 
@@ -234,21 +222,4 @@ pub fn get_source_rect(options: &Options) -> Area {
     };
 
     source_rect
-}
-
-fn get_scale_factor() -> f64 {
-    unsafe {
-        let hdc = GetDC(None);
-
-        let dpi_x = GetDeviceCaps(hdc, LOGPIXELSX);
-        let dpi_y = GetDeviceCaps(hdc, LOGPIXELSY);
-
-        ReleaseDC(None, hdc);
-
-        let scale_x = dpi_x as f64 / 96.0;
-        let scale_y = dpi_y as f64 / 96.0;
-        let scale = (scale_x + scale_y) / 2.0;
-
-        return scale;
-    }
 }
