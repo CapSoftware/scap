@@ -48,12 +48,12 @@ pub fn get_targets() -> Vec<Target> {
     return linux::get_targets();
 }
 
-pub fn get_scale_factor(_display_id: u32) -> u64 {
+pub fn get_scale_factor(_display_id: u32) -> f64 {
     #[cfg(target_os = "macos")]
     return mac::get_scale_factor(_display_id);
 
     #[cfg(target_os = "windows")]
-    return win::get_scale_factor() as u64;
+    return win::get_scale_factor();
 
     #[cfg(target_os = "linux")]
     return 1;
