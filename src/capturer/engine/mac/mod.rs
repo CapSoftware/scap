@@ -22,11 +22,7 @@ use crate::frame::{
     convert_bgra_to_rgb, get_cropped_data, remove_alpha_channel, BGRAFrame, BGRFrame, Frame,
     FrameType, RGBFrame, YUVFrame,
 };
-use crate::{
-    capturer::Options,
-    capturer::Resolution,
-    device::display::{self},
-};
+use crate::{capturer::Options, capturer::Resolution, targets};
 use apple_sys_helmer_fork::{
     CoreMedia::{
         CFDictionaryGetValue, CFDictionaryRef, CFNumberGetValue, CFNumberType_kCFNumberSInt64Type,
@@ -99,7 +95,7 @@ impl StreamOutput for Capturer {
 pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     // TODO: identify targets to capture using options.targets
     // scap currently only captures the main display
-    let display = display::get_main_display();
+    let display = targets::get_main_display();
 
     let sc_shareable_content = SCShareableContent::current();
     let excluded_windows = sc_shareable_content
@@ -325,9 +321,9 @@ pub unsafe fn create_rgb_frame(sample_buffer: CMSampleBuffer) -> Option<RGBFrame
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
-    let display = display::get_main_display();
+    let display = targets::get_main_display();
     let display_id = display.display_id;
-    let scale = display::get_scale_factor(display_id) as u32;
+    let scale = targets::get_scale_factor(display_id) as u32;
 
     let source_rect = get_source_rect(options);
 
@@ -360,7 +356,7 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
 }
 
 pub fn get_source_rect(options: &Options) -> CGRect {
-    let display = display::get_main_display();
+    let display = targets::get_main_display();
     let width = display.width;
     let height = display.height;
 
