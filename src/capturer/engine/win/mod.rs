@@ -1,11 +1,11 @@
 use crate::{
     capturer::{Area, Options, Point, Resolution, Size},
     frame::{BGRAFrame, Frame, FrameType},
-    targets,
 };
 use std::cmp;
 use std::sync::mpsc;
 use std::time::{SystemTime, UNIX_EPOCH};
+use windows::Win32::Graphics::Gdi::HMONITOR;
 use windows_capture::{
     capture::{CaptureControl, GraphicsCaptureApiHandler},
     frame::Frame as Wframe,
@@ -176,7 +176,7 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
 }
 
 pub fn get_source_rect(options: &Options) -> Area {
-    let display = targets::get_main_display();
+    let display = get_monitor_from_id(HMONITOR(0));
     let width_result = display.width();
     let height_result = display.height();
 
@@ -222,4 +222,12 @@ pub fn get_source_rect(options: &Options) -> Area {
     };
 
     source_rect
+}
+
+fn get_monitor_from_id(id: HMONITOR) -> Monitor {
+    Monitor::enumerate()
+        .expect("Failed to enumerate monitors")
+        .into_iter()
+        .find(|m| m.as_raw_hmonitor() == id.0)
+        .unwrap_or_else(|| Monitor::primary().expect("Failed to get primary monitor"))
 }

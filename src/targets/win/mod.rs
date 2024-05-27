@@ -1,4 +1,4 @@
-use super::Target;
+use super::{Display, Target};
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MONITORINFOEXW};
 use windows_capture::{monitor::Monitor, window::Window};
 
@@ -6,7 +6,7 @@ pub use windows::Win32::{Foundation::HWND, Graphics::Gdi::HMONITOR};
 
 use windows::Win32::Graphics::Gdi::{GetDC, GetDeviceCaps, ReleaseDC, LOGPIXELSX, LOGPIXELSY};
 
-fn get_monitor_name(h_monitor: HMONITOR) -> windows::core::Result<String> {
+fn get_monitor_name(h_monitor: HMONITOR) -> String {
     let mut monitor_info = MONITORINFOEXW::default();
     monitor_info.monitorInfo.cbSize = std::mem::size_of::<MONITORINFOEXW>() as u32;
 
@@ -26,12 +26,9 @@ fn get_monitor_name(h_monitor: HMONITOR) -> windows::core::Result<String> {
             None => name.to_string(),
         };
 
-        Ok(clean_name)
+        clean_name
     } else {
-        Err(windows::core::Error::new(
-            windows::core::HRESULT(0),
-            "Failed to get monitor info".into(),
-        ))
+        format!("Unknown Monitor {}", h_monitor.0)
     }
 }
 
@@ -40,14 +37,9 @@ pub fn get_targets() -> Vec<Target> {
 
     let displays = Monitor::enumerate().expect("Failed to enumerate monitors");
 
-    let mut cnt = 1;
     for display in displays {
-        let id = cnt;
-        cnt = cnt + 1;
-
-        // let title = display.name().expect("Failed to get monitor name");
-        let title = get_monitor_name(HMONITOR(display.as_raw_hmonitor()))
-            .expect("Failed to get monitor name");
+        let id = display.as_raw_hmonitor() as u32;
+        let title = get_monitor_name(HMONITOR(id as isize));
 
         let target = Target::Display(super::Display {
             id,
@@ -74,11 +66,15 @@ pub fn get_targets() -> Vec<Target> {
     targets
 }
 
-pub fn get_main_display() -> Monitor {
-    let displays = Monitor::enumerate().expect("Failed to enumerate monitors");
-    let display = displays.first().expect("No displays found");
+pub fn get_main_display() -> Display {
+    let display = Monitor::primary().expect("Failed to get primary monitor");
+    let id = display.as_raw_hmonitor() as u32;
 
-    *display
+    Display {
+        id,
+        title: get_monitor_name(HMONITOR(display.as_raw_hmonitor())),
+        raw_handle: HMONITOR(display.as_raw_hmonitor()),
+    }
 }
 
 pub fn get_scale_factor() -> f64 {

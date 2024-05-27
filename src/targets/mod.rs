@@ -64,14 +64,6 @@ pub fn get_main_display() -> Display {
     #[cfg(target_os = "windows")]
     return win::get_main_display();
 
-    #[cfg(target_os = "linux")]
-    return linux::get_main_display();
-}
-
-#[cfg(target_os = "windows")]
-use windows_capture::monitor::Monitor;
-
-#[cfg(target_os = "windows")]
-pub fn get_main_display() -> Monitor {
-    win::get_main_display()
+    // #[cfg(target_os = "linux")]
+    // return linux::get_main_display();
 }
