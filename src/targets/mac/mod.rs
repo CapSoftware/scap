@@ -3,13 +3,13 @@ use cocoa::base::{id, nil};
 use cocoa::foundation::NSString;
 use core_graphics_helmer_fork::display::{CGDirectDisplayID, CGMainDisplayID};
 use objc::{msg_send, sel, sel_impl};
-use screencapturekit::{sc_display::SCDisplay, sc_shareable_content::SCShareableContent};
+use screencapturekit::sc_shareable_content::SCShareableContent;
 
-use super::Target;
+use super::{Display, Target};
 
 pub use core_graphics_helmer_fork::display::CGDisplay;
 
-fn get_display_name(display_id: CGDirectDisplayID) -> Option<String> {
+fn get_display_name(display_id: CGDirectDisplayID) -> String {
     unsafe {
         // Get all screens
         let screens: id = NSScreen::screens(nil);
@@ -22,18 +22,15 @@ fn get_display_name(display_id: CGDirectDisplayID) -> Option<String> {
             let display_id_number: u32 = msg_send![display_id_number, unsignedIntValue];
 
             if display_id_number == display_id {
-                // Get the localized name
                 let localized_name: id = msg_send![screen, localizedName];
                 let name: *const i8 = msg_send![localized_name, UTF8String];
-                return Some(
-                    std::ffi::CStr::from_ptr(name)
-                        .to_string_lossy()
-                        .into_owned(),
-                );
+                return std::ffi::CStr::from_ptr(name)
+                    .to_string_lossy()
+                    .into_owned();
             }
         }
 
-        None
+        format!("Unknown Display {}", display_id)
     }
 }
 
@@ -46,7 +43,7 @@ pub fn get_targets() -> Vec<Target> {
     for display in content.displays {
         let id: CGDirectDisplayID = display.display_id;
         let raw_handle = CGDisplay::new(id);
-        let title = get_display_name(id).unwrap_or_else(|| format!("Unknown Display {}", id));
+        let title = get_display_name(id);
 
         let target = Target::Display(super::Display {
             id,
@@ -71,19 +68,15 @@ pub fn get_targets() -> Vec<Target> {
     targets
 }
 
-pub fn get_main_display() -> SCDisplay {
-    let content = SCShareableContent::current();
-    let displays = content.displays;
+pub fn get_main_display() -> Display {
+    let id = unsafe { CGMainDisplayID() };
+    let title = get_display_name(id);
 
-    let main_display_id = unsafe { CGMainDisplayID() };
-    let main_display = displays
-        .iter()
-        .find(|display| display.display_id == main_display_id)
-        .unwrap_or_else(|| {
-            panic!("Main display not found");
-        });
-
-    main_display.to_owned()
+    Display {
+        id,
+        title,
+        raw_handle: CGDisplay::new(id),
+    }
 }
 
 pub fn get_scale_factor(display_id: CGDirectDisplayID) -> f64 {

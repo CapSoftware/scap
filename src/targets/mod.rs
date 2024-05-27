@@ -14,7 +14,6 @@ pub struct Window {
 
     #[cfg(target_os = "windows")]
     pub raw_handle: win::HWND,
-    // TODO: linux
 }
 
 #[derive(Debug, Clone)]
@@ -27,7 +26,6 @@ pub struct Display {
 
     #[cfg(target_os = "macos")]
     pub raw_handle: mac::CGDisplay,
-    // TODO: linux
 }
 
 #[derive(Debug, Clone)]
@@ -59,12 +57,15 @@ pub fn get_scale_factor(_display_id: u32) -> f64 {
     return 1;
 }
 
-#[cfg(target_os = "macos")]
-use screencapturekit::sc_display::SCDisplay;
+pub fn get_main_display() -> Display {
+    #[cfg(target_os = "macos")]
+    return mac::get_main_display();
 
-#[cfg(target_os = "macos")]
-pub fn get_main_display() -> SCDisplay {
-    mac::get_main_display()
+    #[cfg(target_os = "windows")]
+    return win::get_main_display();
+
+    #[cfg(target_os = "linux")]
+    return linux::get_main_display();
 }
 
 #[cfg(target_os = "windows")]

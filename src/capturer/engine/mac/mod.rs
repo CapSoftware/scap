@@ -6,6 +6,7 @@ use screencapturekit::sc_output_handler::SCStreamOutputType;
 use screencapturekit::sc_stream_configuration::PixelFormat;
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
+    sc_display::SCDisplay,
     sc_error_handler::StreamErrorHandler,
     sc_output_handler::StreamOutput,
     sc_shareable_content::SCShareableContent,
@@ -30,7 +31,9 @@ use apple_sys_helmer_fork::{
     },
     ScreenCaptureKit::{SCFrameStatus_SCFrameStatusComplete, SCStreamFrameInfoStatus},
 };
-use core_graphics_helmer_fork::display::{CFArrayGetCount, CFArrayGetValueAtIndex, CFArrayRef};
+use core_graphics_helmer_fork::display::{
+    CFArrayGetCount, CFArrayGetValueAtIndex, CFArrayRef, CGDirectDisplayID,
+};
 use core_video_sys::{
     CVPixelBufferGetBaseAddress, CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRow,
     CVPixelBufferGetBytesPerRowOfPlane, CVPixelBufferGetHeight, CVPixelBufferGetWidth,
@@ -96,8 +99,10 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     // TODO: identify targets to capture using options.targets
     // scap currently only captures the main display
     let display = targets::get_main_display();
+    let sc_display = get_sc_display_from_id(display.id);
 
     let sc_shareable_content = SCShareableContent::current();
+
     let excluded_windows = sc_shareable_content
         .windows
         .into_iter()
@@ -114,7 +119,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
         })
         .collect();
 
-    let params = InitParams::DisplayExcludingWindows(display, excluded_windows);
+    let params = InitParams::DisplayExcludingWindows(sc_display, excluded_windows);
     let filter = SCContentFilter::new(params);
 
     let source_rect = get_source_rect(options);
@@ -322,8 +327,8 @@ pub unsafe fn create_rgb_frame(sample_buffer: CMSampleBuffer) -> Option<RGBFrame
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     let display = targets::get_main_display();
-    let display_id = display.display_id;
-    let scale = targets::get_scale_factor(display_id) as u32;
+    let display_id = display.id;
+    let scale = targets::get_scale_factor(display_id);
 
     let source_rect = get_source_rect(options);
 
@@ -357,8 +362,11 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
 
 pub fn get_source_rect(options: &Options) -> CGRect {
     let display = targets::get_main_display();
-    let width = display.width;
-    let height = display.height;
+
+    let display_raw = display.raw_handle;
+
+    let width = display_raw.pixels_wide();
+    let height = display_raw.pixels_high();
 
     let source_rect = match &options.source_rect {
         Some(val) => {
@@ -393,4 +401,18 @@ pub fn get_source_rect(options: &Options) -> CGRect {
     };
 
     source_rect
+}
+
+pub fn get_sc_display_from_id(id: CGDirectDisplayID) -> SCDisplay {
+    SCShareableContent::current()
+        .displays
+        .into_iter()
+        .find(|display| display.display_id == id)
+        .unwrap_or_else(|| {
+            SCShareableContent::current()
+                .displays
+                .get(0)
+                .expect("couldn't find display")
+                .to_owned()
+        })
 }
