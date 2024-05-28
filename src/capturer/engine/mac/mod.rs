@@ -326,6 +326,7 @@ pub unsafe fn create_rgb_frame(sample_buffer: CMSampleBuffer) -> Option<RGBFrame
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
+    // TODO: this should be based on display from options.target, not main one
     let display = targets::get_main_display();
     let display_id = display.id;
     let scale = targets::get_scale_factor(display_id);
@@ -349,37 +350,25 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
         }
     }
 
-    if output_width % 2 == 1 {
-        output_width = output_width - 1;
-    }
+    output_width = output_width - output_width % 2;
+    output_height = output_height - output_height % 2;
 
-    if output_height % 2 == 1 {
-        output_height = output_height - 1;
-    }
-
-    return [output_width, output_height];
+    [output_width, output_height]
 }
 
 pub fn get_source_rect(options: &Options) -> CGRect {
+    // TODO: this should be based on display from options.target, not main one
     let display = targets::get_main_display();
+    let width = display.raw_handle.pixels_wide();
+    let height = display.raw_handle.pixels_high();
 
-    let display_raw = display.raw_handle;
+    options
+        .source_rect
+        .as_ref()
+        .map(|val| {
+            let input_width = val.size.width + (val.size.width % 2.0);
+            let input_height = val.size.height + (val.size.height % 2.0);
 
-    let width = display_raw.pixels_wide();
-    let height = display_raw.pixels_high();
-
-    let source_rect = match &options.source_rect {
-        Some(val) => {
-            let input_width = if (val.size.width as i64) % 2 == 0 {
-                val.size.width as i64
-            } else {
-                (val.size.width as i64) + 1
-            };
-            let input_height = if (val.size.height as i64) % 2 == 0 {
-                val.size.height as i64
-            } else {
-                (val.size.height as i64) + 1
-            };
             CGRect {
                 origin: CGPoint {
                     x: val.origin.x,
@@ -390,17 +379,14 @@ pub fn get_source_rect(options: &Options) -> CGRect {
                     height: input_height as f64,
                 },
             }
-        }
-        None => CGRect {
+        })
+        .unwrap_or_else(|| CGRect {
             origin: CGPoint { x: 0.0, y: 0.0 },
             size: CGSize {
                 width: width as f64,
                 height: height as f64,
             },
-        },
-    };
-
-    source_rect
+        })
 }
 
 pub fn get_sc_display_from_id(id: CGDirectDisplayID) -> SCDisplay {
