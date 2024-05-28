@@ -158,8 +158,8 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
         }
     }
 
-    output_width = output_width - output_width % 2;
-    output_height = output_height - output_height % 2;
+    output_width -= output_width % 2;
+    output_height -= output_height % 2;
 
     [output_width, output_height]
 }

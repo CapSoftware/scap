@@ -154,9 +154,16 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     let mut output_width = source_rect.size.width as u32;
     let mut output_height = source_rect.size.height as u32;
 
-    if let Resolution::Custom(resolved_width, resolved_height) = options.output_resolution {
-        output_width = cmp::min(output_width, resolved_width);
-        output_height = cmp::min(output_height, resolved_height);
+    match options.output_resolution {
+        Resolution::Captured => {}
+        _ => {
+            let [resolved_width, resolved_height] = options
+                .output_resolution
+                .value((source_rect.size.width as f32) / (source_rect.size.height as f32));
+            // 1280 x 853
+            output_width = cmp::min(output_width, resolved_width);
+            output_height = cmp::min(output_height, resolved_height);
+        }
     }
 
     output_width -= output_width % 2;
@@ -175,11 +182,12 @@ pub fn get_source_rect(options: &Options) -> Area {
 
     options
         .source_rect
+        .as_ref()
         .map(|val| {
-            let input_width = val.size.width + val.size.width % 2;
-            let input_height = val.size.height + val.size.height % 2;
+            let input_width = val.size.width + val.size.width % 2.0;
+            let input_height = val.size.height + val.size.height % 2.0;
             Area {
-                origin: val.origin,
+                origin: val.origin.clone(),
                 size: Size {
                     width: input_width as f64,
                     height: input_height as f64,
