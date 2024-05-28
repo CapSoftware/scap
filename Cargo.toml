@@ -30,6 +30,8 @@ core-graphics-helmer-fork = "0.24.0"
 screencapturekit = "0.2.8"
 screencapturekit-sys = "0.2.8"
 apple-sys-helmer-fork = { version = "0.2.0", features = ["CoreMedia", "ScreenCaptureKit"] }
+cocoa = "0.25.0"
+objc = "0.2.7"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 pipewire = "0.8.0"

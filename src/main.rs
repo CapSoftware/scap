@@ -8,8 +8,7 @@ use scap::{
 
 fn main() {
     // #1 Check if the platform is supported
-    let supported = scap::is_supported();
-    if !supported {
+    if !scap::is_supported() {
         println!("❌ Platform not supported");
         return;
     } else {
@@ -43,8 +42,8 @@ fn main() {
         source_rect: Some(Area {
             origin: Point { x: 0.0, y: 0.0 },
             size: Size {
-                width: 2000.0,
-                height: 1000.0,
+                width: 1000.0,
+                height: 800.0,
             },
         }),
         ..Default::default()

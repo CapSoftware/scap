@@ -3,8 +3,8 @@ mod engine;
 use std::sync::mpsc;
 
 use crate::{
-    device::display,
     frame::{Frame, FrameType},
+    targets::Target,
 };
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -59,10 +59,10 @@ pub struct Options {
     pub fps: u32,
     pub show_cursor: bool,
     pub show_highlight: bool,
-    pub targets: Vec<display::Target>,
+    pub targets: Vec<Target>,
 
     // excluded targets will only work on macOS
-    pub excluded_targets: Option<Vec<display::Target>>,
+    pub excluded_targets: Option<Vec<Target>>,
     // excluded windows will only work on macOS
     pub excluded_windows: Option<Vec<String>>,
     pub output_type: FrameType,

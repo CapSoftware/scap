@@ -1,11 +1,12 @@
 //! Cross Platform, Performant and High Quality screen recordings
 
 pub mod capturer;
-mod device;
 pub mod frame;
+pub mod targets;
+pub mod utils;
 
 // Helper Methods
-pub use device::display::get_targets;
-pub use device::display::has_permission;
-pub use device::display::is_supported;
-pub use device::display::request_permission;
+pub use targets::get_targets;
+pub use utils::has_permission;
+pub use utils::is_supported;
+pub use utils::request_permission;
