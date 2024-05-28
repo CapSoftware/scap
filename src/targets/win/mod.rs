@@ -1,9 +1,10 @@
 use super::{Display, Target};
+use windows::Win32::{
+    Foundation::HWND,
+    Graphics::Gdi::{GetDC, GetDeviceCaps, ReleaseDC, HMONITOR, LOGPIXELSX, LOGPIXELSY},
+    UI::Shell::GetScaleFactorForMonitor,
+};
 use windows_capture::{monitor::Monitor, window::Window};
-
-pub use windows::Win32::{Foundation::HWND, Graphics::Gdi::HMONITOR};
-
-use windows::Win32::Graphics::Gdi::{GetDC, GetDeviceCaps, ReleaseDC, LOGPIXELSX, LOGPIXELSY};
 
 pub fn get_targets() -> Vec<Target> {
     let mut targets: Vec<Target> = Vec::new();
@@ -50,19 +51,31 @@ pub fn get_main_display() -> Display {
     }
 }
 
-pub fn get_scale_factor() -> f64 {
-    unsafe {
-        let hdc = GetDC(None);
+// pub fn get_scale_factor(display_id: u32) -> f64 {
+//     unsafe {
+//         let hdc = GetDC(None);
+//         let dpi_x = GetDeviceCaps(hdc, LOGPIXELSX);
+//         let dpi_y = GetDeviceCaps(hdc, LOGPIXELSY);
+//         ReleaseDC(None, hdc);
+//         let scale_x = dpi_x as f64 / 96.0;
+//         let scale_y = dpi_y as f64 / 96.0;
+//         let scale = (scale_x + scale_y) / 2.0;
 
-        let dpi_x = GetDeviceCaps(hdc, LOGPIXELSX);
-        let dpi_y = GetDeviceCaps(hdc, LOGPIXELSY);
+//         println!("Scale factor: {}", scale);
+//         return scale;
+//     }
+// }
 
-        ReleaseDC(None, hdc);
+pub fn get_scale_factor(display_id: u32) -> f64 {
+    let display = HMONITOR(display_id as isize);
 
-        let scale_x = dpi_x as f64 / 96.0;
-        let scale_y = dpi_y as f64 / 96.0;
-        let scale = (scale_x + scale_y) / 2.0;
+    let scale_factor = unsafe {
+        GetScaleFactorForMonitor(display)
+            .expect("Failed to get scale factor")
+            .0
+    };
 
-        return scale;
-    }
+    println!("Scale factor: {}", scale_factor);
+
+    scale_factor.into()
 }
