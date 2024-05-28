@@ -13,7 +13,7 @@ pub struct Window {
     pub title: String,
 
     #[cfg(target_os = "windows")]
-    pub raw_handle: win::HWND,
+    pub raw_handle: windows::Win32::Foundation::HWND,
 }
 
 #[derive(Debug, Clone)]
@@ -22,10 +22,10 @@ pub struct Display {
     pub title: String,
 
     #[cfg(target_os = "windows")]
-    pub raw_handle: win::HMONITOR,
+    pub raw_handle: windows::Win32::Graphics::Gdi::HMONITOR,
 
     #[cfg(target_os = "macos")]
-    pub raw_handle: mac::CGDisplay,
+    pub raw_handle: core_graphics_helmer_fork::display::CGDisplay,
 }
 
 #[derive(Debug, Clone)]
@@ -46,12 +46,12 @@ pub fn get_targets() -> Vec<Target> {
     return linux::get_targets();
 }
 
-pub fn get_scale_factor(_display_id: u32) -> f64 {
+pub fn get_scale_factor(display_id: u32) -> f64 {
     #[cfg(target_os = "macos")]
-    return mac::get_scale_factor(_display_id);
+    return mac::get_scale_factor(display_id);
 
     #[cfg(target_os = "windows")]
-    return win::get_scale_factor();
+    return win::get_scale_factor(display_id);
 
     #[cfg(target_os = "linux")]
     return 1;

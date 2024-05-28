@@ -137,14 +137,14 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     // TODO: this should be based on display from options.target, not main one
     let display = targets::get_main_display();
     let display_id = display.id;
-    let scale = targets::get_scale_factor(display_id);
+    let scale_factor = targets::get_scale_factor(display_id);
 
     let source_rect = get_source_rect(options);
 
     // Calculate the output height & width based on the required resolution
     // Output width and height need to be multiplied by scale (or dpi)
-    let mut output_width = (source_rect.size.width as u32) * scale as u32;
-    let mut output_height = (source_rect.size.height as u32) * scale as u32;
+    let mut output_width = (source_rect.size.width as u32) * scale_factor as u32;
+    let mut output_height = (source_rect.size.height as u32) * scale_factor as u32;
     // 1200x800
     match options.output_resolution {
         Resolution::Captured => {}
