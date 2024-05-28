@@ -50,6 +50,7 @@ pub fn get_main_display() -> Display {
 
 const BASE_DPI: u32 = 96;
 
+// Referred to: https://github.com/tauri-apps/tao/blob/ab792dbd6c5f0a708c818b20eaff1d9a7534c7c1/src/platform_impl/windows/dpi.rs#L50
 pub fn get_scale_factor(display_id: u32) -> f64 {
     let hmonitor = HMONITOR(display_id as isize);
     let mut dpi_x = 0;

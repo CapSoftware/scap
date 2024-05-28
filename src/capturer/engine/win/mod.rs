@@ -1,7 +1,7 @@
 use crate::{
     capturer::{Area, Options, Point, Resolution, Size},
     frame::{BGRAFrame, Frame, FrameType},
-    targets::{get_main_display, get_scale_factor},
+    targets,
 };
 use std::cmp;
 use std::sync::mpsc;
@@ -152,8 +152,6 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream 
         },
     );
 
-    let scale_factor = get_scale_factor(get_main_display().id);
-
     return WinStream {
         settings,
         capture_control: None,
@@ -161,11 +159,15 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream 
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
-    // TODO: should scale factor be considered here?
+    // TODO: this should be based on display from options.target, not main one
+    let display = targets::get_main_display();
+    let display_id = display.id;
+    let scale_factor = targets::get_scale_factor(display_id);
+
     let source_rect = get_source_rect(options);
 
-    let mut output_width = source_rect.size.width as u32;
-    let mut output_height = source_rect.size.height as u32;
+    let mut output_width = (source_rect.size.width as u32) * scale_factor as u32;
+    let mut output_height = (source_rect.size.height as u32) * scale_factor as u32;
 
     match options.output_resolution {
         Resolution::Captured => {}
@@ -186,9 +188,11 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
 }
 
 pub fn get_source_rect(options: &Options) -> Area {
-    let display = get_monitor_from_id(get_main_display().raw_handle);
-    let width_result = display.width();
-    let height_result = display.height();
+    let display = targets::get_main_display();
+    let display_raw = get_monitor_from_id(display.raw_handle);
+
+    let width_result = display_raw.width();
+    let height_result = display_raw.height();
 
     let width = width_result.unwrap_or(0);
     let height = height_result.unwrap_or(0);
