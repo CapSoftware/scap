@@ -1,5 +1,5 @@
+use std::cmp;
 use std::sync::mpsc;
-use std::{cmp, mem, slice};
 
 use screencapturekit::cm_sample_buffer::CMSampleBuffer;
 use screencapturekit::sc_output_handler::SCStreamOutputType;
@@ -13,32 +13,15 @@ use screencapturekit::{
     sc_stream::SCStream,
     sc_stream_configuration::SCStreamConfiguration,
 };
-use screencapturekit_sys::cm_sample_buffer_ref::{
-    CMSampleBufferGetImageBuffer, CMSampleBufferGetSampleAttachmentsArray,
-};
+
 use screencapturekit_sys::os_types::geometry::{CGPoint, CGRect, CGSize};
 use screencapturekit_sys::sc_stream_frame_info::SCFrameStatus;
 
-use crate::frame::{
-    convert_bgra_to_rgb, get_cropped_data, remove_alpha_channel, BGRAFrame, BGRFrame, Frame,
-    FrameType, RGBFrame, YUVFrame,
-};
+use crate::frame::{Frame, FrameType};
 use crate::{capturer::Options, capturer::Resolution, targets};
-use apple_sys_helmer_fork::{
-    CoreMedia::{
-        CFDictionaryGetValue, CFDictionaryRef, CFNumberGetValue, CFNumberType_kCFNumberSInt64Type,
-        CFTypeRef,
-    },
-    ScreenCaptureKit::{SCFrameStatus_SCFrameStatusComplete, SCStreamFrameInfoStatus},
-};
-use core_graphics_helmer_fork::display::{
-    CFArrayGetCount, CFArrayGetValueAtIndex, CFArrayRef, CGDirectDisplayID,
-};
-use core_video_sys::{
-    CVPixelBufferGetBaseAddress, CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRow,
-    CVPixelBufferGetBytesPerRowOfPlane, CVPixelBufferGetHeight, CVPixelBufferGetWidth,
-    CVPixelBufferLockBaseAddress, CVPixelBufferRef, CVPixelBufferUnlockBaseAddress,
-};
+use core_graphics_helmer_fork::display::CGDirectDisplayID;
+
+mod pixelformat;
 
 struct ErrorHandler;
 impl StreamErrorHandler for ErrorHandler {
@@ -69,19 +52,19 @@ impl StreamOutput for Capturer {
                         let frame;
                         match self.output_type {
                             FrameType::YUVFrame => {
-                                let yuvframe = create_yuv_frame(sample).unwrap();
+                                let yuvframe = pixelformat::create_yuv_frame(sample).unwrap();
                                 frame = Frame::YUVFrame(yuvframe);
                             }
                             FrameType::RGB => {
-                                let rgbframe = create_rgb_frame(sample).unwrap();
+                                let rgbframe = pixelformat::create_rgb_frame(sample).unwrap();
                                 frame = Frame::RGB(rgbframe);
                             }
                             FrameType::BGR0 => {
-                                let bgrframe = create_bgr_frame(sample).unwrap();
+                                let bgrframe = pixelformat::create_bgr_frame(sample).unwrap();
                                 frame = Frame::BGR0(bgrframe);
                             }
                             FrameType::BGRAFrame => {
-                                let bgraframe = create_bgra_frame(sample).unwrap();
+                                let bgraframe = pixelformat::create_bgra_frame(sample).unwrap();
                                 frame = Frame::BGRA(bgraframe);
                             }
                         }
@@ -130,14 +113,14 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
         FrameType::BGRAFrame => PixelFormat::ARGB8888,
     };
 
-    let [output_width, output_height] = get_output_frame_size(options);
+    let [width, height] = get_output_frame_size(options);
 
     let stream_config = SCStreamConfiguration {
-        shows_cursor: options.show_cursor,
-        width: output_width as u32,
-        height: output_height as u32,
+        width,
+        height,
         source_rect,
         pixel_format,
+        shows_cursor: options.show_cursor,
         ..Default::default()
     };
 
@@ -150,182 +133,8 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     stream
 }
 
-pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame> {
-    // Check that the frame status is complete
-    let buffer_ref = &(*sample_buffer.sys_ref);
-    {
-        let attachments = CMSampleBufferGetSampleAttachmentsArray(buffer_ref, 0);
-        if attachments.is_null() || CFArrayGetCount(attachments as CFArrayRef) == 0 {
-            return None;
-        }
-        let attachment = CFArrayGetValueAtIndex(attachments as CFArrayRef, 0) as CFDictionaryRef;
-        let frame_status_ref = CFDictionaryGetValue(
-            attachment as CFDictionaryRef,
-            SCStreamFrameInfoStatus.0 as _,
-        ) as CFTypeRef;
-        if frame_status_ref.is_null() {
-            return None;
-        }
-        let mut frame_status: i64 = 0;
-        let result = CFNumberGetValue(
-            frame_status_ref as _,
-            CFNumberType_kCFNumberSInt64Type,
-            mem::transmute(&mut frame_status),
-        );
-        if result == 0 {
-            return None;
-        }
-        if frame_status != SCFrameStatus_SCFrameStatusComplete {
-            return None;
-        }
-    }
-
-    //let epoch = CMSampleBufferGetPresentationTimeStamp(buffer_ref).epoch;
-    let epoch = sample_buffer.sys_ref.get_presentation_timestamp().value;
-    let pixel_buffer = CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef;
-
-    CVPixelBufferLockBaseAddress(pixel_buffer, 0);
-
-    let width = CVPixelBufferGetWidth(pixel_buffer);
-    let height = CVPixelBufferGetHeight(pixel_buffer);
-    if width == 0 || height == 0 {
-        return None;
-    }
-
-    let luminance_bytes_address = CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 0);
-    let luminance_stride = CVPixelBufferGetBytesPerRowOfPlane(pixel_buffer, 0);
-    let luminance_bytes = slice::from_raw_parts(
-        luminance_bytes_address as *mut u8,
-        height * luminance_stride,
-    )
-    .to_vec();
-
-    let chrominance_bytes_address = CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 1);
-    let chrominance_stride = CVPixelBufferGetBytesPerRowOfPlane(pixel_buffer, 1);
-    let chrominance_bytes = slice::from_raw_parts(
-        chrominance_bytes_address as *mut u8,
-        height * chrominance_stride / 2,
-    )
-    .to_vec();
-
-    CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
-
-    YUVFrame {
-        display_time: epoch as u64,
-        width: width as i32,
-        height: height as i32,
-        luminance_bytes,
-        luminance_stride: luminance_stride as i32,
-        chrominance_bytes,
-        chrominance_stride: chrominance_stride as i32,
-    }
-    .into()
-}
-
-pub unsafe fn create_bgr_frame(sample_buffer: CMSampleBuffer) -> Option<BGRFrame> {
-    let buffer_ref = &(*sample_buffer.sys_ref);
-    let epoch = sample_buffer.sys_ref.get_presentation_timestamp().value;
-    let pixel_buffer = CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef;
-
-    CVPixelBufferLockBaseAddress(pixel_buffer, 0);
-
-    let width = CVPixelBufferGetWidth(pixel_buffer);
-    let height = CVPixelBufferGetHeight(pixel_buffer);
-    if width == 0 || height == 0 {
-        return None;
-    }
-
-    let base_address = CVPixelBufferGetBaseAddress(pixel_buffer);
-    let bytes_per_row = CVPixelBufferGetBytesPerRow(pixel_buffer);
-
-    let data = slice::from_raw_parts(base_address as *mut u8, bytes_per_row * height).to_vec();
-
-    let cropped_data = get_cropped_data(
-        data,
-        (bytes_per_row / 4) as i32,
-        height as i32,
-        width as i32,
-    );
-
-    CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
-
-    Some(BGRFrame {
-        display_time: epoch as u64,
-        width: width as i32, // width does not give accurate results - https://stackoverflow.com/questions/19587185/cvpixelbuffergetbytesperrow-for-cvimagebufferref-returns-unexpected-wrong-valu
-        height: height as i32,
-        data: remove_alpha_channel(cropped_data),
-    })
-}
-
-pub unsafe fn create_bgra_frame(sample_buffer: CMSampleBuffer) -> Option<BGRAFrame> {
-    let buffer_ref = &(*sample_buffer.sys_ref);
-    let epoch = sample_buffer.sys_ref.get_presentation_timestamp().value;
-    let pixel_buffer = CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef;
-
-    CVPixelBufferLockBaseAddress(pixel_buffer, 0);
-
-    let width = CVPixelBufferGetWidth(pixel_buffer);
-    let height = CVPixelBufferGetHeight(pixel_buffer);
-    if width == 0 || height == 0 {
-        return None;
-    }
-
-    let base_address = CVPixelBufferGetBaseAddress(pixel_buffer);
-    let bytes_per_row = CVPixelBufferGetBytesPerRow(pixel_buffer);
-
-    let mut data: Vec<u8> = vec![];
-    for i in 0..height {
-        let start = (base_address as *mut u8).wrapping_add(i * bytes_per_row);
-        data.extend_from_slice(slice::from_raw_parts(start, 4 * width));
-    }
-
-    CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
-
-    Some(BGRAFrame {
-        display_time: epoch as u64,
-        width: width as i32, // width does not give accurate results - https://stackoverflow.com/questions/19587185/cvpixelbuffergetbytesperrow-for-cvimagebufferref-returns-unexpected-wrong-valu
-        height: height as i32,
-        data,
-    })
-}
-
-pub unsafe fn create_rgb_frame(sample_buffer: CMSampleBuffer) -> Option<RGBFrame> {
-    let buffer_ref = &(*sample_buffer.sys_ref);
-    let epoch = sample_buffer.sys_ref.get_presentation_timestamp().value;
-    let pixel_buffer = CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef;
-
-    CVPixelBufferLockBaseAddress(pixel_buffer, 0);
-
-    let width = CVPixelBufferGetWidth(pixel_buffer);
-    let height = CVPixelBufferGetHeight(pixel_buffer);
-    if width == 0 || height == 0 {
-        return None;
-    }
-
-    let base_address = CVPixelBufferGetBaseAddress(pixel_buffer);
-    let bytes_per_row = CVPixelBufferGetBytesPerRow(pixel_buffer);
-
-    let data = slice::from_raw_parts(base_address as *mut u8, bytes_per_row * height).to_vec();
-
-    let cropped_data = get_cropped_data(
-        data,
-        (bytes_per_row / 4) as i32,
-        height as i32,
-        width as i32,
-    );
-
-    CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
-
-    Some(RGBFrame {
-        display_time: epoch as u64,
-        width: width as i32, // width does not give accurate results - https://stackoverflow.com/questions/19587185/cvpixelbuffergetbytesperrow-for-cvimagebufferref-returns-unexpected-wrong-valu
-        height: height as i32,
-        data: convert_bgra_to_rgb(cropped_data),
-    })
-    // (y_width, y_height, data)
-}
-
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
+    // TODO: this should be based on display from options.target, not main one
     let display = targets::get_main_display();
     let display_id = display.id;
     let scale = targets::get_scale_factor(display_id);
@@ -349,37 +158,25 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
         }
     }
 
-    if output_width % 2 == 1 {
-        output_width = output_width - 1;
-    }
+    output_width = output_width - output_width % 2;
+    output_height = output_height - output_height % 2;
 
-    if output_height % 2 == 1 {
-        output_height = output_height - 1;
-    }
-
-    return [output_width, output_height];
+    [output_width, output_height]
 }
 
 pub fn get_source_rect(options: &Options) -> CGRect {
+    // TODO: this should be based on display from options.target, not main one
     let display = targets::get_main_display();
+    let width = display.raw_handle.pixels_wide();
+    let height = display.raw_handle.pixels_high();
 
-    let display_raw = display.raw_handle;
+    options
+        .source_rect
+        .as_ref()
+        .map(|val| {
+            let input_width = val.size.width + (val.size.width % 2.0);
+            let input_height = val.size.height + (val.size.height % 2.0);
 
-    let width = display_raw.pixels_wide();
-    let height = display_raw.pixels_high();
-
-    let source_rect = match &options.source_rect {
-        Some(val) => {
-            let input_width = if (val.size.width as i64) % 2 == 0 {
-                val.size.width as i64
-            } else {
-                (val.size.width as i64) + 1
-            };
-            let input_height = if (val.size.height as i64) % 2 == 0 {
-                val.size.height as i64
-            } else {
-                (val.size.height as i64) + 1
-            };
             CGRect {
                 origin: CGPoint {
                     x: val.origin.x,
@@ -390,17 +187,14 @@ pub fn get_source_rect(options: &Options) -> CGRect {
                     height: input_height as f64,
                 },
             }
-        }
-        None => CGRect {
+        })
+        .unwrap_or_else(|| CGRect {
             origin: CGPoint { x: 0.0, y: 0.0 },
             size: CGSize {
                 width: width as f64,
                 height: height as f64,
             },
-        },
-    };
-
-    source_rect
+        })
 }
 
 pub fn get_sc_display_from_id(id: CGDirectDisplayID) -> SCDisplay {
