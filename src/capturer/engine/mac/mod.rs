@@ -130,12 +130,12 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
         FrameType::BGRAFrame => PixelFormat::ARGB8888,
     };
 
-    let [output_width, output_height] = get_output_frame_size(options);
+    let [width, height] = get_output_frame_size(options);
 
     let stream_config = SCStreamConfiguration {
         shows_cursor: options.show_cursor,
-        width: output_width as u32,
-        height: output_height as u32,
+        width,
+        height,
         source_rect,
         pixel_format,
         ..Default::default()
