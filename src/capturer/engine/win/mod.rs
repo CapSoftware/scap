@@ -131,10 +131,20 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream 
         _ => ColorFormat::Rgba8,
     };
 
+    let show_cursor = match options.show_cursor {
+        true => CursorCaptureSettings::WithCursor,
+        false => CursorCaptureSettings::WithoutCursor,
+    };
+
+    let show_highlight = match options.show_highlight {
+        true => DrawBorderSettings::WithBorder,
+        false => DrawBorderSettings::WithoutBorder,
+    };
+
     let settings = Settings::new(
         Monitor::primary().unwrap(),
-        CursorCaptureSettings::Default,
-        DrawBorderSettings::Default,
+        show_cursor,
+        show_highlight,
         color_format,
         FlagStruct {
             tx,
