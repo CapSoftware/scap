@@ -33,7 +33,7 @@ fn get_display_name(display_id: CGDirectDisplayID) -> String {
     }
 }
 
-pub fn get_targets() -> Vec<Target> {
+pub fn get_all_targets() -> Vec<Target> {
     let mut targets: Vec<Target> = Vec::new();
 
     let content = SCShareableContent::current();

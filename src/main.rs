@@ -27,19 +27,19 @@ fn main() {
     println!("✅ Permission granted");
 
     // #3 Get recording targets (WIP)
-    let targets = scap::get_targets();
+    let targets = scap::get_all_targets();
     println!("🎯 Targets: {:?}", targets);
 
     // #4 Create Options
     let options = Options {
         fps: 60,
-        targets,
+        target: None,
         show_cursor: true,
         show_highlight: true,
         excluded_targets: None,
         output_type: scap::frame::FrameType::BGRAFrame,
         output_resolution: scap::capturer::Resolution::_720p,
-        source_rect: Some(Area {
+        crop_area: Some(Area {
             origin: Point { x: 0.0, y: 0.0 },
             size: Size {
                 width: 1000.0,
