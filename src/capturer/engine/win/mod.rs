@@ -27,7 +27,7 @@ enum Settings {
     Display(WCSettings<FlagStruct, WCMonitor>),
 }
 
-pub struct WinStream {
+pub struct WCStream {
     settings: Settings,
     capture_control: Option<CaptureControl<Capturer, Box<dyn std::error::Error + Send + Sync>>>,
 }
@@ -113,7 +113,7 @@ impl GraphicsCaptureApiHandler for Capturer {
     }
 }
 
-impl WinStream {
+impl WCStream {
     pub fn start_capture(&mut self) {
         let cc = match &self.settings {
             Settings::Display(st) => Capturer::start_free_threaded(st.to_owned()).unwrap(),
@@ -135,7 +135,7 @@ struct FlagStruct {
     pub crop: Option<Area>,
 }
 
-pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream {
+pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WCStream {
     let target = options
         .target
         .clone()
@@ -179,7 +179,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream 
         )),
     };
 
-    WinStream {
+    WCStream {
         settings,
         capture_control: None,
     }
