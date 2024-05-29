@@ -14,6 +14,9 @@ pub struct Window {
 
     #[cfg(target_os = "windows")]
     pub raw_handle: windows::Win32::Foundation::HWND,
+
+    #[cfg(target_os = "macos")]
+    pub raw_handle: core_graphics_helmer_fork::window::CGWindowID,
 }
 
 #[derive(Debug, Clone)]
@@ -46,13 +49,12 @@ pub fn get_all_targets() -> Vec<Target> {
     return linux::get_all_targets();
 }
 
-// TODO: this should take a target instead of a display_id
-pub fn get_scale_factor(display_id: u32) -> f64 {
+pub fn get_scale_factor(target: &Target) -> f64 {
     #[cfg(target_os = "macos")]
-    return mac::get_scale_factor(display_id);
+    return mac::get_scale_factor(target);
 
     #[cfg(target_os = "windows")]
-    return win::get_scale_factor(display_id);
+    return win::get_scale_factor(target);
 
     #[cfg(target_os = "linux")]
     return 1;
