@@ -6,13 +6,13 @@ use crate::{
 use std::cmp;
 use std::sync::mpsc;
 use std::time::{SystemTime, UNIX_EPOCH};
-use windows::Win32::Graphics::Gdi::HMONITOR;
 use windows_capture::{
     capture::{CaptureControl, GraphicsCaptureApiHandler},
-    frame::Frame as Wframe,
+    frame::Frame as WCFrame,
     graphics_capture_api::InternalCaptureControl,
-    monitor::Monitor,
+    monitor::Monitor as WCMonitor,
     settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings},
+    window::Window as WCWindow,
 };
 
 #[derive(Debug)]
@@ -22,7 +22,7 @@ struct Capturer {
 }
 
 pub struct WinStream {
-    settings: Settings<FlagStruct, Monitor>,
+    settings: Settings<FlagStruct, WCMonitor>,
     capture_control: Option<CaptureControl<Capturer, Box<dyn std::error::Error + Send + Sync>>>,
 }
 
@@ -39,7 +39,7 @@ impl GraphicsCaptureApiHandler for Capturer {
 
     fn on_frame_arrived(
         &mut self,
-        frame: &mut Wframe,
+        frame: &mut WCFrame,
         _: InternalCaptureControl,
     ) -> Result<(), Self::Error> {
         match &self.crop {
@@ -126,6 +126,8 @@ struct FlagStruct {
 }
 
 pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream {
+    // TODO: get targets from options.targets
+
     let color_format = match options.output_type {
         FrameType::BGRAFrame => ColorFormat::Bgra8,
         _ => ColorFormat::Rgba8,
@@ -142,7 +144,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream 
     };
 
     let settings = Settings::new(
-        Monitor::primary().unwrap(),
+        WCMonitor::primary().unwrap(),
         show_cursor,
         show_highlight,
         color_format,
@@ -189,7 +191,7 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
 
 pub fn get_crop_area(options: &Options) -> Area {
     let display = targets::get_main_display();
-    let display_raw = get_monitor_from_id(display.raw_handle);
+    let display_raw = WCMonitor::from_raw_hmonitor(display.raw_handle.0);
 
     let width_result = display_raw.width();
     let height_result = display_raw.height();
@@ -218,12 +220,4 @@ pub fn get_crop_area(options: &Options) -> Area {
                 height: height as f64,
             },
         })
-}
-
-fn get_monitor_from_id(id: HMONITOR) -> Monitor {
-    Monitor::enumerate()
-        .expect("Failed to enumerate monitors")
-        .into_iter()
-        .find(|m| m.as_raw_hmonitor() == id.0)
-        .unwrap_or_else(|| Monitor::primary().expect("Failed to get primary monitor"))
 }
