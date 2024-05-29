@@ -2,22 +2,21 @@ use std::cmp;
 use std::sync::mpsc;
 
 use screencapturekit::cm_sample_buffer::CMSampleBuffer;
-use screencapturekit::sc_output_handler::SCStreamOutputType;
-use screencapturekit::sc_stream_configuration::PixelFormat;
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
     sc_display::SCDisplay,
     sc_error_handler::StreamErrorHandler,
-    sc_output_handler::StreamOutput,
+    sc_output_handler::{SCStreamOutputType, StreamOutput},
     sc_shareable_content::SCShareableContent,
     sc_stream::SCStream,
-    sc_stream_configuration::SCStreamConfiguration,
+    sc_stream_configuration::{PixelFormat, SCStreamConfiguration},
 };
 
 use screencapturekit_sys::os_types::geometry::{CGPoint, CGRect, CGSize};
 use screencapturekit_sys::sc_stream_frame_info::SCFrameStatus;
 
 use crate::frame::{Frame, FrameType};
+use crate::targets::Target;
 use crate::{capturer::Options, capturer::Resolution, targets};
 use core_graphics_helmer_fork::display::CGDirectDisplayID;
 
@@ -90,14 +89,16 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
         .windows
         .into_iter()
         .filter(|window| {
-            if let Some(excluded_window_names) = &options.excluded_windows {
-                if let Some(current_window_name) = &window.title {
-                    return excluded_window_names.contains(current_window_name);
-                } else {
-                    return false;
-                }
+            if let Some(excluded_targets) = &options.excluded_targets {
+                excluded_targets
+                    .into_iter()
+                    .find(|excluded_target| match excluded_target {
+                        Target::Window(excluded_window) => excluded_window.id == window.window_id,
+                        _ => false,
+                    })
+                    .is_some()
             } else {
-                return false;
+                false
             }
         })
         .collect();
@@ -105,7 +106,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     let params = InitParams::DisplayExcludingWindows(sc_display, excluded_windows);
     let filter = SCContentFilter::new(params);
 
-    let source_rect = get_source_rect(options);
+    let source_rect = get_crop_area(options);
     let pixel_format = match options.output_type {
         FrameType::YUVFrame => PixelFormat::YCbCr420v,
         FrameType::BGR0 => PixelFormat::ARGB8888,
@@ -139,7 +140,7 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     let display_id = display.id;
     let scale_factor = targets::get_scale_factor(display_id);
 
-    let source_rect = get_source_rect(options);
+    let source_rect = get_crop_area(options);
 
     // Calculate the output height & width based on the required resolution
     // Output width and height need to be multiplied by scale (or dpi)
@@ -164,14 +165,14 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     [output_width, output_height]
 }
 
-pub fn get_source_rect(options: &Options) -> CGRect {
+pub fn get_crop_area(options: &Options) -> CGRect {
     // TODO: this should be based on display from options.target, not main one
     let display = targets::get_main_display();
     let width = display.raw_handle.pixels_wide();
     let height = display.raw_handle.pixels_high();
 
     options
-        .source_rect
+        .crop_area
         .as_ref()
         .map(|val| {
             let input_width = val.size.width + (val.size.width % 2.0);

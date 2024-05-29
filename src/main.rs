@@ -4,6 +4,7 @@
 use scap::{
     capturer::{Area, Capturer, Options, Point, Size},
     frame::Frame,
+    Target,
 };
 
 fn main() {
@@ -26,24 +27,31 @@ fn main() {
     }
     println!("✅ Permission granted");
 
-    // #3 Get recording targets (WIP)
-    let targets = scap::get_targets();
+    // #3 Get recording targets
+    let targets = scap::get_all_targets();
     println!("🎯 Targets: {:?}", targets);
+
+    let target = targets.into_iter().find(|target| match target {
+        Target::Display(_) => false,
+        Target::Window(w) => w.title.contains("Visual Studio Code"),
+    });
+
+    println!("{:?}", target);
 
     // #4 Create Options
     let options = Options {
         fps: 60,
-        targets,
+        target,
         show_cursor: true,
         show_highlight: true,
         excluded_targets: None,
         output_type: scap::frame::FrameType::BGRAFrame,
         output_resolution: scap::capturer::Resolution::_720p,
-        source_rect: Some(Area {
+        crop_area: Some(Area {
             origin: Point { x: 0.0, y: 0.0 },
             size: Size {
-                width: 1000.0,
-                height: 800.0,
+                width: 500.0,
+                height: 500.0,
             },
         }),
         ..Default::default()

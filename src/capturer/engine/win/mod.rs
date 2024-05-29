@@ -1,18 +1,18 @@
 use crate::{
     capturer::{Area, Options, Point, Resolution, Size},
     frame::{BGRAFrame, Frame, FrameType},
-    targets,
+    targets::{self, Target},
 };
 use std::cmp;
 use std::sync::mpsc;
 use std::time::{SystemTime, UNIX_EPOCH};
-use windows::Win32::Graphics::Gdi::HMONITOR;
 use windows_capture::{
     capture::{CaptureControl, GraphicsCaptureApiHandler},
-    frame::Frame as Wframe,
+    frame::Frame as WCFrame,
     graphics_capture_api::InternalCaptureControl,
-    monitor::Monitor,
-    settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings},
+    monitor::Monitor as WCMonitor,
+    settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings as WCSettings},
+    window::Window as WCWindow,
 };
 
 #[derive(Debug)]
@@ -21,8 +21,14 @@ struct Capturer {
     pub crop: Option<Area>,
 }
 
-pub struct WinStream {
-    settings: Settings<FlagStruct, Monitor>,
+#[derive(Clone)]
+enum Settings {
+    Window(WCSettings<FlagStruct, WCWindow>),
+    Display(WCSettings<FlagStruct, WCMonitor>),
+}
+
+pub struct WCStream {
+    settings: Settings,
     capture_control: Option<CaptureControl<Capturer, Box<dyn std::error::Error + Send + Sync>>>,
 }
 
@@ -39,7 +45,7 @@ impl GraphicsCaptureApiHandler for Capturer {
 
     fn on_frame_arrived(
         &mut self,
-        frame: &mut Wframe,
+        frame: &mut WCFrame,
         _: InternalCaptureControl,
     ) -> Result<(), Self::Error> {
         match &self.crop {
@@ -107,10 +113,14 @@ impl GraphicsCaptureApiHandler for Capturer {
     }
 }
 
-impl WinStream {
+impl WCStream {
     pub fn start_capture(&mut self) {
-        let capture_control = Capturer::start_free_threaded(self.settings.clone()).unwrap();
-        self.capture_control = Some(capture_control);
+        let cc = match &self.settings {
+            Settings::Display(st) => Capturer::start_free_threaded(st.to_owned()).unwrap(),
+            Settings::Window(st) => Capturer::start_free_threaded(st.to_owned()).unwrap(),
+        };
+
+        self.capture_control = Some(cc)
     }
 
     pub fn stop_capture(&mut self) {
@@ -125,7 +135,12 @@ struct FlagStruct {
     pub crop: Option<Area>,
 }
 
-pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream {
+pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WCStream {
+    let target = options
+        .target
+        .clone()
+        .unwrap_or_else(|| Target::Display(targets::get_main_display()));
+
     let color_format = match options.output_type {
         FrameType::BGRAFrame => ColorFormat::Bgra8,
         _ => ColorFormat::Rgba8,
@@ -141,28 +156,40 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream 
         false => DrawBorderSettings::WithoutBorder,
     };
 
-    let settings = Settings::new(
-        Monitor::primary().unwrap(),
-        show_cursor,
-        show_highlight,
-        color_format,
-        FlagStruct {
-            tx,
-            crop: Some(get_source_rect(options)),
-        },
-    );
+    let settings = match target {
+        Target::Display(display) => Settings::Display(WCSettings::new(
+            WCMonitor::from_raw_hmonitor(display.raw_handle.0),
+            show_cursor,
+            show_highlight,
+            color_format,
+            FlagStruct {
+                tx,
+                crop: Some(get_crop_area(options)),
+            },
+        )),
+        Target::Window(window) => Settings::Window(WCSettings::new(
+            WCWindow::from_raw_hwnd(window.raw_handle.0),
+            show_cursor,
+            show_highlight,
+            color_format,
+            FlagStruct {
+                tx,
+                crop: Some(get_crop_area(options)),
+            },
+        )),
+    };
 
-    return WinStream {
+    WCStream {
         settings,
         capture_control: None,
-    };
+    }
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     // TODO: this should be based on display from options.target, not main one
     let scale_factor = targets::get_scale_factor(options.targets.first().unwrap());
 
-    let source_rect = get_source_rect(options);
+    let source_rect = get_crop_area(options);
 
     let mut output_width = (source_rect.size.width as u32) * scale_factor as u32;
     let mut output_height = (source_rect.size.height as u32) * scale_factor as u32;
@@ -185,9 +212,9 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     [output_width, output_height]
 }
 
-pub fn get_source_rect(options: &Options) -> Area {
+pub fn get_crop_area(options: &Options) -> Area {
     let display = targets::get_main_display();
-    let display_raw = get_monitor_from_id(display.raw_handle);
+    let display_raw = WCMonitor::from_raw_hmonitor(display.raw_handle.0);
 
     let width_result = display_raw.width();
     let height_result = display_raw.height();
@@ -196,7 +223,7 @@ pub fn get_source_rect(options: &Options) -> Area {
     let height = height_result.unwrap_or(0);
 
     options
-        .source_rect
+        .crop_area
         .as_ref()
         .map(|val| {
             let input_width = val.size.width + val.size.width % 2.0;
@@ -216,12 +243,4 @@ pub fn get_source_rect(options: &Options) -> Area {
                 height: height as f64,
             },
         })
-}
-
-fn get_monitor_from_id(id: HMONITOR) -> Monitor {
-    Monitor::enumerate()
-        .expect("Failed to enumerate monitors")
-        .into_iter()
-        .find(|m| m.as_raw_hmonitor() == id.0)
-        .unwrap_or_else(|| Monitor::primary().expect("Failed to get primary monitor"))
 }
