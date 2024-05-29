@@ -60,14 +60,11 @@ pub struct Options {
     pub show_cursor: bool,
     pub show_highlight: bool,
     pub targets: Vec<Target>,
-
-    // excluded targets will only work on macOS
-    pub excluded_targets: Option<Vec<Target>>,
-    // excluded windows will only work on macOS
-    pub excluded_windows: Option<Vec<String>>,
     pub output_type: FrameType,
     pub output_resolution: Resolution,
     pub source_rect: Option<Area>,
+    // excluded targets will only work on macOS
+    pub excluded_targets: Option<Vec<Target>>,
 }
 
 /// Screen capturer class

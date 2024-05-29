@@ -90,15 +90,16 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
         .windows
         .into_iter()
         .filter(|window| {
-            if let Some(excluded_window_names) = &options.excluded_windows {
-                if let Some(current_window_name) = &window.title {
-                    return excluded_window_names.contains(current_window_name);
-                } else {
-                    return false;
-                }
-            } else {
-                return false;
-            }
+            return false;
+            // if let Some(excluded_targets) = &options.excluded_targets {
+            //     if let Some(current_window_name) = &window.title {
+            //         return excluded_window_names.contains(current_window_name);
+            //     } else {
+            //         return false;
+            //     }
+            // } else {
+            //     return false;
+            // }
         })
         .collect();
 
