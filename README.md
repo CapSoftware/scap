@@ -6,8 +6,8 @@
 ![docs.rs](https://img.shields.io/docsrs/scap?style=for-the-badge&logo=rust&logoColor=white&labelColor=black)
 ![Crates.io MSRV](https://img.shields.io/crates/msrv/scap?style=for-the-badge&logo=rust&logoColor=white&labelColor=black)
 
-
 A Rust library for high-quality screen capture that leverages native OS APIs for optimal performance!
+
 1. macOS: [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit)
 2. Windows: [Windows.Graphics.Capture](https://learn.microsoft.com/en-us/uwp/api/windows.graphics.capture?view=winrt-22621)
 3. Linux: [Pipewire](https://pipewire.org)
@@ -26,6 +26,7 @@ A Rust library for high-quality screen capture that leverages native OS APIs for
 We found most of Rust's tooling around screen capture either very outdated, non-performant or platform-specific. This project is our attempt to change that. Contributions, PRs and Issues are most welcome!
 
 If you want to contribute code, here's a quick primer:
+
 1. Clone the repo and run it with `cargo run`.
 2. Explore the API and library code in [lib.rs](./scap/src/lib.rs).
 3. Platform-specific code lives in the `win`, `mac` and `linux` modules.
@@ -61,7 +62,7 @@ fn main() {
     println!("✅ Permission granted");
 
     // Get capturing targets (WIP)
-    let targets = scap::get_targets();
+    let targets = scap::get_all_targets();
     println!("🎯 Targets: {:?}", targets);
 
     // Create Options
@@ -128,6 +129,6 @@ The code in this repository is open-sourced under the MIT license, though it may
 
 This project builds on top of the fabulous work done by:
 
-- [@MAlba124](https://github.com/MAlba124) for Linux support via Pipewire
-- [@svtlabs](https://github.com/svtlabs) for [screencapturekit-rs](https://github.com/svtlabs/screencapturekit-rs)
-- [@NiiightmareXD](https://github.com/NiiightmareXD) for [windows-capture](https://github.com/NiiightmareXD/windows-capture)
+-   [@MAlba124](https://github.com/MAlba124) for Linux support via Pipewire
+-   [@svtlabs](https://github.com/svtlabs) for [screencapturekit-rs](https://github.com/svtlabs/screencapturekit-rs)
+-   [@NiiightmareXD](https://github.com/NiiightmareXD) for [windows-capture](https://github.com/NiiightmareXD/windows-capture)
