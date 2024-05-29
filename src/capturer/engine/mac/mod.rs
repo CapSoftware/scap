@@ -16,6 +16,7 @@ use screencapturekit_sys::os_types::geometry::{CGPoint, CGRect, CGSize};
 use screencapturekit_sys::sc_stream_frame_info::SCFrameStatus;
 
 use crate::frame::{Frame, FrameType};
+use crate::targets::Target;
 use crate::{capturer::Options, capturer::Resolution, targets};
 use core_graphics_helmer_fork::display::CGDirectDisplayID;
 
@@ -88,16 +89,17 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
         .windows
         .into_iter()
         .filter(|window| {
-            return false;
-            // if let Some(excluded_targets) = &options.excluded_targets {
-            //     if let Some(current_window_name) = &window.title {
-            //         return excluded_window_names.contains(current_window_name);
-            //     } else {
-            //         return false;
-            //     }
-            // } else {
-            //     return false;
-            // }
+            if let Some(excluded_targets) = &options.excluded_targets {
+                excluded_targets
+                    .into_iter()
+                    .find(|excluded_target| match excluded_target {
+                        Target::Window(excluded_window) => excluded_window.id == window.window_id,
+                        _ => false,
+                    })
+                    .is_some()
+            } else {
+                false
+            }
         })
         .collect();
 
