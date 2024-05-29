@@ -148,7 +148,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream 
         color_format,
         FlagStruct {
             tx,
-            crop: Some(get_source_rect(options)),
+            crop: Some(get_crop_area(options)),
         },
     );
 
@@ -164,7 +164,7 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     let display_id = display.id;
     let scale_factor = targets::get_scale_factor(display_id);
 
-    let source_rect = get_source_rect(options);
+    let source_rect = get_crop_area(options);
 
     let mut output_width = (source_rect.size.width as u32) * scale_factor as u32;
     let mut output_height = (source_rect.size.height as u32) * scale_factor as u32;
@@ -187,7 +187,7 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     [output_width, output_height]
 }
 
-pub fn get_source_rect(options: &Options) -> Area {
+pub fn get_crop_area(options: &Options) -> Area {
     let display = targets::get_main_display();
     let display_raw = get_monitor_from_id(display.raw_handle);
 
@@ -198,7 +198,7 @@ pub fn get_source_rect(options: &Options) -> Area {
     let height = height_result.unwrap_or(0);
 
     options
-        .source_rect
+        .crop_area
         .as_ref()
         .map(|val| {
             let input_width = val.size.width + val.size.width % 2.0;
