@@ -27,7 +27,7 @@ fn main() {
     println!("✅ Permission granted");
 
     // #3 Get recording targets (WIP)
-    let targets = scap::get_targets();
+    let targets = scap::get_all_targets();
     println!("🎯 Targets: {:?}", targets);
 
     // #4 Create Options

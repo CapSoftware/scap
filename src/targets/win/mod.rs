@@ -3,7 +3,7 @@ use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI};
 use windows::Win32::{Foundation::HWND, Graphics::Gdi::HMONITOR};
 use windows_capture::{monitor::Monitor, window::Window};
 
-pub fn get_targets() -> Vec<Target> {
+pub fn get_all_targets() -> Vec<Target> {
     let mut targets: Vec<Target> = Vec::new();
 
     // Add displays to targets
