@@ -1,7 +1,7 @@
 use crate::{
     capturer::{Area, Options, Point, Resolution, Size},
     frame::{BGRAFrame, Frame, FrameType},
-    targets,
+    targets::{self, Target},
 };
 use std::cmp;
 use std::sync::mpsc;
@@ -11,7 +11,7 @@ use windows_capture::{
     frame::Frame as WCFrame,
     graphics_capture_api::InternalCaptureControl,
     monitor::Monitor as WCMonitor,
-    settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings},
+    settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings as WCSettings},
     window::Window as WCWindow,
 };
 
@@ -21,8 +21,14 @@ struct Capturer {
     pub crop: Option<Area>,
 }
 
+#[derive(Clone)]
+enum Settings {
+    Window(WCSettings<FlagStruct, WCWindow>),
+    Display(WCSettings<FlagStruct, WCMonitor>),
+}
+
 pub struct WinStream {
-    settings: Settings<FlagStruct, WCMonitor>,
+    settings: Settings,
     capture_control: Option<CaptureControl<Capturer, Box<dyn std::error::Error + Send + Sync>>>,
 }
 
@@ -109,8 +115,12 @@ impl GraphicsCaptureApiHandler for Capturer {
 
 impl WinStream {
     pub fn start_capture(&mut self) {
-        let capture_control = Capturer::start_free_threaded(self.settings.clone()).unwrap();
-        self.capture_control = Some(capture_control);
+        let cc = match &self.settings {
+            Settings::Display(st) => Capturer::start_free_threaded(st.to_owned()).unwrap(),
+            Settings::Window(st) => Capturer::start_free_threaded(st.to_owned()).unwrap(),
+        };
+
+        self.capture_control = Some(cc)
     }
 
     pub fn stop_capture(&mut self) {
@@ -126,7 +136,10 @@ struct FlagStruct {
 }
 
 pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream {
-    // TODO: get targets from options.targets
+    let target = options
+        .target
+        .clone()
+        .unwrap_or_else(|| Target::Display(targets::get_main_display()));
 
     let color_format = match options.output_type {
         FrameType::BGRAFrame => ColorFormat::Bgra8,
@@ -143,21 +156,33 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream 
         false => DrawBorderSettings::WithoutBorder,
     };
 
-    let settings = Settings::new(
-        WCMonitor::primary().unwrap(),
-        show_cursor,
-        show_highlight,
-        color_format,
-        FlagStruct {
-            tx,
-            crop: Some(get_crop_area(options)),
-        },
-    );
+    let settings = match target {
+        Target::Display(display) => Settings::Display(WCSettings::new(
+            WCMonitor::from_raw_hmonitor(display.raw_handle.0),
+            show_cursor,
+            show_highlight,
+            color_format,
+            FlagStruct {
+                tx,
+                crop: Some(get_crop_area(options)),
+            },
+        )),
+        Target::Window(window) => Settings::Window(WCSettings::new(
+            WCWindow::from_raw_hwnd(window.raw_handle.0),
+            show_cursor,
+            show_highlight,
+            color_format,
+            FlagStruct {
+                tx,
+                crop: Some(get_crop_area(options)),
+            },
+        )),
+    };
 
-    return WinStream {
+    WinStream {
         settings,
         capture_control: None,
-    };
+    }
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
