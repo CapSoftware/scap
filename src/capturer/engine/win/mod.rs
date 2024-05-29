@@ -1,7 +1,7 @@
 use crate::{
     capturer::{Area, Options, Point, Resolution, Size},
     frame::{BGRAFrame, Frame, FrameType},
-    targets,
+    targets::{self, Target},
 };
 use std::cmp;
 use std::sync::mpsc;
@@ -11,7 +11,7 @@ use windows_capture::{
     frame::Frame as WCFrame,
     graphics_capture_api::InternalCaptureControl,
     monitor::Monitor as WCMonitor,
-    settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings},
+    settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings as WCSettings},
     window::Window as WCWindow,
 };
 
@@ -21,8 +21,14 @@ struct Capturer {
     pub crop: Option<Area>,
 }
 
-pub struct WinStream {
-    settings: Settings<FlagStruct, WCMonitor>,
+#[derive(Clone)]
+enum Settings {
+    Window(WCSettings<FlagStruct, WCWindow>),
+    Display(WCSettings<FlagStruct, WCMonitor>),
+}
+
+pub struct WCStream {
+    settings: Settings,
     capture_control: Option<CaptureControl<Capturer, Box<dyn std::error::Error + Send + Sync>>>,
 }
 
@@ -107,10 +113,14 @@ impl GraphicsCaptureApiHandler for Capturer {
     }
 }
 
-impl WinStream {
+impl WCStream {
     pub fn start_capture(&mut self) {
-        let capture_control = Capturer::start_free_threaded(self.settings.clone()).unwrap();
-        self.capture_control = Some(capture_control);
+        let cc = match &self.settings {
+            Settings::Display(st) => Capturer::start_free_threaded(st.to_owned()).unwrap(),
+            Settings::Window(st) => Capturer::start_free_threaded(st.to_owned()).unwrap(),
+        };
+
+        self.capture_control = Some(cc)
     }
 
     pub fn stop_capture(&mut self) {
@@ -125,8 +135,11 @@ struct FlagStruct {
     pub crop: Option<Area>,
 }
 
-pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream {
-    // TODO: get targets from options.targets
+pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WCStream {
+    let target = options
+        .target
+        .clone()
+        .unwrap_or_else(|| Target::Display(targets::get_main_display()));
 
     let color_format = match options.output_type {
         FrameType::BGRAFrame => ColorFormat::Bgra8,
@@ -143,40 +156,54 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WinStream 
         false => DrawBorderSettings::WithoutBorder,
     };
 
-    let settings = Settings::new(
-        WCMonitor::primary().unwrap(),
-        show_cursor,
-        show_highlight,
-        color_format,
-        FlagStruct {
-            tx,
-            crop: Some(get_crop_area(options)),
-        },
-    );
+    let settings = match target {
+        Target::Display(display) => Settings::Display(WCSettings::new(
+            WCMonitor::from_raw_hmonitor(display.raw_handle.0),
+            show_cursor,
+            show_highlight,
+            color_format,
+            FlagStruct {
+                tx,
+                crop: Some(get_crop_area(options)),
+            },
+        )),
+        Target::Window(window) => Settings::Window(WCSettings::new(
+            WCWindow::from_raw_hwnd(window.raw_handle.0),
+            show_cursor,
+            show_highlight,
+            color_format,
+            FlagStruct {
+                tx,
+                crop: Some(get_crop_area(options)),
+            },
+        )),
+    };
 
-    return WinStream {
+    WCStream {
         settings,
         capture_control: None,
-    };
+    }
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
-    // TODO: this should be based on display from options.target, not main one
-    let display = targets::get_main_display();
-    let display_id = display.id;
-    let scale_factor = targets::get_scale_factor(display_id);
+    let target = options
+        .target
+        .clone()
+        .unwrap_or_else(|| Target::Display(targets::get_main_display()));
 
-    let source_rect = get_crop_area(options);
+    let scale_factor = targets::get_scale_factor(&target);
 
-    let mut output_width = (source_rect.size.width as u32) * scale_factor as u32;
-    let mut output_height = (source_rect.size.height as u32) * scale_factor as u32;
+    let crop_area = get_crop_area(options);
+
+    let mut output_width = (crop_area.size.width * scale_factor) as u32;
+    let mut output_height = (crop_area.size.height * scale_factor) as u32;
 
     match options.output_resolution {
         Resolution::Captured => {}
         _ => {
             let [resolved_width, resolved_height] = options
                 .output_resolution
-                .value((source_rect.size.width as f32) / (source_rect.size.height as f32));
+                .value((crop_area.size.width as f32) / (crop_area.size.height as f32));
             // 1280 x 853
             output_width = cmp::min(output_width, resolved_width);
             output_height = cmp::min(output_height, resolved_height);
