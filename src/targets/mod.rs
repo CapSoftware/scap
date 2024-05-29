@@ -46,6 +46,7 @@ pub fn get_all_targets() -> Vec<Target> {
     return linux::get_all_targets();
 }
 
+// TODO: this should take a target instead of a display_id
 pub fn get_scale_factor(display_id: u32) -> f64 {
     #[cfg(target_os = "macos")]
     return mac::get_scale_factor(display_id);

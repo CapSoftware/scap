@@ -1,13 +1,11 @@
 use cocoa::appkit::NSScreen;
 use cocoa::base::{id, nil};
 use cocoa::foundation::NSString;
-use core_graphics_helmer_fork::display::{CGDirectDisplayID, CGMainDisplayID};
+use core_graphics_helmer_fork::display::{CGDirectDisplayID, CGDisplay, CGMainDisplayID};
 use objc::{msg_send, sel, sel_impl};
 use screencapturekit::sc_shareable_content::SCShareableContent;
 
 use super::{Display, Target};
-
-pub use core_graphics_helmer_fork::display::CGDisplay;
 
 fn get_display_name(display_id: CGDirectDisplayID) -> String {
     unsafe {
