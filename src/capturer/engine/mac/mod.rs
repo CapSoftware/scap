@@ -161,11 +161,12 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
-    // TODO: this should be based on options.target, not main display
-    let display = targets::get_main_display();
-    let display_id = display.id;
-    let scale_factor = targets::get_scale_factor(display_id);
+    let target = options
+        .target
+        .clone()
+        .unwrap_or_else(|| Target::Display(targets::get_main_display()));
 
+    let scale_factor = targets::get_scale_factor(&target);
     let source_rect = get_crop_area(options);
 
     // Calculate the output height & width based on the required resolution
