@@ -70,3 +70,14 @@ pub fn get_main_display() -> Display {
     // #[cfg(target_os = "linux")]
     // return linux::get_main_display();
 }
+
+pub fn get_target_dimensions(target: &Target) -> (u64, u64) {
+    #[cfg(target_os = "macos")]
+    return mac::get_target_dimensions(target);
+
+    #[cfg(target_os = "windows")]
+    return win::get_target_dimensions(target);
+
+    // #[cfg(target_os = "linux")]
+    // return linux::get_target_dimensions(target);
+}
