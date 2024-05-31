@@ -18,7 +18,7 @@ pub struct Engine {
     mac: screencapturekit::sc_stream::SCStream,
 
     #[cfg(target_os = "windows")]
-    win: win::WinStream,
+    win: win::WCStream,
 
     #[cfg(target_os = "linux")]
     linux: linux::LinuxCapturer,

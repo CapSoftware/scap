@@ -1,13 +1,12 @@
-use cocoa::appkit::NSScreen;
+use cocoa::appkit::{NSApp, NSScreen};
 use cocoa::base::{id, nil};
-use cocoa::foundation::NSString;
-use core_graphics_helmer_fork::display::{CGDirectDisplayID, CGMainDisplayID};
+use cocoa::foundation::{NSString, NSUInteger};
+use core_graphics_helmer_fork::display::{CGDirectDisplayID, CGDisplay, CGMainDisplayID};
+use core_graphics_helmer_fork::window::CGWindowID;
 use objc::{msg_send, sel, sel_impl};
 use screencapturekit::sc_shareable_content::SCShareableContent;
 
 use super::{Display, Target};
-
-pub use core_graphics_helmer_fork::display::CGDisplay;
 
 fn get_display_name(display_id: CGDirectDisplayID) -> String {
     unsafe {
@@ -34,7 +33,7 @@ fn get_display_name(display_id: CGDirectDisplayID) -> String {
     }
 }
 
-pub fn get_targets() -> Vec<Target> {
+pub fn get_all_targets() -> Vec<Target> {
     let mut targets: Vec<Target> = Vec::new();
 
     let content = SCShareableContent::current();
@@ -59,8 +58,13 @@ pub fn get_targets() -> Vec<Target> {
         if window.title.is_some() {
             let id = window.window_id;
             let title = window.title.expect("Window title not found");
+            let raw_handle: CGWindowID = id;
 
-            let target = Target::Window(super::Window { id, title });
+            let target = Target::Window(super::Window {
+                id,
+                title,
+                raw_handle,
+            });
             targets.push(target);
         }
     }
@@ -79,7 +83,18 @@ pub fn get_main_display() -> Display {
     }
 }
 
-pub fn get_scale_factor(display_id: CGDirectDisplayID) -> f64 {
-    let mode = CGDisplay::new(display_id).display_mode().unwrap();
-    (mode.pixel_width() / mode.width()) as f64
+pub fn get_scale_factor(target: &Target) -> f64 {
+    match target {
+        Target::Window(window) => unsafe {
+            let cg_win_id = window.raw_handle;
+            let ns_app: id = NSApp();
+            let ns_window: id = msg_send![ns_app, windowWithWindowNumber: cg_win_id as NSUInteger];
+            let scale_factor: f64 = msg_send![ns_window, backingScaleFactor];
+            scale_factor
+        },
+        Target::Display(display) => {
+            let mode = display.raw_handle.display_mode().unwrap();
+            (mode.pixel_width() / mode.width()) as f64
+        }
+    }
 }

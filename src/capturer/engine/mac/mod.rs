@@ -2,24 +2,21 @@ use std::cmp;
 use std::sync::mpsc;
 
 use screencapturekit::cm_sample_buffer::CMSampleBuffer;
-use screencapturekit::sc_output_handler::SCStreamOutputType;
-use screencapturekit::sc_stream_configuration::PixelFormat;
 use screencapturekit::{
     sc_content_filter::{InitParams, SCContentFilter},
-    sc_display::SCDisplay,
     sc_error_handler::StreamErrorHandler,
-    sc_output_handler::StreamOutput,
+    sc_output_handler::{SCStreamOutputType, StreamOutput},
     sc_shareable_content::SCShareableContent,
     sc_stream::SCStream,
-    sc_stream_configuration::SCStreamConfiguration,
+    sc_stream_configuration::{PixelFormat, SCStreamConfiguration},
 };
 
 use screencapturekit_sys::os_types::geometry::{CGPoint, CGRect, CGSize};
 use screencapturekit_sys::sc_stream_frame_info::SCFrameStatus;
 
 use crate::frame::{Frame, FrameType};
+use crate::targets::Target;
 use crate::{capturer::Options, capturer::Resolution, targets};
-use core_graphics_helmer_fork::display::CGDirectDisplayID;
 
 mod pixelformat;
 
@@ -79,33 +76,63 @@ impl StreamOutput for Capturer {
 }
 
 pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
-    // TODO: identify targets to capture using options.targets
-    // scap currently only captures the main display
-    let display = targets::get_main_display();
-    let sc_display = get_sc_display_from_id(display.id);
+    // If no target is specified, capture the main display
+    let target = options
+        .target
+        .clone()
+        .unwrap_or_else(|| Target::Display(targets::get_main_display()));
 
     let sc_shareable_content = SCShareableContent::current();
 
-    let excluded_windows = sc_shareable_content
-        .windows
-        .into_iter()
-        .filter(|window| {
-            if let Some(excluded_window_names) = &options.excluded_windows {
-                if let Some(current_window_name) = &window.title {
-                    return excluded_window_names.contains(current_window_name);
-                } else {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        })
-        .collect();
+    let params = match target {
+        Target::Window(window) => {
+            // Get SCWindow from window id
+            let sc_window = sc_shareable_content
+                .windows
+                .into_iter()
+                .find(|sc_win| sc_win.window_id == window.id)
+                .unwrap();
 
-    let params = InitParams::DisplayExcludingWindows(sc_display, excluded_windows);
+            // Return a DesktopIndependentWindow
+            // https://developer.apple.com/documentation/screencapturekit/sccontentfilter/3919804-init
+            InitParams::DesktopIndependentWindow(sc_window)
+        }
+        Target::Display(display) => {
+            // Get SCDisplay from display id
+            let sc_display = sc_shareable_content
+                .displays
+                .into_iter()
+                .find(|sc_dis| sc_dis.display_id == display.id)
+                .unwrap();
+
+            match &options.excluded_targets {
+                None => InitParams::Display(sc_display),
+                Some(excluded_targets) => {
+                    let excluded_windows = sc_shareable_content
+                        .windows
+                        .into_iter()
+                        .filter(|window| {
+                            excluded_targets
+                                .into_iter()
+                                .find(|excluded_target| match excluded_target {
+                                    Target::Window(excluded_window) => {
+                                        excluded_window.id == window.window_id
+                                    }
+                                    _ => false,
+                                })
+                                .is_some()
+                        })
+                        .collect();
+
+                    InitParams::DisplayExcludingWindows(sc_display, excluded_windows)
+                }
+            }
+        }
+    };
+
     let filter = SCContentFilter::new(params);
 
-    let source_rect = get_source_rect(options);
+    let source_rect = get_crop_area(options);
     let pixel_format = match options.output_type {
         FrameType::YUVFrame => PixelFormat::YCbCr420v,
         FrameType::BGR0 => PixelFormat::ARGB8888,
@@ -134,12 +161,13 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
-    // TODO: this should be based on display from options.target, not main one
-    let display = targets::get_main_display();
-    let display_id = display.id;
-    let scale_factor = targets::get_scale_factor(display_id);
+    let target = options
+        .target
+        .clone()
+        .unwrap_or_else(|| Target::Display(targets::get_main_display()));
 
-    let source_rect = get_source_rect(options);
+    let scale_factor = targets::get_scale_factor(&target);
+    let source_rect = get_crop_area(options);
 
     // Calculate the output height & width based on the required resolution
     // Output width and height need to be multiplied by scale (or dpi)
@@ -164,14 +192,14 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     [output_width, output_height]
 }
 
-pub fn get_source_rect(options: &Options) -> CGRect {
-    // TODO: this should be based on display from options.target, not main one
+pub fn get_crop_area(options: &Options) -> CGRect {
+    // TODO: this should be based on options.target, not main display
     let display = targets::get_main_display();
     let width = display.raw_handle.pixels_wide();
     let height = display.raw_handle.pixels_high();
 
     options
-        .source_rect
+        .crop_area
         .as_ref()
         .map(|val| {
             let input_width = val.size.width + (val.size.width % 2.0);
@@ -194,19 +222,5 @@ pub fn get_source_rect(options: &Options) -> CGRect {
                 width: width as f64,
                 height: height as f64,
             },
-        })
-}
-
-pub fn get_sc_display_from_id(id: CGDirectDisplayID) -> SCDisplay {
-    SCShareableContent::current()
-        .displays
-        .into_iter()
-        .find(|display| display.display_id == id)
-        .unwrap_or_else(|| {
-            SCShareableContent::current()
-                .displays
-                .get(0)
-                .expect("couldn't find display")
-                .to_owned()
         })
 }
