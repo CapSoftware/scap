@@ -1,5 +1,5 @@
-// This program is just a testbed for the library itself
-// Refer to the lib.rs file for the actual implementation
+// This program is just a testing application
+// Refer to `lib.rs` for the library source code
 
 use scap::{
     capturer::{Area, Capturer, Options, Point, Size},
@@ -8,15 +8,13 @@ use scap::{
 };
 
 fn main() {
-    // #1 Check if the platform is supported
+    // Check if the platform is supported
     if !scap::is_supported() {
         println!("❌ Platform not supported");
         return;
-    } else {
-        println!("✅ Platform supported");
     }
 
-    // #2 Check if we have permission to capture screen
+    // Check if we have permission to capture screen
     // If we don't, request it.
     if !scap::has_permission() {
         println!("❌ Permission not granted. Requesting permission...");
@@ -25,23 +23,23 @@ fn main() {
             return;
         }
     }
-    println!("✅ Permission granted");
 
-    // #3 Get recording targets
+    // Get recording targets
     let targets = scap::get_all_targets();
     println!("🎯 Targets: {:?}", targets);
 
-    let target = targets.into_iter().find(|target| match target {
-        Target::Display(_) => false,
-        Target::Window(w) => w.title.contains("Visual Studio Code"),
-    });
+    let vscode_win = targets
+        .into_iter()
+        .find(|target| match target {
+            Target::Display(_) => false,
+            Target::Window(w) => w.title.contains("Visual Studio Code"),
+        })
+        .expect("Visual Studio Code window not found");
 
-    println!("{:?}", target);
-
-    // #4 Create Options
+    // Create Options
     let options = Options {
         fps: 60,
-        target,
+        target: Some(vscode_win),
         show_cursor: true,
         show_highlight: true,
         excluded_targets: None,
@@ -57,13 +55,13 @@ fn main() {
         ..Default::default()
     };
 
-    // #5 Create Recorder
+    // Create Recorder with options
     let mut recorder = Capturer::new(options);
 
-    // #6 Start Capture
+    // Start Capture
     recorder.start_capture();
 
-    // #7 Capture 100 frames
+    // Capture 100 frames
     let mut start_time: u64 = 0;
     for i in 0..100 {
         let frame = recorder.get_next_frame().expect("Error");
@@ -126,6 +124,6 @@ fn main() {
         }
     }
 
-    // #8 Stop Capture
+    // Stop Capture
     recorder.stop_capture();
 }

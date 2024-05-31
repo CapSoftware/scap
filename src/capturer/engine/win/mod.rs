@@ -217,6 +217,7 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
 }
 
 pub fn get_crop_area(options: &Options) -> Area {
+    // TODO: this should be based on options.target, not main display
     let display = targets::get_main_display();
     let display_raw = WCMonitor::from_raw_hmonitor(display.raw_handle.0);
 

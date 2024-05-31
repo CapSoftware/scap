@@ -42,12 +42,9 @@ use scap::{
 
 fn main() {
     // Check if the platform is supported
-    let supported = scap::is_supported();
-    if !supported {
+    if !scap::is_supported() {
         println!("❌ Platform not supported");
         return;
-    } else {
-        println!("✅ Platform supported");
     }
 
     // Check if we have permission to capture screen
@@ -59,16 +56,18 @@ fn main() {
             return;
         }
     }
-    println!("✅ Permission granted");
 
-    // Get capturing targets (WIP)
+    // Get recording targets
     let targets = scap::get_all_targets();
-    println!("🎯 Targets: {:?}", targets);
+    println!("Targets: {:?}", targets);
+
+    // All your displays and windows are targets
+    // You can filter this and capture the one you need.
 
     // Create Options
     let options = Options {
         fps: 60,
-        targets,
+        target: None, // None captures the primary display
         show_cursor: true,
         show_highlight: true,
         excluded_targets: None,
