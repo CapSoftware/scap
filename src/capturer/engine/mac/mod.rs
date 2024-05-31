@@ -193,10 +193,12 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
 }
 
 pub fn get_crop_area(options: &Options) -> CGRect {
-    // TODO: this should be based on options.target, not main display
-    let display = targets::get_main_display();
-    let width = display.raw_handle.pixels_wide();
-    let height = display.raw_handle.pixels_high();
+    let target = options
+        .target
+        .clone()
+        .unwrap_or_else(|| Target::Display(targets::get_main_display()));
+
+    let (width, height) = targets::get_target_dimensions(&target);
 
     options
         .crop_area

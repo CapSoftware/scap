@@ -1,6 +1,6 @@
 use cocoa::appkit::{NSApp, NSScreen};
 use cocoa::base::{id, nil};
-use cocoa::foundation::{NSString, NSUInteger};
+use cocoa::foundation::{NSRect, NSString, NSUInteger};
 use core_graphics_helmer_fork::display::{CGDirectDisplayID, CGDisplay, CGMainDisplayID};
 use core_graphics_helmer_fork::window::CGWindowID;
 use objc::{msg_send, sel, sel_impl};
@@ -95,6 +95,22 @@ pub fn get_scale_factor(target: &Target) -> f64 {
         Target::Display(display) => {
             let mode = display.raw_handle.display_mode().unwrap();
             (mode.pixel_width() / mode.width()) as f64
+        }
+    }
+}
+
+pub fn get_target_dimensions(target: &Target) -> (u64, u64) {
+    match target {
+        Target::Window(window) => unsafe {
+            let cg_win_id = window.raw_handle;
+            let ns_app: id = NSApp();
+            let ns_window: id = msg_send![ns_app, windowWithWindowNumber: cg_win_id as NSUInteger];
+            let frame: NSRect = msg_send![ns_window, frame];
+            (frame.size.width as u64, frame.size.height as u64)
+        },
+        Target::Display(display) => {
+            let mode = display.raw_handle.display_mode().unwrap();
+            (mode.width(), mode.height())
         }
     }
 }
