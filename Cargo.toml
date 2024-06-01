@@ -18,8 +18,6 @@ sysinfo = "0.30.0"
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-capture = "1.2.0"
 windows = { version = "0.52", features = [
-	"Graphics",
-	"Graphics_Capture",
 	"Win32_Foundation",
 	"Win32_Graphics_Gdi",
 	"Win32_UI_HiDpi",

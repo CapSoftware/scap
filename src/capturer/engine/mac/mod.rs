@@ -9,14 +9,13 @@ use screencapturekit::{
     sc_shareable_content::SCShareableContent,
     sc_stream::SCStream,
     sc_stream_configuration::{PixelFormat, SCStreamConfiguration},
+    sc_types::SCFrameStatus,
 };
 
-use screencapturekit_sys::os_types::geometry::{CGPoint, CGRect, CGSize};
-use screencapturekit_sys::sc_stream_frame_info::SCFrameStatus;
-
+use crate::capturer::{Area, Options, Point, Size};
 use crate::frame::{Frame, FrameType};
 use crate::targets::Target;
-use crate::{capturer::Options, capturer::Resolution, targets};
+use crate::{capturer::Resolution, targets};
 
 mod pixelformat;
 
@@ -192,7 +191,7 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     [output_width, output_height]
 }
 
-pub fn get_crop_area(options: &Options) -> CGRect {
+pub fn get_crop_area(options: &Options) -> Area {
     let target = options
         .target
         .clone()
@@ -207,20 +206,20 @@ pub fn get_crop_area(options: &Options) -> CGRect {
             let input_width = val.size.width + (val.size.width % 2.0);
             let input_height = val.size.height + (val.size.height % 2.0);
 
-            CGRect {
-                origin: CGPoint {
+            Area {
+                origin: Point {
                     x: val.origin.x,
                     y: val.origin.y,
                 },
-                size: CGSize {
+                size: Size {
                     width: input_width as f64,
                     height: input_height as f64,
                 },
             }
         })
-        .unwrap_or_else(|| CGRect {
-            origin: CGPoint { x: 0.0, y: 0.0 },
-            size: CGSize {
+        .unwrap_or_else(|| Area {
+            origin: Point { x: 0.0, y: 0.0 },
+            size: Size {
                 width: width as f64,
                 height: height as f64,
             },
