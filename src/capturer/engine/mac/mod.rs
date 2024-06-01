@@ -1,8 +1,8 @@
 use std::cmp;
 use std::sync::mpsc;
 
-use screencapturekit::cm_sample_buffer::CMSampleBuffer;
 use screencapturekit::{
+    cm_sample_buffer::CMSampleBuffer,
     sc_content_filter::{InitParams, SCContentFilter},
     sc_error_handler::StreamErrorHandler,
     sc_output_handler::{SCStreamOutputType, StreamOutput},
@@ -11,6 +11,7 @@ use screencapturekit::{
     sc_stream_configuration::{PixelFormat, SCStreamConfiguration},
     sc_types::SCFrameStatus,
 };
+use screencapturekit_sys::os_types::geometry::{CGPoint, CGRect, CGSize};
 
 use crate::capturer::{Area, Options, Point, Size};
 use crate::frame::{Frame, FrameType};
@@ -131,7 +132,19 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
 
     let filter = SCContentFilter::new(params);
 
-    let source_rect = get_crop_area(options);
+    let crop_area = get_crop_area(options);
+
+    let source_rect = CGRect {
+        origin: CGPoint {
+            x: crop_area.origin.x,
+            y: crop_area.origin.y,
+        },
+        size: CGSize {
+            width: crop_area.size.width,
+            height: crop_area.size.height,
+        },
+    };
+
     let pixel_format = match options.output_type {
         FrameType::YUVFrame => PixelFormat::YCbCr420v,
         FrameType::BGR0 => PixelFormat::ARGB8888,
