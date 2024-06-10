@@ -28,9 +28,9 @@ We found most of Rust's tooling around screen capture either very outdated, non-
 If you want to contribute code, here's a quick primer:
 
 1. Clone the repo and run it with `cargo run`.
-2. Explore the API and library code in [lib.rs](./scap/src/lib.rs).
+2. Explore the API and library code in [lib.rs](./src/lib.rs).
 3. Platform-specific code lives in the `win`, `mac` and `linux` modules.
-4. The [main.rs](./scap/src/main.rs) is a small program that "consumes" the library, for easy testing.
+4. The [main.rs](./src/main.rs) is a small program that "consumes" the library, for easy testing.
 
 ## usage
 
