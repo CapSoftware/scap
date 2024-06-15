@@ -1,7 +1,7 @@
 use crate::{
     capturer::{Area, Options, Point, Resolution, Size},
     frame::{BGRAFrame, Frame, FrameType},
-    targets::{self, Target},
+    targets::{self, get_scale_factor, Target},
 };
 use std::cmp;
 use std::sync::mpsc;
@@ -191,12 +191,10 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
         .clone()
         .unwrap_or_else(|| Target::Display(targets::get_main_display()));
 
-    let scale_factor = targets::get_scale_factor(&target);
-
     let crop_area = get_crop_area(options);
 
-    let mut output_width = (crop_area.size.width * scale_factor) as u32;
-    let mut output_height = (crop_area.size.height * scale_factor) as u32;
+    let mut output_width = (crop_area.size.width) as u32;
+    let mut output_height = (crop_area.size.height) as u32;
 
     match options.output_resolution {
         Resolution::Captured => {}
@@ -216,6 +214,11 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     [output_width, output_height]
 }
 
+fn get_absolute_value(value: f64, scale_factor: f64) -> f64 {
+    let value = (value * scale_factor).floor();
+    value + value % 2.0
+}
+
 pub fn get_crop_area(options: &Options) -> Area {
     let target = options
         .target
@@ -224,17 +227,20 @@ pub fn get_crop_area(options: &Options) -> Area {
 
     let (width, height) = targets::get_target_dimensions(&target);
 
+    let scale_factor = targets::get_scale_factor(&target);
     options
         .crop_area
         .as_ref()
         .map(|val| {
-            let input_width = val.size.width + val.size.width % 2.0;
-            let input_height = val.size.height + val.size.height % 2.0;
+            // WINDOWS: limit values [input-width, input-height] = [146, 50]
             Area {
-                origin: val.origin.clone(),
+                origin: Point {
+                    x: get_absolute_value(val.origin.x, scale_factor),
+                    y: get_absolute_value(val.origin.y, scale_factor),
+                },
                 size: Size {
-                    width: input_width as f64,
-                    height: input_height as f64,
+                    width: get_absolute_value(val.size.width, scale_factor),
+                    height: get_absolute_value(val.size.height, scale_factor),
                 },
             }
         })
