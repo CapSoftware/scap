@@ -136,6 +136,7 @@ struct FlagStruct {
 }
 
 pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WCStream {
+    println!("Target from Scap: {:?}", options.target.clone());
     let target = options
         .target
         .clone()
