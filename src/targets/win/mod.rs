@@ -76,7 +76,7 @@ pub fn get_scale_factor(target: &Target) -> f64 {
         },
     };
 
-    let scale_factor = dpi / BASE_DPI;
+    let scale_factor = dpi as f64 / BASE_DPI as f64;
     scale_factor as f64
 }
 
