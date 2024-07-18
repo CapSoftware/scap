@@ -375,6 +375,7 @@ impl LinuxCapturer {
                 eprintln!("Error occured capturing: {e}");
             }
         }
+        CAPTURER_STATE.store(0, std::sync::atomic::Ordering::Relaxed);
     }
 }
 
