@@ -14,7 +14,7 @@ use screencapturekit::{
 use screencapturekit_sys::os_types::base::{CMTime, CMTimeScale};
 use screencapturekit_sys::os_types::geometry::{CGPoint, CGRect, CGSize};
 
-use crate::capturer::{Area, Options, Point, Size};
+use crate::{capturer::{Area, Options, Point, Size}, frame::BGRAFrame};
 use crate::frame::{Frame, FrameType};
 use crate::targets::Target;
 use crate::{capturer::Resolution, targets};
@@ -46,27 +46,42 @@ impl StreamOutput for Capturer {
                 let frame_status = &sample.frame_status;
 
                 match frame_status {
-                    SCFrameStatus::Complete => unsafe {
-                        let frame;
-                        match self.output_type {
+                    SCFrameStatus::Complete | SCFrameStatus::Started => unsafe {
+                        let frame = match self.output_type {
                             FrameType::YUVFrame => {
                                 let yuvframe = pixelformat::create_yuv_frame(sample).unwrap();
-                                frame = Frame::YUVFrame(yuvframe);
+                                Frame::YUVFrame(yuvframe)
                             }
                             FrameType::RGB => {
                                 let rgbframe = pixelformat::create_rgb_frame(sample).unwrap();
-                                frame = Frame::RGB(rgbframe);
+                                Frame::RGB(rgbframe)
                             }
                             FrameType::BGR0 => {
                                 let bgrframe = pixelformat::create_bgr_frame(sample).unwrap();
-                                frame = Frame::BGR0(bgrframe);
+                                Frame::BGR0(bgrframe)
                             }
                             FrameType::BGRAFrame => {
                                 let bgraframe = pixelformat::create_bgra_frame(sample).unwrap();
-                                frame = Frame::BGRA(bgraframe);
+                                Frame::BGRA(bgraframe)
                             }
-                        }
+                        };
                         self.tx.send(frame).unwrap_or(());
+                    },
+                    SCFrameStatus::Idle => {
+                        // Quick hack - just send an empty frame, and the caller can figure out how to handle it
+                        match self.output_type {
+                            FrameType::BGRAFrame => {
+                                let display_time = sample.sys_ref.get_presentation_timestamp().value as u64;
+                                let frame = BGRAFrame {
+                                    display_time,
+                                    width: 0,
+                                    height: 0,
+                                    data: vec![],
+                                };
+                                self.tx.send(Frame::BGRA(frame)).unwrap_or(());
+                            },
+                            _ => {}
+                        }
                     },
                     _ => {}
                 }
