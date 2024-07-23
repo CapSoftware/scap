@@ -3,21 +3,21 @@ use std::sync::mpsc;
 
 use screencapturekit::{
     cm_sample_buffer::CMSampleBuffer,
-    sc_content_filter::{ InitParams, SCContentFilter },
+    sc_content_filter::{InitParams, SCContentFilter},
     sc_error_handler::StreamErrorHandler,
-    sc_output_handler::{ SCStreamOutputType, StreamOutput },
+    sc_output_handler::{SCStreamOutputType, StreamOutput},
     sc_shareable_content::SCShareableContent,
     sc_stream::SCStream,
-    sc_stream_configuration::{ PixelFormat, SCStreamConfiguration },
+    sc_stream_configuration::{PixelFormat, SCStreamConfiguration},
     sc_types::SCFrameStatus,
 };
-use screencapturekit_sys::os_types::geometry::{ CGPoint, CGRect, CGSize };
-use screencapturekit_sys::os_types::base::{ CMTime, CMTimeScale };
+use screencapturekit_sys::os_types::base::{CMTime, CMTimeScale};
+use screencapturekit_sys::os_types::geometry::{CGPoint, CGRect, CGSize};
 
-use crate::capturer::{ Area, Options, Point, Size };
-use crate::frame::{ Frame, FrameType };
+use crate::capturer::{Area, Options, Point, Size};
+use crate::frame::{Frame, FrameType};
 use crate::targets::Target;
-use crate::{ capturer::Resolution, targets };
+use crate::{capturer::Resolution, targets};
 
 mod pixelformat;
 
@@ -67,7 +67,7 @@ impl StreamOutput for Capturer {
                             }
                         }
                         self.tx.send(frame).unwrap_or(());
-                    }
+                    },
                     _ => {}
                 }
             }
@@ -78,7 +78,8 @@ impl StreamOutput for Capturer {
 
 pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     // If no target is specified, capture the main display
-    let target = options.target
+    let target = options
+        .target
         .clone()
         .unwrap_or_else(|| Target::Display(targets::get_main_display()));
 
@@ -87,7 +88,8 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
     let params = match target {
         Target::Window(window) => {
             // Get SCWindow from window id
-            let sc_window = sc_shareable_content.windows
+            let sc_window = sc_shareable_content
+                .windows
                 .into_iter()
                 .find(|sc_win| sc_win.window_id == window.id)
                 .unwrap();
@@ -98,7 +100,8 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
         }
         Target::Display(display) => {
             // Get SCDisplay from display id
-            let sc_display = sc_shareable_content.displays
+            let sc_display = sc_shareable_content
+                .displays
                 .into_iter()
                 .find(|sc_dis| sc_dis.display_id == display.id)
                 .unwrap();
@@ -106,18 +109,17 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
             match &options.excluded_targets {
                 None => InitParams::Display(sc_display),
                 Some(excluded_targets) => {
-                    let excluded_windows = sc_shareable_content.windows
+                    let excluded_windows = sc_shareable_content
+                        .windows
                         .into_iter()
                         .filter(|window| {
                             excluded_targets
                                 .into_iter()
-                                .find(|excluded_target| {
-                                    match excluded_target {
-                                        Target::Window(excluded_window) => {
-                                            excluded_window.id == window.window_id
-                                        }
-                                        _ => false,
+                                .find(|excluded_target| match excluded_target {
+                                    Target::Window(excluded_window) => {
+                                        excluded_window.id == window.window_id
                                     }
+                                    _ => false,
                                 })
                                 .is_some()
                         })
@@ -163,19 +165,23 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
             value: 1,
             timescale: options.fps as CMTimeScale,
             epoch: 0,
-            flags: 0,
+            flags: 1,
         },
         ..Default::default()
     };
 
     let mut stream = SCStream::new(filter, stream_config, ErrorHandler);
-    stream.add_output(Capturer::new(tx, options.output_type), SCStreamOutputType::Screen);
+    stream.add_output(
+        Capturer::new(tx, options.output_type),
+        SCStreamOutputType::Screen,
+    );
 
     stream
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
-    let target = options.target
+    let target = options
+        .target
         .clone()
         .unwrap_or_else(|| Target::Display(targets::get_main_display()));
 
@@ -190,9 +196,9 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     match options.output_resolution {
         Resolution::Captured => {}
         _ => {
-            let [resolved_width, resolved_height] = options.output_resolution.value(
-                (source_rect.size.width as f32) / (source_rect.size.height as f32)
-            );
+            let [resolved_width, resolved_height] = options
+                .output_resolution
+                .value((source_rect.size.width as f32) / (source_rect.size.height as f32));
             // 1280 x 853
             output_width = cmp::min(output_width, resolved_width);
             output_height = cmp::min(output_height, resolved_height);
@@ -206,13 +212,15 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
 }
 
 pub fn get_crop_area(options: &Options) -> Area {
-    let target = options.target
+    let target = options
+        .target
         .clone()
         .unwrap_or_else(|| Target::Display(targets::get_main_display()));
 
     let (width, height) = targets::get_target_dimensions(&target);
 
-    options.crop_area
+    options
+        .crop_area
         .as_ref()
         .map(|val| {
             let input_width = val.size.width + (val.size.width % 2.0);
