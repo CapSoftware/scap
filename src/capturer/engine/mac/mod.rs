@@ -11,8 +11,8 @@ use screencapturekit::{
     sc_stream_configuration::{ PixelFormat, SCStreamConfiguration },
     sc_types::SCFrameStatus,
 };
-use screencapturekit_sys::os_types::geometry::{ CGPoint, CGRect, CGSize };
 use screencapturekit_sys::os_types::base::{ CMTime, CMTimeScale };
+use screencapturekit_sys::os_types::geometry::{ CGPoint, CGRect, CGSize };
 
 use crate::capturer::{ Area, Options, Point, Size };
 use crate::frame::{ Frame, FrameType };
@@ -163,7 +163,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
             value: 1,
             timescale: options.fps as CMTimeScale,
             epoch: 0,
-            flags: 0,
+            flags: 1,
         },
         ..Default::default()
     };
