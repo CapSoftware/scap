@@ -1,7 +1,11 @@
 // This program is just a testing application
 // Refer to `lib.rs` for the library source code
 
-use scap::{ capturer::{ Area, Capturer, Options, Point, Size }, frame::Frame, Target };
+use scap::{
+    capturer::{Area, Capturer, Options, Point, Size},
+    frame::Frame,
+    Target,
+};
 
 fn main() {
     // Check if the platform is supported
@@ -56,17 +60,13 @@ fn main() {
             Frame::YUVFrame(frame) => {
                 println!(
                     "Recieved YUV frame {} of width {} and height {} and pts {}",
-                    i,
-                    frame.width,
-                    frame.height,
-                    frame.display_time
+                    i, frame.width, frame.height, frame.display_time
                 );
             }
             Frame::BGR0(frame) => {
                 println!(
                     "Received BGR0 frame of width {} and height {}",
-                    frame.width,
-                    frame.height
+                    frame.width, frame.height
                 );
             }
             Frame::RGB(frame) => {
@@ -84,22 +84,19 @@ fn main() {
             Frame::RGBx(frame) => {
                 println!(
                     "Recieved RGBx frame of width {} and height {}",
-                    frame.width,
-                    frame.height
+                    frame.width, frame.height
                 );
             }
             Frame::XBGR(frame) => {
                 println!(
                     "Recieved xRGB frame of width {} and height {}",
-                    frame.width,
-                    frame.height
+                    frame.width, frame.height
                 );
             }
             Frame::BGRx(frame) => {
                 println!(
                     "Recieved BGRx frame of width {} and height {}",
-                    frame.width,
-                    frame.height
+                    frame.width, frame.height
                 );
             }
             Frame::BGRA(frame) => {
