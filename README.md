@@ -58,7 +58,7 @@ fn main() {
     }
 
     // Get recording targets
-    let targets = scap::get_all_targets();
+    let targets = scap::get_targets();
     println!("Targets: {:?}", targets);
 
     // All your displays and windows are targets
@@ -67,7 +67,7 @@ fn main() {
     // Create Options
     let options = Options {
         fps: 60,
-        target: None, // None captures the primary display
+        target: targets, // None captures the primary display
         show_cursor: true,
         show_highlight: true,
         excluded_targets: None,
