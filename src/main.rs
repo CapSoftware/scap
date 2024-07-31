@@ -24,22 +24,12 @@ fn main() {
         }
     }
 
-    // Get recording targets
-    let targets = scap::get_all_targets();
-    println!("🎯 Targets: {:?}", targets);
-
-    let vscode_win = targets
-        .into_iter()
-        .find(|target| match target {
-            Target::Display(_) => false,
-            Target::Window(w) => w.title.contains("Visual Studio Code"),
-        })
-        .expect("Visual Studio Code window not found");
+    // // Get recording targets
+    // let targets = scap::get_all_targets();
 
     // Create Options
     let options = Options {
         fps: 60,
-        target: Some(vscode_win),
         show_cursor: true,
         show_highlight: true,
         excluded_targets: None,
