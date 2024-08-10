@@ -3,9 +3,10 @@
 
 use scap::{
     capturer::{Area, Capturer, Options, Point, Size},
-    frame::Frame,
-    Target,
+    frame::Frame
+    ,
 };
+use std::process;
 
 fn main() {
     // Check if the platform is supported
@@ -46,7 +47,10 @@ fn main() {
     };
 
     // Create Recorder with options
-    let mut recorder = Capturer::new(options);
+    let mut recorder = Capturer::build(options).unwrap_or_else(|err| {
+        println!("Problem with building Capturer: {err}");
+        process::exit(1);
+    });
 
     // Start Capture
     recorder.start_capture();
