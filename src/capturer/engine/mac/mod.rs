@@ -14,10 +14,13 @@ use screencapturekit::{
 use screencapturekit_sys::os_types::base::{CMTime, CMTimeScale};
 use screencapturekit_sys::os_types::geometry::{CGPoint, CGRect, CGSize};
 
-use crate::{capturer::{Area, Options, Point, Size}, frame::BGRAFrame};
-use crate::frame::{Frame, FrameType};
+use crate::frame::{Frame, FrameMetadata, FrameType};
 use crate::targets::Target;
 use crate::{capturer::Resolution, targets};
+use crate::{
+    capturer::{Area, Options, Point, Size},
+    frame::BGRAFrame,
+};
 
 mod pixelformat;
 
@@ -31,11 +34,48 @@ impl StreamErrorHandler for ErrorHandler {
 pub struct Capturer {
     pub tx: mpsc::Sender<Frame>,
     pub output_type: FrameType,
+    pub target: Target,
 }
 
 impl Capturer {
-    pub fn new(tx: mpsc::Sender<Frame>, output_type: FrameType) -> Self {
-        Capturer { tx, output_type }
+    pub fn new(tx: mpsc::Sender<Frame>, output_type: FrameType, target: Target) -> Self {
+        Capturer {
+            tx,
+            output_type,
+            target,
+        }
+    }
+
+    fn get_real_time_metadata(&self) -> FrameMetadata {
+        let sc_shareable_content = SCShareableContent::current();
+
+        println!("Target: {:?}", self.target);
+        match &self.target {
+            Target::Window(window) => {
+                if let Some(sc_window) = sc_shareable_content
+                    .windows
+                    .into_iter()
+                    .find(|sc_win| sc_win.window_id == window.id)
+                {
+                    FrameMetadata {
+                        window_name: sc_window.title,
+                        app_name: sc_window
+                            .owning_application
+                            .as_ref()
+                            .and_then(|app| app.application_name.as_deref().map(|s| s.to_string())),
+                    }
+                } else {
+                    FrameMetadata {
+                        window_name: None,
+                        app_name: None,
+                    }
+                }
+            }
+            Target::Display(_) => FrameMetadata {
+                window_name: None,
+                app_name: None,
+            },
+        }
     }
 }
 
@@ -47,22 +87,23 @@ impl StreamOutput for Capturer {
 
                 match frame_status {
                     SCFrameStatus::Complete | SCFrameStatus::Started => unsafe {
+                        let metadata = self.get_real_time_metadata();
                         let frame = match self.output_type {
                             FrameType::YUVFrame => {
                                 let yuvframe = pixelformat::create_yuv_frame(sample).unwrap();
-                                Frame::YUVFrame(yuvframe)
+                                Frame::YUVFrame(yuvframe, metadata)
                             }
                             FrameType::RGB => {
                                 let rgbframe = pixelformat::create_rgb_frame(sample).unwrap();
-                                Frame::RGB(rgbframe)
+                                Frame::RGB(rgbframe, metadata)
                             }
                             FrameType::BGR0 => {
                                 let bgrframe = pixelformat::create_bgr_frame(sample).unwrap();
-                                Frame::BGR0(bgrframe)
+                                Frame::BGR0(bgrframe, metadata)
                             }
                             FrameType::BGRAFrame => {
                                 let bgraframe = pixelformat::create_bgra_frame(sample).unwrap();
-                                Frame::BGRA(bgraframe)
+                                Frame::BGRA(bgraframe, metadata)
                             }
                         };
                         self.tx.send(frame).unwrap_or(());
@@ -71,18 +112,23 @@ impl StreamOutput for Capturer {
                         // Quick hack - just send an empty frame, and the caller can figure out how to handle it
                         match self.output_type {
                             FrameType::BGRAFrame => {
-                                let display_time = sample.sys_ref.get_presentation_timestamp().value as u64;
+                                let display_time =
+                                    sample.sys_ref.get_presentation_timestamp().value as u64;
                                 let frame = BGRAFrame {
                                     display_time,
                                     width: 0,
                                     height: 0,
                                     data: vec![],
                                 };
-                                self.tx.send(Frame::BGRA(frame)).unwrap_or(());
-                            },
+                                let metadata = FrameMetadata {
+                                    window_name: None,
+                                    app_name: None,
+                                };
+                                self.tx.send(Frame::BGRA(frame, metadata)).unwrap_or(());
+                            }
                             _ => {}
                         }
-                    },
+                    }
                     _ => {}
                 }
             }
@@ -92,7 +138,6 @@ impl StreamOutput for Capturer {
 }
 
 pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
-    // If no target is specified, capture the main display
     let target = options
         .target
         .clone()
@@ -100,21 +145,17 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
 
     let sc_shareable_content = SCShareableContent::current();
 
-    let params = match target {
+    let params = match &target {
         Target::Window(window) => {
-            // Get SCWindow from window id
             let sc_window = sc_shareable_content
                 .windows
                 .into_iter()
                 .find(|sc_win| sc_win.window_id == window.id)
                 .unwrap();
 
-            // Return a DesktopIndependentWindow
-            // https://developer.apple.com/documentation/screencapturekit/sccontentfilter/3919804-init
             InitParams::DesktopIndependentWindow(sc_window)
         }
         Target::Display(display) => {
-            // Get SCDisplay from display id
             let sc_display = sc_shareable_content
                 .displays
                 .into_iter()
@@ -187,13 +228,12 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> SCStream {
 
     let mut stream = SCStream::new(filter, stream_config, ErrorHandler);
     stream.add_output(
-        Capturer::new(tx, options.output_type),
+        Capturer::new(tx, options.output_type, target),
         SCStreamOutputType::Screen,
     );
 
     stream
 }
-
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     let target = options
         .target

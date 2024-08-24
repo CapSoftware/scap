@@ -64,24 +64,30 @@ pub struct BGRAFrame {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-pub enum FrameType {
-    #[default]
-    YUVFrame,
-    BGR0,
-    RGB, // Prefer BGR0 because RGB is slower
-    BGRAFrame,
+#[derive(Debug, Clone)]
+pub struct FrameMetadata {
+    pub app_name: Option<String>,
+    pub window_name: Option<String>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Frame {
-    YUVFrame(YUVFrame),
-    RGB(RGBFrame),
-    RGBx(RGBxFrame),
-    XBGR(XBGRFrame),
-    BGRx(BGRxFrame),
-    BGR0(BGRFrame),
-    BGRA(BGRAFrame),
+    YUVFrame(YUVFrame, FrameMetadata),
+    RGB(RGBFrame, FrameMetadata),
+    RGBx(RGBxFrame, FrameMetadata),
+    XBGR(XBGRFrame, FrameMetadata),
+    BGRx(BGRxFrame, FrameMetadata),
+    BGR0(BGRFrame, FrameMetadata),
+    BGRA(BGRAFrame, FrameMetadata),
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub enum FrameType {
+    #[default]
+    YUVFrame,
+    RGB,
+    BGR0,
+    BGRAFrame,
 }
 
 pub enum FrameData<'a> {
