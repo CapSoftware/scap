@@ -2,10 +2,7 @@ mod engine;
 
 use std::sync::mpsc;
 
-use crate::{
-    frame::{Frame, FrameType},
-    targets::Target,
-};
+use crate::{frame::{Frame, FrameType}, has_permission, is_supported, request_permission, targets::Target};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum Resolution {
@@ -74,13 +71,22 @@ pub struct Capturer {
 }
 
 impl Capturer {
-    /// Create a new capturer instance with the provided options
-    pub fn new(options: Options) -> Capturer {
+    /// Build a new [Capturer] instance with the provided options
+    pub fn build(options: Options) -> Result<Capturer, &'static str> {
+        if !is_supported() {
+            return Err("❌ Platform not supported");
+        }
+
+        if !has_permission() && !request_permission() {
+            return Err("❌ Permission not granted.");
+        }
+
         let (tx, rx) = mpsc::channel::<Frame>();
         let engine = engine::Engine::new(&options, tx);
 
-        Capturer { engine, rx }
+        Ok(Capturer { engine, rx })
     }
+
 
     // TODO
     // Prevent starting capture if already started
