@@ -12,6 +12,24 @@ mod win;
 #[cfg(target_os = "linux")]
 mod linux;
 
+pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
+    #[cfg(target_os = "macos")]
+    {
+        mac::get_output_frame_size(options)
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        win::get_output_frame_size(options)
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        // TODO: How to calculate this on Linux?
+        return [0, 0];
+    }
+}
+
 pub struct Engine {
     options: Options,
     #[cfg(target_os = "macos")]
@@ -90,19 +108,6 @@ impl Engine {
     }
 
     pub fn get_output_frame_size(&mut self) -> [u32; 2] {
-        #[cfg(target_os = "macos")]
-        {
-            mac::get_output_frame_size(&self.options)
-        }
-
-        #[cfg(target_os = "windows")]
-        {
-            win::get_output_frame_size(&self.options)
-        }
-
-        #[cfg(target_os = "linux")]
-        {
-            return [0, 0];
-        }
+        get_output_frame_size(&self.options)
     }
 }
