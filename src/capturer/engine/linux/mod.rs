@@ -1,7 +1,6 @@
-
 use std::{env, sync::mpsc};
 
-use pw::PwCapturer;
+use wayland::WaylandCapturer;
 use x11::X11Capturer;
 
 use crate::{
@@ -11,7 +10,7 @@ use crate::{
 
 mod error;
 
-mod pw;
+mod wayland;
 mod x11;
 
 pub trait LinuxCapturerImpl {

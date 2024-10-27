@@ -313,14 +313,14 @@ fn pipewire_capturer(
     Ok(())
 }
 
-pub struct PwCapturer {
+pub struct WaylandCapturer {
     capturer_join_handle: Option<JoinHandle<Result<(), LinCapError>>>,
     // The pipewire stream is deleted when the connection is dropped.
     // That's why we keep it alive
     _connection: dbus::blocking::Connection,
 }
 
-impl PwCapturer {
+impl WaylandCapturer {
     // TODO: Error handling
     pub fn new(options: &Options, tx: Sender<Frame>) -> Self {
         let connection =
@@ -354,7 +354,7 @@ impl PwCapturer {
     }
 }
 
-impl LinuxCapturerImpl for PwCapturer {
+impl LinuxCapturerImpl for WaylandCapturer {
     fn start_capture(&mut self) {
         CAPTURER_STATE.store(1, std::sync::atomic::Ordering::Relaxed);
     }
