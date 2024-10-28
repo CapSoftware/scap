@@ -37,6 +37,7 @@ use super::{error::LinCapError, LinuxCapturerImpl};
 
 mod portal;
 
+// TODO: Move to wayland capturer with Arc<>
 static CAPTURER_STATE: AtomicU8 = AtomicU8::new(0);
 static STREAM_STATE_CHANGED_TO_ERROR: AtomicBool = AtomicBool::new(false);
 

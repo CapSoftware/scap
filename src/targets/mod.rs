@@ -17,6 +17,9 @@ pub struct Window {
 
     #[cfg(target_os = "macos")]
     pub raw_handle: core_graphics_helmer_fork::window::CGWindowID,
+
+    #[cfg(target_os = "linux")]
+    pub raw_handle: xcb::x::Window,
 }
 
 #[derive(Debug, Clone)]
@@ -29,6 +32,15 @@ pub struct Display {
 
     #[cfg(target_os = "macos")]
     pub raw_handle: core_graphics_helmer_fork::display::CGDisplay,
+
+    #[cfg(target_os = "linux")]
+    pub width: u16,
+    #[cfg(target_os = "linux")]
+    pub height: u16,
+    #[cfg(target_os = "linux")]
+    pub x_offset: i16,
+    #[cfg(target_os = "linux")]
+    pub y_offset: i16,
 }
 
 #[derive(Debug, Clone)]

@@ -29,7 +29,7 @@ impl LinuxCapturer {
         if env::var("WAYLAND_DISPLAY").is_ok() {
             println!("[DEBUG] On wayland");
             return Self {
-                imp: Box::new(PwCapturer::new(options, tx)),
+                imp: Box::new(WaylandCapturer::new(options, tx)),
             };
         } else if env::var("DISPLAY").is_ok() {
             println!("[DEBUG] On X11");
