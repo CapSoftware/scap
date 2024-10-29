@@ -6,9 +6,9 @@ use std::{
     }, thread::JoinHandle
 };
 
-use xcb::{randr::{GetCrtcInfo, GetOutputInfo, GetOutputPrimary}, x, Xid};
+use xcb::x;
 
-use crate::{capturer::Options, frame::Frame, targets::Display, Target};
+use crate::{capturer::Options, frame::Frame, targets::linux::get_default_x_display, Target};
 
 use super::{error::LinCapError, LinuxCapturerImpl};
 
@@ -22,38 +22,11 @@ impl X11Capturer {
         let (conn, screen_num) =
             xcb::Connection::connect_with_extensions(None, &[xcb::Extension::RandR], &[]).unwrap();
         let setup = conn.get_setup();
+        let screen = setup.roots().nth(screen_num as usize).unwrap();
 
         let target = match &options.target {
             Some(t) => t.clone(),
-            None => {
-                println!("[DEBUG] No target provided getting default display");
-                let screen = setup.roots().nth(screen_num as usize).unwrap();
-
-                let primary_display_cookie = conn.send_request(&GetOutputPrimary {
-                    window: screen.root(),
-                });
-                let primary_display = conn.wait_for_reply(primary_display_cookie).unwrap();
-                let info_cookie = conn.send_request(&GetOutputInfo {
-                    output: primary_display.output(),
-                    config_timestamp: 0,
-                });
-                let info = conn.wait_for_reply(info_cookie).unwrap();
-                let crtc = info.crtc();
-                let crtc_info_cookie = conn.send_request(&GetCrtcInfo {
-                    crtc,
-                    config_timestamp: 0,
-                });
-                let crtc_info = conn.wait_for_reply(crtc_info_cookie).unwrap();
-                Target::Display(Display {
-                    id: crtc.resource_id(),
-                    title: String::from_utf8(info.name().to_vec()).unwrap_or(String::from("default")),
-                    width: crtc_info.width(),
-                    height: crtc_info.height(),
-                    x_offset: crtc_info.x(),
-                    y_offset: crtc_info.y(),
-                    raw_handle: screen.root(),
-                })
-            },
+            None => Target::Display(get_default_x_display(&conn, screen).unwrap()),
         };
 
         let framerate = options.fps as f32;

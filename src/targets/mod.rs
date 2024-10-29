@@ -5,7 +5,7 @@ mod mac;
 mod win;
 
 #[cfg(target_os = "linux")]
-mod linux;
+pub(crate) mod linux;
 
 #[derive(Debug, Clone)]
 pub struct Window {
@@ -82,7 +82,7 @@ pub fn get_main_display() -> Display {
     return win::get_main_display();
 
     #[cfg(target_os = "linux")]
-    unreachable!();
+    return linux::get_main_display();
 }
 
 pub fn get_target_dimensions(target: &Target) -> (u64, u64) {
@@ -93,5 +93,5 @@ pub fn get_target_dimensions(target: &Target) -> (u64, u64) {
     return win::get_target_dimensions(target);
 
     #[cfg(target_os = "linux")]
-    unreachable!();
+    return linux::get_target_dimensions(target);
 }
