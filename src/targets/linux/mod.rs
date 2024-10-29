@@ -82,10 +82,8 @@ fn decode_compound_text(
 }
 
 fn get_x11_targets() -> Result<Vec<Target>, xcb::Error> {
-    let (conn, _screen_num) = xcb::Connection::connect_with_xlib_display_and_extensions(
-        &[xcb::Extension::RandR],
-        &[],
-    )?;
+    let (conn, _screen_num) =
+        xcb::Connection::connect_with_xlib_display_and_extensions(&[xcb::Extension::RandR], &[])?;
     let setup = conn.get_setup();
     let screens = setup.roots();
 
@@ -99,12 +97,10 @@ fn get_x11_targets() -> Result<Vec<Target>, xcb::Error> {
 
     let mut targets = Vec::new();
     for screen in screens {
-        let window_list =
-            get_property(&conn, screen.root(), wm_client_list, x::ATOM_NONE, 100)?;
+        let window_list = get_property(&conn, screen.root(), wm_client_list, x::ATOM_NONE, 100)?;
 
         for client in window_list.value::<x::Window>() {
-            let cr =
-                get_property(&conn, *client, atom_net_wm_name, x::ATOM_STRING, 4096)?;
+            let cr = get_property(&conn, *client, atom_net_wm_name, x::ATOM_STRING, 4096)?;
             if !cr.value::<x::Atom>().is_empty() {
                 targets.push(Target::Window(crate::targets::Window {
                     id: 0,
@@ -115,22 +111,19 @@ fn get_x11_targets() -> Result<Vec<Target>, xcb::Error> {
                 continue;
             }
 
-            let reply =
-                get_property(&conn, *client, x::ATOM_WM_NAME, x::ATOM_ANY, 4096)?;
+            let reply = get_property(&conn, *client, x::ATOM_WM_NAME, x::ATOM_ANY, 4096)?;
             let value: &[u8] = reply.value();
             if !value.is_empty() {
                 let ttype = reply.r#type();
-                let title = if ttype == x::ATOM_STRING
-                    || ttype == atom_utf8_string
-                    || ttype == atom_text
-                {
-                    String::from_utf8(reply.value().to_vec()).unwrap_or(String::from("n/a"))
-                } else if ttype == atom_compound_text {
-                    decode_compound_text(&conn, value, client, ttype)
-                        .map_err(|_| xcb::Error::Connection(xcb::ConnError::ClosedParseErr))?
-                } else {
-                    String::from_utf8(reply.value().to_vec()).unwrap_or(String::from("n/a"))
-                };
+                let title =
+                    if ttype == x::ATOM_STRING || ttype == atom_utf8_string || ttype == atom_text {
+                        String::from_utf8(reply.value().to_vec()).unwrap_or(String::from("n/a"))
+                    } else if ttype == atom_compound_text {
+                        decode_compound_text(&conn, value, client, ttype)
+                            .map_err(|_| xcb::Error::Connection(xcb::ConnError::ClosedParseErr))?
+                    } else {
+                        String::from_utf8(reply.value().to_vec()).unwrap_or(String::from("n/a"))
+                    };
 
                 targets.push(Target::Window(crate::targets::Window {
                     id: 0,
@@ -163,8 +156,7 @@ fn get_x11_targets() -> Result<Vec<Target>, xcb::Error> {
                     config_timestamp: 0,
                 });
                 let crtc_info = conn.wait_for_reply(crtc_info)?;
-                let title =
-                    String::from_utf8(info.name().to_vec()).unwrap_or(String::from("n/a"));
+                let title = String::from_utf8(info.name().to_vec()).unwrap_or(String::from("n/a"));
                 targets.push(Target::Display(crate::targets::Display {
                     id: crtc.resource_id(),
                     title,
@@ -192,7 +184,10 @@ pub fn get_all_targets() -> Vec<Target> {
     }
 }
 
-pub(crate) fn get_default_x_display(conn: &xcb::Connection, screen: &Screen) -> Result<Display, xcb::Error> {
+pub(crate) fn get_default_x_display(
+    conn: &xcb::Connection,
+    screen: &Screen,
+) -> Result<Display, xcb::Error> {
     let primary_display_cookie = conn.send_request(&GetOutputPrimary {
         window: screen.root(),
     });

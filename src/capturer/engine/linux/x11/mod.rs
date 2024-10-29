@@ -3,7 +3,8 @@ use std::{
         atomic::{AtomicU8, Ordering},
         mpsc::Sender,
         Arc,
-    }, thread::JoinHandle
+    },
+    thread::JoinHandle,
 };
 
 use xcb::x;
@@ -13,20 +14,26 @@ use crate::{capturer::Options, frame::Frame, targets::linux::get_default_x_displ
 use super::{error::LinCapError, LinuxCapturerImpl};
 
 pub struct X11Capturer {
-    capturer_join_handle: Option<JoinHandle<Result<(), LinCapError>>>,
+    capturer_join_handle: Option<JoinHandle<Result<(), xcb::Error>>>,
     capturer_state: Arc<AtomicU8>,
 }
 
 impl X11Capturer {
-    pub fn new(options: &Options, tx: Sender<Frame>) -> Self {
+    pub fn new(options: &Options, tx: Sender<Frame>) -> Result<Self, LinCapError> {
         let (conn, screen_num) =
-            xcb::Connection::connect_with_extensions(None, &[xcb::Extension::RandR], &[]).unwrap();
+            xcb::Connection::connect_with_extensions(None, &[xcb::Extension::RandR], &[])
+                .map_err(|e| LinCapError::new(e.to_string()))?;
         let setup = conn.get_setup();
-        let screen = setup.roots().nth(screen_num as usize).unwrap();
+        let Some(screen) = setup.roots().nth(screen_num as usize) else {
+            return Err(LinCapError::new(String::from("Failed to get setup root")));
+        };
 
         let target = match &options.target {
             Some(t) => t.clone(),
-            None => Target::Display(get_default_x_display(&conn, screen).unwrap()),
+            None => Target::Display(
+                get_default_x_display(&conn, screen)
+                    .map_err(|e| LinCapError::new(e.to_string()))?,
+            ),
         };
 
         let framerate = options.fps as f32;
@@ -41,55 +48,44 @@ impl X11Capturer {
             let frame_time = std::time::Duration::from_secs_f32(1.0 / framerate);
             while capturer_state_clone.load(Ordering::Acquire) == 1 {
                 let start = std::time::Instant::now();
-                match &target {
+                let (x, y, width, height, window) = match &target {
                     Target::Window(win) => {
                         let geom_cookie = conn.send_request(&x::GetGeometry {
                             drawable: x::Drawable::Window(win.raw_handle),
                         });
-                        let geom = conn.wait_for_reply(geom_cookie).unwrap();
-
-                        let img_cookie = conn.send_request(&x::GetImage {
-                            format: x::ImageFormat::ZPixmap,
-                            drawable: x::Drawable::Window(win.raw_handle),
-                            x: 0,
-                            y: 0,
-                            width: geom.width(),
-                            height: geom.height(),
-                            plane_mask: u32::MAX,
-                        });
-                        let img = conn.wait_for_reply(img_cookie).unwrap();
-
-                        let img_data = img.data();
-
-                        tx.send(Frame::BGRx(crate::frame::BGRxFrame {
-                            display_time: 0,
-                            width: geom.width() as i32,
-                            height: geom.height() as i32,
-                            data: img_data.to_vec(),
-                        })).unwrap();
+                        let geom = conn.wait_for_reply(geom_cookie)?;
+                        (0, 0, geom.width(), geom.height(), win.raw_handle)
                     }
-                    Target::Display(disp) => {
-                        let img_cookie = conn.send_request(&x::GetImage {
-                            format: x::ImageFormat::ZPixmap,
-                            drawable: x::Drawable::Window(disp.raw_handle),
-                            x: disp.x_offset,
-                            y: disp.y_offset,
-                            width: disp.width,
-                            height: disp.height,
-                            plane_mask: u32::MAX,
-                        });
-                        let img = conn.wait_for_reply(img_cookie).unwrap();
+                    Target::Display(disp) => (
+                        disp.x_offset,
+                        disp.y_offset,
+                        disp.width,
+                        disp.height,
+                        disp.raw_handle,
+                    ),
+                };
 
-                        let img_data = img.data();
+                let img_cookie = conn.send_request(&x::GetImage {
+                    format: x::ImageFormat::ZPixmap,
+                    drawable: x::Drawable::Window(window),
+                    x: x,
+                    y: y,
+                    width: width,
+                    height: height,
+                    plane_mask: u32::MAX,
+                });
+                let img = conn.wait_for_reply(img_cookie)?;
 
-                        tx.send(Frame::BGRx(crate::frame::BGRxFrame {
-                            display_time: 0,
-                            width: disp.width as i32,
-                            height: disp.height as i32,
-                            data: img_data.to_vec(),
-                        })).unwrap();
-                    }
-                }
+                let img_data = img.data();
+
+                tx.send(Frame::BGRx(crate::frame::BGRxFrame {
+                    display_time: 0,
+                    width: width as i32,
+                    height: height as i32,
+                    data: img_data.to_vec(),
+                }))
+                .unwrap();
+
                 let elapsed = start.elapsed();
                 if elapsed < frame_time {
                     std::thread::sleep(frame_time - start.elapsed());
@@ -99,10 +95,10 @@ impl X11Capturer {
             Ok(())
         });
 
-        Self {
+        Ok(Self {
             capturer_state: capturer_state,
             capturer_join_handle: Some(jh),
-        }
+        })
     }
 }
 

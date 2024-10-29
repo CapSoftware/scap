@@ -29,9 +29,12 @@ use pw::{
     stream::{StreamRef, StreamState},
 };
 
-use crate::{capturer::Options, frame::{BGRxFrame, Frame, RGBFrame, RGBxFrame, XBGRFrame}};
+use crate::{
+    capturer::Options,
+    frame::{BGRxFrame, Frame, RGBFrame, RGBxFrame, XBGRFrame},
+};
 
-use self::{portal::ScreenCastPortal};
+use self::portal::ScreenCastPortal;
 
 use super::{error::LinCapError, LinuxCapturerImpl};
 

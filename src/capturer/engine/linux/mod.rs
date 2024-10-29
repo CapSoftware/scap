@@ -3,10 +3,7 @@ use std::{env, sync::mpsc};
 use wayland::WaylandCapturer;
 use x11::X11Capturer;
 
-use crate::{
-    capturer::Options,
-    frame::Frame,
-};
+use crate::{capturer::Options, frame::Frame};
 
 mod error;
 
@@ -34,7 +31,7 @@ impl LinuxCapturer {
         } else if env::var("DISPLAY").is_ok() {
             println!("[DEBUG] On X11");
             return Self {
-                imp: Box::new(X11Capturer::new(options, tx)),
+                imp: Box::new(X11Capturer::new(options, tx).unwrap()),
             };
         } else {
             panic!("Unsupported platform. Could not detect Wayland or X11 displays")
