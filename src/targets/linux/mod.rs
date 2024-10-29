@@ -161,7 +161,6 @@ pub fn get_all_targets() -> Vec<Target> {
                 let info = conn.wait_for_reply(info).unwrap();
                 if info.connection() == Connection::Connected {
                     let crtc = info.crtc();
-                    crtc.resource_id();
                     let crtc_info = conn.send_request(&GetCrtcInfo {
                         crtc,
                         config_timestamp: 0,
@@ -176,6 +175,7 @@ pub fn get_all_targets() -> Vec<Target> {
                         height: crtc_info.height(),
                         x_offset: crtc_info.x(),
                         y_offset: crtc_info.y(),
+                        raw_handle: screen.root(),
                     }));
                 }
             }
