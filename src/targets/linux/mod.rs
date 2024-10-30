@@ -45,7 +45,7 @@ fn decode_compound_text(
     assert!(!display.is_null());
 
     let c_string = CString::new(value.to_vec())?;
-    let mut fuck = XTextProperty {
+    let mut text_prop = XTextProperty {
         value: std::ptr::null_mut(),
         encoding: 0,
         format: 0,
@@ -55,11 +55,11 @@ fn decode_compound_text(
         XGetTextProperty(
             display,
             client.resource_id() as u64,
-            &mut fuck,
+            &mut text_prop,
             x::ATOM_WM_NAME.resource_id() as u64,
         )
     };
-    if res == 0 || fuck.nitems == 0 {
+    if res == 0 || text_prop.nitems == 0 {
         return Ok(String::from("n/a"));
     }
 
@@ -67,7 +67,7 @@ fn decode_compound_text(
         value: c_string.as_ptr() as *mut u8,
         encoding: ttype.resource_id() as u64,
         format: 8,
-        nitems: fuck.nitems,
+        nitems: text_prop.nitems,
     };
     let mut list: *mut *mut i8 = std::ptr::null_mut();
     let mut count: i32 = 0;
