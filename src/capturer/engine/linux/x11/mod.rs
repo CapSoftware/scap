@@ -162,7 +162,10 @@ fn grab(conn: &xcb::Connection, target: &Target, show_cursor: bool) -> Result<Fr
     }
 
     Ok(Frame::BGRx(crate::frame::BGRxFrame {
-        display_time: 0,
+        display_time: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("Unix epoch is in the past")
+            .as_nanos() as u64,
         width: width as i32,
         height: height as i32,
         data: img_data,
