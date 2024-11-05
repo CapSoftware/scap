@@ -2,7 +2,11 @@ mod engine;
 
 use std::sync::mpsc;
 
-use crate::{frame::{Frame, FrameType}, has_permission, is_supported, request_permission, targets::Target};
+use crate::{
+    frame::{Frame, FrameType},
+    has_permission, is_supported, request_permission,
+    targets::Target,
+};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum Resolution {
@@ -70,15 +74,32 @@ pub struct Capturer {
     rx: mpsc::Receiver<Frame>,
 }
 
+pub enum CapturerBuildError {
+    NotSupported,
+    PermissionNotGranted,
+}
+
 impl Capturer {
+    /// Create a new capturer instance with the provided options
+    #[deprecated(
+        since = "0.0.6",
+        note = "Use `build` instead of `new` to create a new capturer instance."
+    )]
+    pub fn new(options: Options) -> Capturer {
+        let (tx, rx) = mpsc::channel::<Frame>();
+        let engine = engine::Engine::new(&options, tx);
+
+        Capturer { engine, rx }
+    }
+
     /// Build a new [Capturer] instance with the provided options
-    pub fn build(options: Options) -> Result<Capturer, &'static str> {
+    pub fn build(options: Options) -> Result<Capturer, CapturerBuildError> {
         if !is_supported() {
-            return Err("❌ Platform not supported");
+            return Err(CapturerBuildError::NotSupported);
         }
 
-        if !has_permission() && !request_permission() {
-            return Err("❌ Permission not granted.");
+        if !has_permission() {
+            return Err(CapturerBuildError::PermissionNotGranted);
         }
 
         let (tx, rx) = mpsc::channel::<Frame>();
@@ -86,7 +107,6 @@ impl Capturer {
 
         Ok(Capturer { engine, rx })
     }
-
 
     // TODO
     // Prevent starting capture if already started
