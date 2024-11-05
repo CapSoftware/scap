@@ -19,6 +19,7 @@ use crate::frame::{Frame, FrameType};
 use crate::targets::Target;
 use crate::{capturer::Resolution, targets};
 
+mod apple_sys;
 mod pixelformat;
 
 struct ErrorHandler;

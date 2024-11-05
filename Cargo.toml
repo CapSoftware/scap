@@ -5,7 +5,10 @@ version = "0.0.5"
 edition = "2021"
 rust-version = "1.71"
 license = "MIT"
-authors = ["Siddharth <siddharth99c@gmail.com>", "Pranav <pranav2000joglekar@gmail.com>"]
+authors = [
+	"Siddharth <siddharth99c@gmail.com>",
+	"Pranav <pranav2000joglekar@gmail.com>",
+]
 readme = "README.md"
 repository = "https://github.com/helmerapp/scap"
 documentation = "https://docs.rs/scap"
@@ -21,7 +24,7 @@ windows = { version = "0.52", features = [
 	"Win32_Foundation",
 	"Win32_Graphics_Gdi",
 	"Win32_UI_HiDpi",
-	"Win32_UI_WindowsAndMessaging"
+	"Win32_UI_WindowsAndMessaging",
 ] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
@@ -29,7 +32,6 @@ tao-core-video-sys = "0.2.0"
 core-graphics-helmer-fork = "0.24.0"
 screencapturekit = "0.2.8"
 screencapturekit-sys = "0.2.8"
-apple-sys-helmer-fork = { version = "0.2.0", features = ["CoreMedia", "ScreenCaptureKit"] }
 cocoa = "0.25.0"
 objc = "0.2.7"
 
