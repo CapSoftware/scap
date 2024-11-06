@@ -1,11 +1,14 @@
 use std::{mem, slice};
 
-use screencapturekit::cm_sample_buffer::CMSampleBuffer;
+use screencapturekit::{cm_sample_buffer::CMSampleBuffer, cv_pixel_buffer::CVPixelBuffer};
 use screencapturekit_sys::cm_sample_buffer_ref::{
     CMSampleBufferGetImageBuffer, CMSampleBufferGetSampleAttachmentsArray,
 };
 
-use super::apple_sys::*;
+use super::{
+    apple_sys::*,
+    pixel_buffer::{pixel_buffer_bounds, sample_buffer_to_pixel_buffer},
+};
 use crate::frame::{
     convert_bgra_to_rgb, get_cropped_data, remove_alpha_channel, BGRAFrame, BGRFrame, RGBFrame,
     YUVFrame,
@@ -13,8 +16,8 @@ use crate::frame::{
 use core_graphics_helmer_fork::display::{CFArrayGetCount, CFArrayGetValueAtIndex, CFArrayRef};
 use core_video_sys::{
     CVPixelBufferGetBaseAddress, CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRow,
-    CVPixelBufferGetBytesPerRowOfPlane, CVPixelBufferGetHeight, CVPixelBufferGetWidth,
-    CVPixelBufferLockBaseAddress, CVPixelBufferRef, CVPixelBufferUnlockBaseAddress,
+    CVPixelBufferGetBytesPerRowOfPlane, CVPixelBufferLockBaseAddress,
+    CVPixelBufferUnlockBaseAddress,
 };
 
 pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame> {
@@ -49,12 +52,11 @@ pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame
 
     //let epoch = CMSampleBufferGetPresentationTimeStamp(buffer_ref).epoch;
     let epoch = sample_buffer.sys_ref.get_presentation_timestamp().value;
-    let pixel_buffer = CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef;
+    let pixel_buffer = sample_buffer_to_pixel_buffer(&sample_buffer);
 
     CVPixelBufferLockBaseAddress(pixel_buffer, 0);
 
-    let width = CVPixelBufferGetWidth(pixel_buffer);
-    let height = CVPixelBufferGetHeight(pixel_buffer);
+    let (width, height) = pixel_buffer_bounds(pixel_buffer);
     if width == 0 || height == 0 {
         return None;
     }
@@ -90,14 +92,12 @@ pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame
 }
 
 pub unsafe fn create_bgr_frame(sample_buffer: CMSampleBuffer) -> Option<BGRFrame> {
-    let buffer_ref = &(*sample_buffer.sys_ref);
     let epoch = sample_buffer.sys_ref.get_presentation_timestamp().value;
-    let pixel_buffer = CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef;
+    let pixel_buffer = sample_buffer_to_pixel_buffer(&sample_buffer);
 
     CVPixelBufferLockBaseAddress(pixel_buffer, 0);
 
-    let width = CVPixelBufferGetWidth(pixel_buffer);
-    let height = CVPixelBufferGetHeight(pixel_buffer);
+    let (width, height) = pixel_buffer_bounds(pixel_buffer);
     if width == 0 || height == 0 {
         return None;
     }
@@ -125,14 +125,12 @@ pub unsafe fn create_bgr_frame(sample_buffer: CMSampleBuffer) -> Option<BGRFrame
 }
 
 pub unsafe fn create_bgra_frame(sample_buffer: CMSampleBuffer) -> Option<BGRAFrame> {
-    let buffer_ref = &(*sample_buffer.sys_ref);
     let epoch = sample_buffer.sys_ref.get_presentation_timestamp().value;
-    let pixel_buffer = CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef;
+    let pixel_buffer = sample_buffer_to_pixel_buffer(&sample_buffer);
 
     CVPixelBufferLockBaseAddress(pixel_buffer, 0);
 
-    let width = CVPixelBufferGetWidth(pixel_buffer);
-    let height = CVPixelBufferGetHeight(pixel_buffer);
+    let (width, height) = pixel_buffer_bounds(pixel_buffer);
     if width == 0 || height == 0 {
         return None;
     }
@@ -141,6 +139,7 @@ pub unsafe fn create_bgra_frame(sample_buffer: CMSampleBuffer) -> Option<BGRAFra
     let bytes_per_row = CVPixelBufferGetBytesPerRow(pixel_buffer);
 
     let mut data: Vec<u8> = vec![];
+
     for i in 0..height {
         let start = (base_address as *mut u8).wrapping_add(i * bytes_per_row);
         data.extend_from_slice(slice::from_raw_parts(start, 4 * width));
@@ -157,14 +156,12 @@ pub unsafe fn create_bgra_frame(sample_buffer: CMSampleBuffer) -> Option<BGRAFra
 }
 
 pub unsafe fn create_rgb_frame(sample_buffer: CMSampleBuffer) -> Option<RGBFrame> {
-    let buffer_ref = &(*sample_buffer.sys_ref);
     let epoch = sample_buffer.sys_ref.get_presentation_timestamp().value;
-    let pixel_buffer = CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef;
+    let pixel_buffer = sample_buffer_to_pixel_buffer(&sample_buffer);
 
     CVPixelBufferLockBaseAddress(pixel_buffer, 0);
 
-    let width = CVPixelBufferGetWidth(pixel_buffer);
-    let height = CVPixelBufferGetHeight(pixel_buffer);
+    let (width, height) = pixel_buffer_bounds(pixel_buffer);
     if width == 0 || height == 0 {
         return None;
     }
@@ -189,5 +186,4 @@ pub unsafe fn create_rgb_frame(sample_buffer: CMSampleBuffer) -> Option<RGBFrame
         height: height as i32,
         data: convert_bgra_to_rgb(cropped_data),
     })
-    // (y_width, y_height, data)
 }

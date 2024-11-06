@@ -2,11 +2,15 @@ mod engine;
 
 use std::sync::mpsc;
 
+use engine::ChannelItem;
+
 use crate::{
     frame::{Frame, FrameType},
-    has_permission, is_supported, request_permission,
+    has_permission, is_supported,
     targets::Target,
 };
+
+pub use engine::get_output_frame_size;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum Resolution {
@@ -71,7 +75,7 @@ pub struct Options {
 /// Screen capturer class
 pub struct Capturer {
     engine: engine::Engine,
-    rx: mpsc::Receiver<Frame>,
+    rx: mpsc::Receiver<ChannelItem>,
 }
 
 pub enum CapturerBuildError {
@@ -86,7 +90,7 @@ impl Capturer {
         note = "Use `build` instead of `new` to create a new capturer instance."
     )]
     pub fn new(options: Options) -> Capturer {
-        let (tx, rx) = mpsc::channel::<Frame>();
+        let (tx, rx) = mpsc::channel();
         let engine = engine::Engine::new(&options, tx);
 
         Capturer { engine, rx }
@@ -102,7 +106,7 @@ impl Capturer {
             return Err(CapturerBuildError::PermissionNotGranted);
         }
 
-        let (tx, rx) = mpsc::channel::<Frame>();
+        let (tx, rx) = mpsc::channel();
         let engine = engine::Engine::new(&options, tx);
 
         Ok(Capturer { engine, rx })
@@ -122,11 +126,25 @@ impl Capturer {
 
     /// Get the next captured frame
     pub fn get_next_frame(&self) -> Result<Frame, mpsc::RecvError> {
-        self.rx.recv()
+        loop {
+            let res = self.rx.recv()?;
+
+            if let Some(frame) = self.engine.process_channel_item(res) {
+                return Ok(frame);
+            }
+        }
     }
 
     /// Get the dimensions the frames will be captured in
     pub fn get_output_frame_size(&mut self) -> [u32; 2] {
         self.engine.get_output_frame_size()
     }
+
+    pub fn raw(&self) -> RawCapturer {
+        RawCapturer { capturer: self }
+    }
+}
+
+pub struct RawCapturer<'a> {
+    capturer: &'a Capturer,
 }
