@@ -18,7 +18,7 @@ pub type ChannelItem = (
     screencapturekit::sc_output_handler::SCStreamOutputType,
 );
 #[cfg(not(target_os = "macos"))]
-pub type ChannelContents = Frame;
+pub type ChannelItem = Frame;
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
     #[cfg(target_os = "macos")]
