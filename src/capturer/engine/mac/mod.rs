@@ -2,6 +2,7 @@ use std::cmp;
 use std::sync::mpsc;
 
 use core_video_sys::{CVPixelBufferGetPixelFormatType, CVPixelBufferRef};
+use pixelformat::get_pts_in_nanoseconds;
 use screencapturekit::{
     cm_sample_buffer::CMSampleBuffer,
     sc_content_filter::{InitParams, SCContentFilter},
@@ -18,15 +19,16 @@ use screencapturekit_sys::{
     os_types::base::{CMTime, CMTimeScale},
 };
 
+use crate::frame::{Frame, FrameType};
 use crate::targets::Target;
 use crate::{
     capturer::RawCapturer,
     frame::{Frame, FrameType},
 };
-use crate::{capturer::Resolution, targets};
 use crate::{
-    capturer::{Area, Options, Point, Size},
+    capturer::{Area, Options, Point, RawCapturer, Resolution, Size},
     frame::BGRAFrame,
+    targets,
 };
 
 use super::ChannelItem;
@@ -263,11 +265,8 @@ pub fn process_sample_buffer(
                     // Quick hack - just send an empty frame, and the caller can figure out how to handle it
                     match output_type {
                         FrameType::BGRAFrame => {
-                            // self.tx.send(sample).unwrap_or(());
-                            let display_time =
-                                sample.sys_ref.get_presentation_timestamp().value as u64;
                             return Some(Frame::BGRA(BGRAFrame {
-                                display_time,
+                                display_time: get_pts_in_nanoseconds(&sample),
                                 width: 0,
                                 height: 0,
                                 data: vec![],
