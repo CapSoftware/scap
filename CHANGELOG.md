@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.7](https://github.com/CapSoftware/scap/compare/v0.0.6...v0.0.7) - 2024-11-07
+
+### Features
+
+- Adds `RawCapturer::get_next_pixel_buffer`, a macOS-specific method to get the next frame as its raw pixel buffer, allowing allocations from pixel format conversion to be avoided.
+
+### Fixed
+
+- `windows` crate versions updated (#120)
+
 ## [0.0.6](https://github.com/CapSoftware/scap/compare/v0.0.5...v0.0.6) - 2024-11-05
 
 ### Added
