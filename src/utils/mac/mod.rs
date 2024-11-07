@@ -2,11 +2,11 @@ use core_graphics_helmer_fork::access::ScreenCaptureAccess;
 use sysinfo::System;
 
 pub fn has_permission() -> bool {
-    ScreenCaptureAccess::default().preflight()
+    ScreenCaptureAccess.preflight()
 }
 
 pub fn request_permission() -> bool {
-    ScreenCaptureAccess::default().request()
+    ScreenCaptureAccess.request()
 }
 
 pub fn is_supported() -> bool {

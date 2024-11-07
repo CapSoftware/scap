@@ -1,3 +1,5 @@
+#![allow(non_upper_case_globals)]
+
 pub use screencapturekit_sys::os_types::base::*;
 
 #[repr(C)]

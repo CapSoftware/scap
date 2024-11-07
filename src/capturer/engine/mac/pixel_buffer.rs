@@ -170,9 +170,9 @@ impl RawCapturer<'_> {
 
 pub unsafe fn sample_buffer_to_pixel_buffer(sample_buffer: &CMSampleBuffer) -> CVPixelBufferRef {
     let buffer_ref = &(*sample_buffer.sys_ref);
-    let pixel_buffer = CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef;
+    
 
-    pixel_buffer
+    CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef
 }
 
 pub unsafe fn pixel_buffer_bounds(pixel_buffer: CVPixelBufferRef) -> (usize, usize) {

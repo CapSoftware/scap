@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 
 use super::Options;
-use crate::frame::{Frame, FrameType};
+use crate::frame::Frame;
 
 #[cfg(target_os = "macos")]
 mod mac;
@@ -54,11 +54,11 @@ impl Engine {
     pub fn new(options: &Options, tx: mpsc::Sender<ChannelItem>) -> Engine {
         #[cfg(target_os = "macos")]
         {
-            let mac = mac::create_capturer(&options, tx);
-            return Engine {
+            let mac = mac::create_capturer(options, tx);
+            Engine {
                 mac,
                 options: (*options).clone(),
-            };
+            }
         }
 
         #[cfg(target_os = "windows")]

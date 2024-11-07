@@ -1,9 +1,7 @@
 use std::{mem, slice};
 
-use screencapturekit::{cm_sample_buffer::CMSampleBuffer, cv_pixel_buffer::CVPixelBuffer};
-use screencapturekit_sys::cm_sample_buffer_ref::{
-    CMSampleBufferGetImageBuffer, CMSampleBufferGetSampleAttachmentsArray,
-};
+use screencapturekit::cm_sample_buffer::CMSampleBuffer;
+use screencapturekit_sys::cm_sample_buffer_ref::CMSampleBufferGetSampleAttachmentsArray;
 
 use super::{
     apple_sys::*,
@@ -61,7 +59,7 @@ pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame
     }
 
     let display_time = get_pts_in_nanoseconds(&sample_buffer);
-    let pixel_buffer = CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef;
+    let pixel_buffer = sample_buffer_to_pixel_buffer(&sample_buffer);
 
     CVPixelBufferLockBaseAddress(pixel_buffer, 0);
 

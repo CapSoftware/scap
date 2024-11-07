@@ -1,7 +1,6 @@
 use std::cmp;
 use std::sync::mpsc;
 
-use core_video_sys::{CVPixelBufferGetPixelFormatType, CVPixelBufferRef};
 use pixelformat::get_pts_in_nanoseconds;
 use screencapturekit::{
     cm_sample_buffer::CMSampleBuffer,
@@ -13,20 +12,13 @@ use screencapturekit::{
     sc_stream_configuration::{PixelFormat, SCStreamConfiguration},
     sc_types::SCFrameStatus,
 };
+use screencapturekit_sys::os_types::base::{CMTime, CMTimeScale};
 use screencapturekit_sys::os_types::geometry::{CGPoint, CGRect, CGSize};
-use screencapturekit_sys::{
-    cm_sample_buffer_ref::CMSampleBufferGetImageBuffer,
-    os_types::base::{CMTime, CMTimeScale},
-};
 
 use crate::frame::{Frame, FrameType};
 use crate::targets::Target;
 use crate::{
-    capturer::RawCapturer,
-    frame::{Frame, FrameType},
-};
-use crate::{
-    capturer::{Area, Options, Point, RawCapturer, Resolution, Size},
+    capturer::{Area, Options, Point, Resolution, Size},
     frame::BGRAFrame,
     targets,
 };
@@ -46,12 +38,11 @@ impl StreamErrorHandler for ErrorHandler {
 
 pub struct Capturer {
     pub tx: mpsc::Sender<ChannelItem>,
-    pub output_type: FrameType,
 }
 
 impl Capturer {
-    pub fn new(tx: mpsc::Sender<ChannelItem>, output_type: FrameType) -> Self {
-        Capturer { tx, output_type }
+    pub fn new(tx: mpsc::Sender<ChannelItem>) -> Self {
+        Capturer { tx }
     }
 }
 
@@ -99,14 +90,13 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<ChannelItem>) -> SCSt
                         .into_iter()
                         .filter(|window| {
                             excluded_targets
-                                .into_iter()
-                                .find(|excluded_target| match excluded_target {
+                                .iter()
+                                .any(|excluded_target| match excluded_target {
                                     Target::Window(excluded_window) => {
                                         excluded_window.id == window.window_id
                                     }
                                     _ => false,
                                 })
-                                .is_some()
                         })
                         .collect();
 
@@ -156,10 +146,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<ChannelItem>) -> SCSt
     };
 
     let mut stream = SCStream::new(filter, stream_config, ErrorHandler);
-    stream.add_output(
-        Capturer::new(tx, options.output_type),
-        SCStreamOutputType::Screen,
-    );
+    stream.add_output(Capturer::new(tx), SCStreamOutputType::Screen);
 
     stream
 }
@@ -217,8 +204,8 @@ pub fn get_crop_area(options: &Options) -> Area {
                     y: val.origin.y,
                 },
                 size: Size {
-                    width: input_width as f64,
-                    height: input_height as f64,
+                    width: input_width,
+                    height: input_height,
                 },
             }
         })
@@ -236,49 +223,43 @@ pub fn process_sample_buffer(
     of_type: SCStreamOutputType,
     output_type: FrameType,
 ) -> Option<Frame> {
-    match of_type {
-        SCStreamOutputType::Screen => {
-            let frame_status = &sample.frame_status;
+    if let SCStreamOutputType::Screen = of_type {
+        let frame_status = &sample.frame_status;
 
-            match frame_status {
-                SCFrameStatus::Complete | SCFrameStatus::Started => unsafe {
-                    return Some(match output_type {
-                        FrameType::YUVFrame => {
-                            let yuvframe = pixelformat::create_yuv_frame(sample).unwrap();
-                            Frame::YUVFrame(yuvframe)
-                        }
-                        FrameType::RGB => {
-                            let rgbframe = pixelformat::create_rgb_frame(sample).unwrap();
-                            Frame::RGB(rgbframe)
-                        }
-                        FrameType::BGR0 => {
-                            let bgrframe = pixelformat::create_bgr_frame(sample).unwrap();
-                            Frame::BGR0(bgrframe)
-                        }
-                        FrameType::BGRAFrame => {
-                            let bgraframe = pixelformat::create_bgra_frame(sample).unwrap();
-                            Frame::BGRA(bgraframe)
-                        }
-                    });
-                },
-                SCFrameStatus::Idle => {
-                    // Quick hack - just send an empty frame, and the caller can figure out how to handle it
-                    match output_type {
-                        FrameType::BGRAFrame => {
-                            return Some(Frame::BGRA(BGRAFrame {
-                                display_time: get_pts_in_nanoseconds(&sample),
-                                width: 0,
-                                height: 0,
-                                data: vec![],
-                            }));
-                        }
-                        _ => {}
+        match frame_status {
+            SCFrameStatus::Complete | SCFrameStatus::Started => unsafe {
+                return Some(match output_type {
+                    FrameType::YUVFrame => {
+                        let yuvframe = pixelformat::create_yuv_frame(sample).unwrap();
+                        Frame::YUVFrame(yuvframe)
                     }
+                    FrameType::RGB => {
+                        let rgbframe = pixelformat::create_rgb_frame(sample).unwrap();
+                        Frame::RGB(rgbframe)
+                    }
+                    FrameType::BGR0 => {
+                        let bgrframe = pixelformat::create_bgr_frame(sample).unwrap();
+                        Frame::BGR0(bgrframe)
+                    }
+                    FrameType::BGRAFrame => {
+                        let bgraframe = pixelformat::create_bgra_frame(sample).unwrap();
+                        Frame::BGRA(bgraframe)
+                    }
+                });
+            },
+            SCFrameStatus::Idle => {
+                // Quick hack - just send an empty frame, and the caller can figure out how to handle it
+                if let FrameType::BGRAFrame = output_type {
+                    return Some(Frame::BGRA(BGRAFrame {
+                        display_time: get_pts_in_nanoseconds(&sample),
+                        width: 0,
+                        height: 0,
+                        data: vec![],
+                    }));
                 }
-                _ => {}
             }
+            _ => {}
         }
-        _ => {}
     }
 
     None

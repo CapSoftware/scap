@@ -1,6 +1,6 @@
 mod engine;
 
-use std::sync::mpsc;
+use std::{error::Error, sync::mpsc};
 
 use engine::ChannelItem;
 
@@ -28,12 +28,12 @@ pub enum Resolution {
 impl Resolution {
     fn value(&self, aspect_ratio: f32) -> [u32; 2] {
         match *self {
-            Resolution::_480p => [640, ((640 as f32) / aspect_ratio).floor() as u32],
-            Resolution::_720p => [1280, ((1280 as f32) / aspect_ratio).floor() as u32],
-            Resolution::_1080p => [1920, ((1920 as f32) / aspect_ratio).floor() as u32],
-            Resolution::_1440p => [2560, ((2560 as f32) / aspect_ratio).floor() as u32],
-            Resolution::_2160p => [3840, ((3840 as f32) / aspect_ratio).floor() as u32],
-            Resolution::_4320p => [7680, ((7680 as f32) / aspect_ratio).floor() as u32],
+            Resolution::_480p => [640, (640_f32 / aspect_ratio).floor() as u32],
+            Resolution::_720p => [1280, (1280_f32 / aspect_ratio).floor() as u32],
+            Resolution::_1080p => [1920, (1920_f32 / aspect_ratio).floor() as u32],
+            Resolution::_1440p => [2560, (2560_f32 / aspect_ratio).floor() as u32],
+            Resolution::_2160p => [3840, (3840_f32 / aspect_ratio).floor() as u32],
+            Resolution::_4320p => [7680, (7680_f32 / aspect_ratio).floor() as u32],
             Resolution::Captured => {
                 panic!(".value should not be called when Resolution type is Captured")
             }
@@ -78,10 +78,24 @@ pub struct Capturer {
     rx: mpsc::Receiver<ChannelItem>,
 }
 
+#[derive(Debug)]
 pub enum CapturerBuildError {
     NotSupported,
     PermissionNotGranted,
 }
+
+impl std::fmt::Display for CapturerBuildError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CapturerBuildError::NotSupported => write!(f, "Screen capturing is not supported"),
+            CapturerBuildError::PermissionNotGranted => {
+                write!(f, "Permission to capture the screen is not granted")
+            }
+        }
+    }
+}
+
+impl Error for CapturerBuildError {}
 
 impl Capturer {
     /// Create a new capturer instance with the provided options
