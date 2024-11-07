@@ -1,10 +1,12 @@
 mod engine;
 
-use std::sync::mpsc;
+use std::{error::Error, sync::mpsc};
+
+use engine::ChannelItem;
 
 use crate::{
     frame::{Frame, FrameType},
-    has_permission, is_supported, request_permission,
+    has_permission, is_supported,
     targets::Target,
 };
 
@@ -26,12 +28,12 @@ pub enum Resolution {
 impl Resolution {
     fn value(&self, aspect_ratio: f32) -> [u32; 2] {
         match *self {
-            Resolution::_480p => [640, ((640 as f32) / aspect_ratio).floor() as u32],
-            Resolution::_720p => [1280, ((1280 as f32) / aspect_ratio).floor() as u32],
-            Resolution::_1080p => [1920, ((1920 as f32) / aspect_ratio).floor() as u32],
-            Resolution::_1440p => [2560, ((2560 as f32) / aspect_ratio).floor() as u32],
-            Resolution::_2160p => [3840, ((3840 as f32) / aspect_ratio).floor() as u32],
-            Resolution::_4320p => [7680, ((7680 as f32) / aspect_ratio).floor() as u32],
+            Resolution::_480p => [640, (640_f32 / aspect_ratio).floor() as u32],
+            Resolution::_720p => [1280, (1280_f32 / aspect_ratio).floor() as u32],
+            Resolution::_1080p => [1920, (1920_f32 / aspect_ratio).floor() as u32],
+            Resolution::_1440p => [2560, (2560_f32 / aspect_ratio).floor() as u32],
+            Resolution::_2160p => [3840, (3840_f32 / aspect_ratio).floor() as u32],
+            Resolution::_4320p => [7680, (7680_f32 / aspect_ratio).floor() as u32],
             Resolution::Captured => {
                 panic!(".value should not be called when Resolution type is Captured")
             }
@@ -73,13 +75,27 @@ pub struct Options {
 /// Screen capturer class
 pub struct Capturer {
     engine: engine::Engine,
-    rx: mpsc::Receiver<Frame>,
+    rx: mpsc::Receiver<ChannelItem>,
 }
 
+#[derive(Debug)]
 pub enum CapturerBuildError {
     NotSupported,
     PermissionNotGranted,
 }
+
+impl std::fmt::Display for CapturerBuildError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CapturerBuildError::NotSupported => write!(f, "Screen capturing is not supported"),
+            CapturerBuildError::PermissionNotGranted => {
+                write!(f, "Permission to capture the screen is not granted")
+            }
+        }
+    }
+}
+
+impl Error for CapturerBuildError {}
 
 impl Capturer {
     /// Create a new capturer instance with the provided options
@@ -88,7 +104,7 @@ impl Capturer {
         note = "Use `build` instead of `new` to create a new capturer instance."
     )]
     pub fn new(options: Options) -> Capturer {
-        let (tx, rx) = mpsc::channel::<Frame>();
+        let (tx, rx) = mpsc::channel();
         let engine = engine::Engine::new(&options, tx);
 
         Capturer { engine, rx }
@@ -104,7 +120,7 @@ impl Capturer {
             return Err(CapturerBuildError::PermissionNotGranted);
         }
 
-        let (tx, rx) = mpsc::channel::<Frame>();
+        let (tx, rx) = mpsc::channel();
         let engine = engine::Engine::new(&options, tx);
 
         Ok(Capturer { engine, rx })
@@ -124,11 +140,25 @@ impl Capturer {
 
     /// Get the next captured frame
     pub fn get_next_frame(&self) -> Result<Frame, mpsc::RecvError> {
-        self.rx.recv()
+        loop {
+            let res = self.rx.recv()?;
+
+            if let Some(frame) = self.engine.process_channel_item(res) {
+                return Ok(frame);
+            }
+        }
     }
 
     /// Get the dimensions the frames will be captured in
     pub fn get_output_frame_size(&mut self) -> [u32; 2] {
         self.engine.get_output_frame_size()
     }
+
+    pub fn raw(&self) -> RawCapturer {
+        RawCapturer { capturer: self }
+    }
+}
+
+pub struct RawCapturer<'a> {
+    capturer: &'a Capturer,
 }
