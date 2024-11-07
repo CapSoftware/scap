@@ -2,9 +2,8 @@ use core::slice;
 use core_video_sys::{
     CVPixelBufferGetBaseAddress, CVPixelBufferGetBaseAddressOfPlane, CVPixelBufferGetBytesPerRow,
     CVPixelBufferGetBytesPerRowOfPlane, CVPixelBufferGetHeight, CVPixelBufferGetHeightOfPlane,
-    CVPixelBufferGetPixelFormatType, CVPixelBufferGetPlaneCount, CVPixelBufferGetWidth,
-    CVPixelBufferGetWidthOfPlane, CVPixelBufferLockBaseAddress, CVPixelBufferRef,
-    CVPixelBufferUnlockBaseAddress,
+    CVPixelBufferGetPlaneCount, CVPixelBufferGetWidth, CVPixelBufferGetWidthOfPlane,
+    CVPixelBufferLockBaseAddress, CVPixelBufferRef, CVPixelBufferUnlockBaseAddress,
 };
 use screencapturekit::{cm_sample_buffer::CMSampleBuffer, sc_types::SCFrameStatus};
 use screencapturekit_sys::cm_sample_buffer_ref::CMSampleBufferGetImageBuffer;
