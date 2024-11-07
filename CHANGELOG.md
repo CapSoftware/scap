@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.7](https://github.com/CapSoftware/scap/compare/v0.0.6...v0.0.7) - 2024-11-07
+
+### Fixed
+
+- fix non-macos
+
+### Other
+
+- Merge pull request [#120](https://github.com/CapSoftware/scap/pull/120) from BenedictWilkins/fix-119
+- clippy
+- Merge branch 'main' into raw-pixel-buffers
+- imports
+- raw pixel buffers
+
 ## [0.0.6](https://github.com/CapSoftware/scap/compare/v0.0.5...v0.0.6) - 2024-11-05
 
 ### Added
