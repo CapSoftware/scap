@@ -1,7 +1,7 @@
 use std::{
     mem::size_of,
     sync::{
-        atomic::{AtomicBool, AtomicU8},
+        atomic::{AtomicBool, AtomicU8, Ordering},
         mpsc::{self, sync_channel, SyncSender},
     },
     thread::JoinHandle,
@@ -85,7 +85,7 @@ fn state_changed_callback(
     match new {
         StreamState::Error(e) => {
             eprintln!("pipewire: State changed to error({e})");
-            STREAM_STATE_CHANGED_TO_ERROR.store(true, std::sync::atomic::Ordering::Relaxed);
+            STREAM_STATE_CHANGED_TO_ERROR.store(true, Ordering::Release);
         }
         _ => {}
     }
@@ -298,16 +298,16 @@ fn pipewire_capturer(
 
     ready_sender.send(true)?;
 
-    while CAPTURER_STATE.load(std::sync::atomic::Ordering::Relaxed) == 0 {
+    while CAPTURER_STATE.load(Ordering::Acquire) == 0 {
         std::thread::sleep(Duration::from_millis(10));
     }
 
     let pw_loop = mainloop.loop_();
 
     // User has called Capturer::start() and we start the main loop
-    while CAPTURER_STATE.load(std::sync::atomic::Ordering::Relaxed) == 1
+    while CAPTURER_STATE.load(Ordering::Acquire) == 1
         && /* If the stream state got changed to `Error`, we exit. TODO: tell user that we exited */
-          !STREAM_STATE_CHANGED_TO_ERROR.load(std::sync::atomic::Ordering::Relaxed)
+          !STREAM_STATE_CHANGED_TO_ERROR.load(Ordering::Acquire)
     {
         pw_loop.iterate(Duration::from_millis(100));
     }
@@ -356,18 +356,18 @@ impl LinuxCapturer {
     }
 
     pub fn start_capture(&self) {
-        CAPTURER_STATE.store(1, std::sync::atomic::Ordering::Relaxed);
+        CAPTURER_STATE.store(1, Ordering::Release);
     }
 
     pub fn stop_capture(&mut self) {
-        CAPTURER_STATE.store(2, std::sync::atomic::Ordering::Relaxed);
+        CAPTURER_STATE.store(2, Ordering::Release);
         if let Some(handle) = self.capturer_join_handle.take() {
             if let Err(e) = handle.join().expect("Failed to join capturer thread") {
                 eprintln!("Error occured capturing: {e}");
             }
         }
-        CAPTURER_STATE.store(0, std::sync::atomic::Ordering::Relaxed);
-        STREAM_STATE_CHANGED_TO_ERROR.store(false, std::sync::atomic::Ordering::Relaxed);
+        CAPTURER_STATE.store(0, Ordering::Release);
+        STREAM_STATE_CHANGED_TO_ERROR.store(false, Ordering::Release);
     }
 }
 
