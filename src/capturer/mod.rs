@@ -8,6 +8,8 @@ use crate::{
     targets::Target,
 };
 
+pub use engine::get_output_frame_size;
+
 #[derive(Debug, Clone, Copy, Default)]
 pub enum Resolution {
     _480p,

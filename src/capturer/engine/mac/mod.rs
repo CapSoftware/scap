@@ -14,10 +14,13 @@ use screencapturekit::{
 use screencapturekit_sys::os_types::base::{CMTime, CMTimeScale};
 use screencapturekit_sys::os_types::geometry::{CGPoint, CGRect, CGSize};
 
-use crate::{capturer::{Area, Options, Point, Size}, frame::BGRAFrame};
 use crate::frame::{Frame, FrameType};
 use crate::targets::Target;
 use crate::{capturer::Resolution, targets};
+use crate::{
+    capturer::{Area, Options, Point, Size},
+    frame::BGRAFrame,
+};
 
 mod apple_sys;
 mod pixelformat;
@@ -72,7 +75,7 @@ impl StreamOutput for Capturer {
                         // Quick hack - just send an empty frame, and the caller can figure out how to handle it
                         match self.output_type {
                             FrameType::BGRAFrame => {
-                                let display_time = sample.sys_ref.get_presentation_timestamp().value as u64;
+                                let display_time = pixelformat::get_pts_in_nanoseconds(&sample);
                                 let frame = BGRAFrame {
                                     display_time,
                                     width: 0,
@@ -80,10 +83,10 @@ impl StreamOutput for Capturer {
                                     data: vec![],
                                 };
                                 self.tx.send(Frame::BGRA(frame)).unwrap_or(());
-                            },
+                            }
                             _ => {}
                         }
-                    },
+                    }
                     _ => {}
                 }
             }
