@@ -99,6 +99,12 @@ impl PixelBuffer {
     }
 }
 
+impl Into<CMSampleBuffer> for PixelBuffer {
+    fn into(self) -> CMSampleBuffer {
+        self.buffer
+    }
+}
+
 #[derive(Debug)]
 pub struct Plane {
     buffer: CVPixelBufferRef,
@@ -170,7 +176,6 @@ impl RawCapturer<'_> {
 
 pub unsafe fn sample_buffer_to_pixel_buffer(sample_buffer: &CMSampleBuffer) -> CVPixelBufferRef {
     let buffer_ref = &(*sample_buffer.sys_ref);
-    
 
     CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef
 }

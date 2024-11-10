@@ -29,6 +29,8 @@ mod apple_sys;
 mod pixel_buffer;
 mod pixelformat;
 
+pub use pixel_buffer::PixelBuffer;
+
 struct ErrorHandler;
 impl StreamErrorHandler for ErrorHandler {
     fn on_error(&self) {

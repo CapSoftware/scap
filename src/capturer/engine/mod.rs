@@ -4,7 +4,7 @@ use super::Options;
 use crate::frame::Frame;
 
 #[cfg(target_os = "macos")]
-mod mac;
+pub mod mac;
 
 #[cfg(target_os = "windows")]
 mod win;

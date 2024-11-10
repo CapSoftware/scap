@@ -1,4 +1,4 @@
-mod engine;
+pub mod engine;
 
 use std::{error::Error, sync::mpsc};
 
