@@ -40,8 +40,11 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
 
 pub struct Engine {
     options: Options,
+
     #[cfg(target_os = "macos")]
     mac: screencapturekit::sc_stream::SCStream,
+    #[cfg(target_os = "macos")]
+    error_flag: std::sync::Arc<std::sync::atomic::AtomicBool>,
 
     #[cfg(target_os = "windows")]
     win: win::WCStream,
@@ -54,9 +57,12 @@ impl Engine {
     pub fn new(options: &Options, tx: mpsc::Sender<ChannelItem>) -> Engine {
         #[cfg(target_os = "macos")]
         {
-            let mac = mac::create_capturer(options, tx);
+            let error_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+            let mac = mac::create_capturer(options, tx, error_flag.clone());
+
             Engine {
                 mac,
+                error_flag,
                 options: (*options).clone(),
             }
         }

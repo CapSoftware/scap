@@ -1,5 +1,6 @@
-use std::cmp;
+use std::sync::atomic::AtomicBool;
 use std::sync::mpsc;
+use std::{cmp, sync::Arc};
 
 use pixelformat::get_pts_in_nanoseconds;
 use screencapturekit::{
@@ -31,10 +32,15 @@ mod pixelformat;
 
 pub use pixel_buffer::PixelBuffer;
 
-struct ErrorHandler;
+struct ErrorHandler {
+    error_flag: Arc<AtomicBool>,
+}
+
 impl StreamErrorHandler for ErrorHandler {
     fn on_error(&self) {
-        println!("Error!");
+        eprintln!("Screen capture error occurred.");
+        self.error_flag
+            .store(true, std::sync::atomic::Ordering::Relaxed);
     }
 }
 
@@ -54,7 +60,11 @@ impl StreamOutput for Capturer {
     }
 }
 
-pub fn create_capturer(options: &Options, tx: mpsc::Sender<ChannelItem>) -> SCStream {
+pub fn create_capturer(
+    options: &Options,
+    tx: mpsc::Sender<ChannelItem>,
+    error_flag: Arc<AtomicBool>,
+) -> SCStream {
     // If no target is specified, capture the main display
     let target = options
         .target
@@ -147,7 +157,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<ChannelItem>) -> SCSt
         ..Default::default()
     };
 
-    let mut stream = SCStream::new(filter, stream_config, ErrorHandler);
+    let mut stream = SCStream::new(filter, stream_config, ErrorHandler { error_flag });
     stream.add_output(Capturer::new(tx), SCStreamOutputType::Screen);
 
     stream
