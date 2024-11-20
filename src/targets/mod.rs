@@ -5,7 +5,7 @@ mod mac;
 mod win;
 
 #[cfg(target_os = "linux")]
-mod linux;
+pub(crate) mod linux;
 
 #[derive(Debug, Clone)]
 pub struct Window {
@@ -17,6 +17,9 @@ pub struct Window {
 
     #[cfg(target_os = "macos")]
     pub raw_handle: core_graphics_helmer_fork::window::CGWindowID,
+
+    #[cfg(target_os = "linux")]
+    pub raw_handle: xcb::x::Window,
 }
 
 #[derive(Debug, Clone)]
@@ -29,6 +32,17 @@ pub struct Display {
 
     #[cfg(target_os = "macos")]
     pub raw_handle: core_graphics_helmer_fork::display::CGDisplay,
+
+    #[cfg(target_os = "linux")]
+    pub raw_handle: xcb::x::Window,
+    #[cfg(target_os = "linux")]
+    pub width: u16,
+    #[cfg(target_os = "linux")]
+    pub height: u16,
+    #[cfg(target_os = "linux")]
+    pub x_offset: i16,
+    #[cfg(target_os = "linux")]
+    pub y_offset: i16,
 }
 
 #[derive(Debug, Clone)]
@@ -68,7 +82,7 @@ pub fn get_main_display() -> Display {
     return win::get_main_display();
 
     #[cfg(target_os = "linux")]
-    unreachable!();
+    return linux::get_main_display();
 }
 
 pub fn get_target_dimensions(target: &Target) -> (u64, u64) {
@@ -79,5 +93,5 @@ pub fn get_target_dimensions(target: &Target) -> (u64, u64) {
     return win::get_target_dimensions(target);
 
     #[cfg(target_os = "linux")]
-    unreachable!();
+    return linux::get_target_dimensions(target);
 }
