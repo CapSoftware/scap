@@ -3,6 +3,7 @@ pub mod engine;
 use std::{error::Error, sync::mpsc};
 
 use engine::ChannelItem;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     frame::{Frame, FrameType},
@@ -12,7 +13,7 @@ use crate::{
 
 pub use engine::get_output_frame_size;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Default)]
 pub enum Resolution {
     _480p,
     _720p,
@@ -41,18 +42,18 @@ impl Resolution {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Point {
     pub x: f64,
     pub y: f64,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Size {
     pub width: f64,
     pub height: f64,
 }
-#[derive(Debug, Default, Clone)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Area {
     pub origin: Point,
     pub size: Size,

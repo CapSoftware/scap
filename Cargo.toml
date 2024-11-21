@@ -16,6 +16,7 @@ keywords = ["screen", "recording", "video", "capture", "media"]
 categories = ["graphics", "multimedia", "multimedia::video"]
 
 [dependencies]
+serde = { version = "1.0.215", features = ["derive"] }
 sysinfo = "0.32.0"
 
 [target.'cfg(target_os = "windows")'.dependencies]

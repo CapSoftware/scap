@@ -1,4 +1,6 @@
-#[derive(Debug, Clone)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct YUVFrame {
     pub display_time: u64,
     pub width: i32,
@@ -9,7 +11,7 @@ pub struct YUVFrame {
     pub chrominance_stride: i32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RGBFrame {
     pub display_time: u64,
     pub width: i32,
@@ -17,14 +19,14 @@ pub struct RGBFrame {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RGB8Frame {
     pub display_time: u64,
     pub width: i32,
     pub height: i32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RGBxFrame {
     pub display_time: u64,
     pub width: i32,
@@ -32,7 +34,7 @@ pub struct RGBxFrame {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct XBGRFrame {
     pub display_time: u64,
     pub width: i32,
@@ -40,7 +42,7 @@ pub struct XBGRFrame {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BGRxFrame {
     pub display_time: u64,
     pub width: i32,
@@ -48,7 +50,7 @@ pub struct BGRxFrame {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BGRFrame {
     pub display_time: u64,
     pub width: i32,
@@ -56,7 +58,7 @@ pub struct BGRFrame {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BGRAFrame {
     pub display_time: u64,
     pub width: i32,
@@ -64,7 +66,7 @@ pub struct BGRAFrame {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Default)]
 pub enum FrameType {
     #[default]
     YUVFrame,
@@ -73,7 +75,7 @@ pub enum FrameType {
     BGRAFrame,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Frame {
     YUVFrame(YUVFrame),
     RGB(RGBFrame),
