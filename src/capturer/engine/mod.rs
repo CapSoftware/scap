@@ -100,7 +100,7 @@ impl Engine {
 
         #[cfg(target_os = "linux")]
         {
-            self.linux.start_capture();
+            self.linux.imp.start_capture();
         }
     }
 
@@ -117,7 +117,7 @@ impl Engine {
 
         #[cfg(target_os = "linux")]
         {
-            self.linux.stop_capture();
+            self.linux.imp.stop_capture();
         }
     }
 
