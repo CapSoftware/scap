@@ -36,10 +36,10 @@ impl GraphicsCaptureApiHandler for Capturer {
     type Flags = FlagStruct;
     type Error = Box<dyn std::error::Error + Send + Sync>;
 
-    fn new(flag_values: Self::Flags) -> Result<Self, Self::Error> {
+    fn new(context: Context<Self::Flags>) -> Result<Self, Self::Error> {
         Ok(Self {
-            tx: flag_values.tx,
-            crop: flag_values.crop,
+            tx: context.flags.tx,
+            crop: context.flags.crop,
         })
     }
 
