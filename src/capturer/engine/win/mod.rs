@@ -14,6 +14,7 @@ use windows_capture::{
     settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings as WCSettings},
     window::Window as WCWindow,
 };
+use windows_capture::capture::Context;
 
 #[derive(Debug)]
 struct Capturer {
