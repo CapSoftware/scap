@@ -62,7 +62,7 @@ impl GraphicsCaptureApiHandler for Capturer {
                     .expect("Failed to crop buffer");
 
                 // get raw frame buffer
-                let raw_frame_buffer = match cropped_buffer.as_raw_nopadding_buffer() {
+                let raw_frame_buffer = match cropped_buffer.as_nopadding_buffer() {
                     Ok(buffer) => buffer,
                     Err(_) => return Err(("Failed to get raw buffer").into()),
                 };
