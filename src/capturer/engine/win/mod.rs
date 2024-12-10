@@ -14,6 +14,7 @@ use windows_capture::{
     settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings as WCSettings},
     window::Window as WCWindow,
 };
+use windows_capture::capture::Context;
 
 #[derive(Debug)]
 struct Capturer {
@@ -36,10 +37,10 @@ impl GraphicsCaptureApiHandler for Capturer {
     type Flags = FlagStruct;
     type Error = Box<dyn std::error::Error + Send + Sync>;
 
-    fn new(flag_values: Self::Flags) -> Result<Self, Self::Error> {
+    fn new(context: Context<Self::Flags>) -> Result<Self, Self::Error> {
         Ok(Self {
-            tx: flag_values.tx,
-            crop: flag_values.crop,
+            tx: context.flags.tx,
+            crop: context.flags.crop,
         })
     }
 
@@ -62,7 +63,7 @@ impl GraphicsCaptureApiHandler for Capturer {
                     .expect("Failed to crop buffer");
 
                 // get raw frame buffer
-                let raw_frame_buffer = match cropped_buffer.as_raw_nopadding_buffer() {
+                let raw_frame_buffer = match cropped_buffer.as_nopadding_buffer() {
                     Ok(buffer) => buffer,
                     Err(_) => return Err(("Failed to get raw buffer").into()),
                 };
