@@ -152,7 +152,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WCStream {
         false => CursorCaptureSettings::WithoutCursor,
     };
 
-    let show_border = options.show_highlight {
+    let show_border = match options.show_highlight {
         true => DrawBorderSettings::WithBorder,
         false => DrawBorderSettings::WithoutBorder,
     }
