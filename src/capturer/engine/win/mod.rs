@@ -152,11 +152,16 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WCStream {
         false => CursorCaptureSettings::WithoutCursor,
     };
 
+    let show_border = options.show_highlight {
+        true => DrawBorderSettings::WithBorder,
+        false => DrawBorderSettings::WithoutBorder,
+    }
+
     let settings = match target {
         Target::Display(display) => Settings::Display(WCSettings::new(
             WCMonitor::from_raw_hmonitor(display.raw_handle.0),
             show_cursor,
-            DrawBorderSettings::Default,
+            show_border,
             color_format,
             FlagStruct {
                 tx,
@@ -166,7 +171,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WCStream {
         Target::Window(window) => Settings::Window(WCSettings::new(
             WCWindow::from_raw_hwnd(window.raw_handle.0),
             show_cursor,
-            DrawBorderSettings::Default,
+            show_border,
             color_format,
             FlagStruct {
                 tx,
