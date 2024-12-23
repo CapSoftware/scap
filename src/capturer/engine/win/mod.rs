@@ -155,7 +155,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WCStream {
     let show_border = match options.show_highlight {
         true => DrawBorderSettings::WithBorder,
         false => DrawBorderSettings::WithoutBorder,
-    }
+    };
 
     let settings = match target {
         Target::Display(display) => Settings::Display(WCSettings::new(
