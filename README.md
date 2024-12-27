@@ -35,10 +35,7 @@ If you want to contribute code, here's a quick primer:
 ## usage
 
 ```rust
-use scap::{
-    capturer::{Point, Area, Size, Capturer, Options},
-    frame::Frame,
-};
+use scap::capturer::{Capturer, Options};
 
 fn main() {
     // Check if the platform is supported
@@ -66,34 +63,33 @@ fn main() {
 
     // Create Options
     let options = Options {
-        fps: 60,
+        fps: 30,
         target: None, // None captures the primary display
         show_cursor: true,
         show_highlight: true,
         excluded_targets: None,
         output_type: scap::frame::FrameType::BGRAFrame,
         output_resolution: scap::capturer::Resolution::_720p,
-        source_rect: Some(Area {
-            origin: Point { x: 0.0, y: 0.0 },
-            size: Size {
-                width: 2000.0,
-                height: 1000.0,
-            },
-        }),
         ..Default::default()
     };
 
     // Create Capturer
-    let mut capturer = Capturer::new(options);
+    let capturer = Capturer::build(options);
 
-    // Start Capture
-    capturer.start_capture();
+    match capturer {
+        Ok(mut cap) => {
+            // Start Capture
+            cap.start_capture();
 
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input).unwrap();
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input).unwrap();
 
-    // Stop Capture
-    capturer.stop_capture();
+            // Stop Capture
+            cap.stop_capture();
+        }
+
+        Err(e) => println!("❌ Could not initialize capturer {}", e),
+    }
 }
 ```
 
