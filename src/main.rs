@@ -3,8 +3,7 @@
 
 use scap::{
     capturer::{Area, Capturer, Options, Point, Size},
-    frame::Frame
-    ,
+    frame::Frame,
 };
 use std::process;
 

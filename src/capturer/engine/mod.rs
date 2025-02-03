@@ -14,8 +14,8 @@ mod linux;
 
 #[cfg(target_os = "macos")]
 pub type ChannelItem = (
-    screencapturekit::cm_sample_buffer::CMSampleBuffer,
-    screencapturekit::sc_output_handler::SCStreamOutputType,
+    screencapturekit::output::CMSampleBuffer,
+    screencapturekit::stream::output_type::SCStreamOutputType,
 );
 #[cfg(not(target_os = "macos"))]
 pub type ChannelItem = Frame;

@@ -70,6 +70,14 @@ pub struct Options {
     pub output_resolution: Resolution,
     // excluded targets will only work on macOS
     pub excluded_targets: Option<Vec<Target>>,
+    #[cfg(target_os = "macos")]
+    pub macos: MacOSOptions,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct MacOSOptions {
+    captures_audio: bool,
+    exclude_current_process_audio: bool,
 }
 
 /// Screen capturer class

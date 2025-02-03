@@ -5,7 +5,10 @@ use core_video_sys::{
     CVPixelBufferGetPlaneCount, CVPixelBufferGetWidth, CVPixelBufferGetWidthOfPlane,
     CVPixelBufferLockBaseAddress, CVPixelBufferRef, CVPixelBufferUnlockBaseAddress,
 };
-use screencapturekit::{cm_sample_buffer::CMSampleBuffer, sc_types::SCFrameStatus};
+
+use screencapturekit::output::{
+    sc_stream_frame_info::SCFrameStatus, CMSampleBuffer, CVPixelBuffer,
+};
 use screencapturekit_sys::cm_sample_buffer_ref::CMSampleBufferGetImageBuffer;
 use std::{ops::Deref, sync::mpsc};
 
@@ -13,9 +16,9 @@ use crate::capturer::{engine::ChannelItem, RawCapturer};
 
 pub struct PixelBuffer {
     display_time: u64,
-    width: usize,
-    height: usize,
-    bytes_per_row: usize,
+    width: u32,
+    height: u32,
+    bytes_per_row: u32,
     buffer: CMSampleBuffer,
 }
 
@@ -24,11 +27,11 @@ impl PixelBuffer {
         self.display_time
     }
 
-    pub fn width(&self) -> usize {
+    pub fn width(&self) -> u32 {
         self.width
     }
 
-    pub fn height(&self) -> usize {
+    pub fn height(&self) -> u32 {
         self.height
     }
 
@@ -36,7 +39,7 @@ impl PixelBuffer {
         &self.buffer
     }
 
-    pub fn bytes_per_row(&self) -> usize {
+    pub fn bytes_per_row(&self) -> u32 {
         self.bytes_per_row
     }
 
@@ -79,9 +82,11 @@ impl PixelBuffer {
 
     pub(crate) fn new(item: ChannelItem) -> Option<Self> {
         unsafe {
-            let display_time = pixel_buffer_display_time(&item.0);
-            let pixel_buffer = sample_buffer_to_pixel_buffer(&item.0);
-            let (width, height) = pixel_buffer_bounds(pixel_buffer);
+            item.0.get_audio_buffer_list();
+            let display_time = item.0.get_format_description();
+            let pixel_buffer = item.0.get_pixel_buffer().unwrap();
+            let width = pixel_buffer.get_width();
+            let height = pixel_buffer.get_height();
 
             match item.0.frame_status {
                 SCFrameStatus::Complete | SCFrameStatus::Started | SCFrameStatus::Idle => {
@@ -89,7 +94,7 @@ impl PixelBuffer {
                         display_time,
                         width,
                         height,
-                        bytes_per_row: pixel_buffer_bytes_per_row(pixel_buffer),
+                        bytes_per_row: pixel_buffer.get_bytes_per_row(),
                         buffer: item.0,
                     })
                 }
@@ -190,23 +195,6 @@ impl RawCapturer<'_> {
             }
         }
     }
-}
-
-pub unsafe fn sample_buffer_to_pixel_buffer(sample_buffer: &CMSampleBuffer) -> CVPixelBufferRef {
-    let buffer_ref = &(*sample_buffer.sys_ref);
-
-    CMSampleBufferGetImageBuffer(buffer_ref) as CVPixelBufferRef
-}
-
-pub unsafe fn pixel_buffer_bounds(pixel_buffer: CVPixelBufferRef) -> (usize, usize) {
-    let width = CVPixelBufferGetWidth(pixel_buffer);
-    let height = CVPixelBufferGetHeight(pixel_buffer);
-
-    (width, height)
-}
-
-pub unsafe fn pixel_buffer_bytes_per_row(pixel_buffer: CVPixelBufferRef) -> usize {
-    CVPixelBufferGetBytesPerRow(pixel_buffer)
 }
 
 pub unsafe fn pixel_buffer_display_time(sample_buffer: &CMSampleBuffer) -> u64 {
