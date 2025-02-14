@@ -6,17 +6,21 @@ use core_foundation::error::CFError;
 use core_graphics::display::{CGPoint, CGRect, CGSize};
 use core_media_rs::cm_time::CMTime;
 use pixelformat::get_pts_in_nanoseconds;
-use screencapturekit::output::sc_stream_frame_info::{SCFrameStatus, SCStreamFrameInfo};
-use screencapturekit::output::CMSampleBuffer;
-use screencapturekit::shareable_content::SCShareableContent;
-use screencapturekit::stream::configuration::pixel_format::PixelFormat;
-use screencapturekit::stream::configuration::SCStreamConfiguration;
-use screencapturekit::stream::content_filter::SCContentFilter;
-use screencapturekit::stream::delegate_trait::SCStreamDelegateTrait;
-use screencapturekit::stream::output_trait::SCStreamOutputTrait;
-use screencapturekit::stream::output_type::SCStreamOutputType;
-use screencapturekit::stream::SCStream;
-use screencapturekit_sys::os_types::base::CMTimeScale;
+use screencapturekit::{
+    output::{
+        sc_stream_frame_info::{SCFrameStatus, SCStreamFrameInfo},
+        CMSampleBuffer,
+    },
+    shareable_content::SCShareableContent,
+    stream::{
+        configuration::{pixel_format::PixelFormat, SCStreamConfiguration},
+        content_filter::SCContentFilter,
+        delegate_trait::SCStreamDelegateTrait,
+        output_trait::SCStreamOutputTrait,
+        output_type::SCStreamOutputType,
+        SCStream,
+    },
+};
 
 use crate::frame::{Frame, FrameType};
 use crate::targets::Target;
@@ -31,8 +35,6 @@ use super::ChannelItem;
 mod apple_sys;
 mod pixel_buffer;
 mod pixelformat;
-
-pub use pixel_buffer::PixelBuffer;
 
 struct ErrorHandler {
     error_flag: Arc<AtomicBool>,
@@ -66,7 +68,7 @@ pub fn create_capturer(
     options: &Options,
     tx: mpsc::Sender<ChannelItem>,
     error_flag: Arc<AtomicBool>,
-) -> SCStream {
+) -> Result<SCStream, CFError> {
     // If no target is specified, capture the main display
     let target = options
         .target
@@ -99,8 +101,8 @@ pub fn create_capturer(
             match &options.excluded_targets {
                 None => SCContentFilter::new().with_display_excluding_windows(&sc_display, &[]),
                 Some(excluded_targets) => {
-                    let excluded_windows = sc_shareable_content
-                        .windows()
+                    let windows = sc_shareable_content.windows();
+                    let excluded_windows = windows
                         .iter()
                         .filter(|window| {
                             excluded_targets
@@ -143,43 +145,30 @@ pub fn create_capturer(
 
     let [width, height] = get_output_frame_size(options);
 
-    let stream_config = {
-        let mut stream_config = SCStreamConfiguration::new();
-        // {
-        //     width,
-        //     height,
-        //     source_rect,
-        //     pixel_format,
-        //     shows_cursor: options.show_cursor,
-        //     minimum_frame_interval: CMTime {
-        //         value: 1,
-        //         timescale: options.fps as CMTimeScale,
-        //         epoch: 0,
-        //         flags: 1,
-        //     },
-        //     ..Default::default()
-        // };
-
-        stream_config.set_width(width);
-        stream_config.set_height(height);
-        stream_config.set_source_rect(source_rect);
-        stream_config.set_pixel_format(pixel_format);
-        stream_config.set_shows_cursor(options.show_cursor);
-        stream_config.set_minimum_frame_interval(&CMTime {
+    let stream_config = SCStreamConfiguration::new()
+        .set_width(width)?
+        .set_height(height)?
+        .set_source_rect(source_rect)?
+        .set_pixel_format(pixel_format)?
+        .set_shows_cursor(options.show_cursor)?
+        .set_minimum_frame_interval(&CMTime {
             value: 1,
-            timescale: options.fps as CMTimeScale,
+            timescale: options.fps as i32,
             epoch: 0,
             flags: 1,
-        });
-
-        stream_config
-    };
+        })?
+        .set_captures_audio(options.macos.captures_audio)?;
 
     let mut stream =
         SCStream::new_with_delegate(&filter, &stream_config, ErrorHandler { error_flag });
+
+    if options.macos.captures_audio {
+        stream.add_output_handler(Capturer::new(tx.clone()), SCStreamOutputType::Audio);
+    }
+
     stream.add_output_handler(Capturer::new(tx), SCStreamOutputType::Screen);
 
-    stream
+    Ok(stream)
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {

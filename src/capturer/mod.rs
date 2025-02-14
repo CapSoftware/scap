@@ -76,8 +76,8 @@ pub struct Options {
 
 #[derive(Debug, Default, Clone)]
 pub struct MacOSOptions {
-    captures_audio: bool,
-    exclude_current_process_audio: bool,
+    pub captures_audio: bool,
+    pub exclude_current_process_audio: bool,
 }
 
 /// Screen capturer class

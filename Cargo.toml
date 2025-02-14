@@ -31,7 +31,6 @@ windows = { version = "0.58", features = [
 tao-core-video-sys = "0.2.0"
 core-graphics-helmer-fork = "0.24.0"
 screencapturekit = "0.3.2"
-screencapturekit-sys = "0.2.8"
 cocoa = "0.25.0"
 objc = "0.2.7"
 core-foundation = "0.10.0"

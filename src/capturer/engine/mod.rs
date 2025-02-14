@@ -42,7 +42,7 @@ pub struct Engine {
     options: Options,
 
     #[cfg(target_os = "macos")]
-    mac: screencapturekit::sc_stream::SCStream,
+    mac: screencapturekit::stream::SCStream,
     #[cfg(target_os = "macos")]
     error_flag: std::sync::Arc<std::sync::atomic::AtomicBool>,
 
@@ -58,7 +58,7 @@ impl Engine {
         #[cfg(target_os = "macos")]
         {
             let error_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-            let mac = mac::create_capturer(options, tx, error_flag.clone());
+            let mac = mac::create_capturer(options, tx, error_flag.clone()).unwrap();
 
             Engine {
                 mac,
