@@ -2,11 +2,16 @@
 // Refer to `lib.rs` for the library source code
 
 use scap::{
-    capturer::{Area, Capturer, Options, Point, Size},
-    frame::Frame
-    ,
+    capturer::{self, Area, Capturer, Options, Point, Size},
+    frame::Frame,
 };
 use std::process;
+use std::{
+    cmp,
+    sync::{Arc, Mutex},
+    thread,
+};
+use windows_capture::capture;
 
 fn main() {
     // Check if the platform is supported
@@ -32,6 +37,7 @@ fn main() {
     let options = Options {
         fps: 60,
         show_cursor: true,
+        system_audio: true,
         show_highlight: true,
         excluded_targets: None,
         output_type: scap::frame::FrameType::BGRAFrame,
@@ -54,9 +60,13 @@ fn main() {
 
     // Start Capture
     recorder.start_capture();
-
-    // Capture 100 frames
     let mut start_time: u64 = 0;
+    let stop_flag = Arc::new(Mutex::new(false));
+    let stop_flag_clone = Arc::clone(&stop_flag);
+    let audio_thread = thread::spawn(move || {
+        capturer::record_system_audio(true, stop_flag_clone);
+    });
+
     for i in 0..100 {
         let frame = recorder.get_next_frame().expect("Error");
 

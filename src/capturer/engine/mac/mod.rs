@@ -276,3 +276,93 @@ pub fn process_sample_buffer(
 
     None
 }
+
+pub fn record_system_audio(system_audio: bool, stop_flag: Arc<Mutex<bool>>) {
+    if !system_audio {
+        println!("System audio capture is disabled.");
+        return;
+    }
+
+    let config = screencapturekit::SCStreamConfiguration {
+        enable_audio: true,
+        enable_video: false,
+    };
+
+    let mut stream: screencapturekit::SCStreamRef = ptr::null_mut();
+    let result = unsafe { screencapturekit::SCStreamCreate(&config, &mut stream) };
+    if result != 0 || stream.is_null() {
+        eprintln!(
+            "Failed to create ScreenCaptureKit stream. Error code: {}",
+            result
+        );
+        eprintln!("Please ensure you are running on macOS 12+ and that your app has the necessary screen and audio permissions.");
+        return;
+    }
+
+    let spec = WavSpec {
+        channels: 2,
+        sample_rate: 44100,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+
+    let file = match File::create("system_audio.wav") {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!(
+                "Failed to create 'system_audio.wav': {}. Please check file permissions.",
+                e
+            );
+            unsafe { screencapturekit::SCStreamRelease(stream) };
+            return;
+        }
+    };
+    let writer = Arc::new(Mutex::new(Some(
+        WavWriter::new(BufWriter::new(file), spec).unwrap(),
+    )));
+
+    let mut capture_state = CaptureState {
+        writer: Arc::clone(&writer),
+    };
+
+    let context_ptr: *mut c_void = &mut capture_state as *mut _ as *mut c_void;
+    let handler_result =
+        unsafe { screencapturekit::SCStreamSetOutputHandler(stream, output_handler, context_ptr) };
+    if handler_result != 0 {
+        eprintln!(
+            "Failed to set output handler. Error code: {}",
+            handler_result
+        );
+        unsafe { screencapturekit::SCStreamRelease(stream) };
+        return;
+    }
+
+    let start_result = unsafe { screencapturekit::SCStreamStartCapture(stream) };
+    if start_result != 0 {
+        eprintln!("Failed to start capture. Error code: {}", start_result);
+        unsafe { screencapturekit::SCStreamRelease(stream) };
+        return;
+    }
+    println!("🎤 Audio recording started using ScreenCaptureKit. Recording will continue until stop flag is set.");
+
+    loop {
+        if *stop_flag.lock().unwrap() {
+            break;
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+
+    let stop_result = unsafe { screencapturekit::SCStreamStopCapture(stream) };
+    if stop_result != 0 {
+        eprintln!("Failed to stop capture. Error code: {}", stop_result);
+    }
+    unsafe { screencapturekit::SCStreamRelease(stream) };
+
+    let mut writer_guard = writer.lock().unwrap();
+    if let Some(w) = writer_guard.take() {
+        if let Err(e) = w.finalize() {
+            eprintln!("Error finalizing WAV file: {}", e);
+        }
+    }
+    println!("✅ Audio recording saved as 'system_audio.wav'");
+}

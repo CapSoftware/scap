@@ -17,6 +17,9 @@ categories = ["graphics", "multimedia", "multimedia::video"]
 
 [dependencies]
 sysinfo = "0.30.0"
+cpal = "0.15.3"
+hound = "3.5.1"
+rodio = "0.20.1"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-capture = "1.3.6"

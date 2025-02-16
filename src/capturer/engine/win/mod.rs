@@ -3,9 +3,18 @@ use crate::{
     frame::{BGRAFrame, Frame, FrameType},
     targets::{self, get_scale_factor, Target},
 };
-use std::cmp;
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::{SampleFormat, StreamConfig};
+use hound::{WavSpec, WavWriter};
+use std::fs::File;
+use std::io::BufWriter;
 use std::sync::mpsc;
+use std::sync::Mutex;
+use std::thread;
+use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::{cmp, sync::Arc};
+use windows_capture::capture::Context;
 use windows_capture::{
     capture::{CaptureControl, GraphicsCaptureApiHandler},
     frame::Frame as WCFrame,
@@ -14,7 +23,6 @@ use windows_capture::{
     settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings as WCSettings},
     window::Window as WCWindow,
 };
-use windows_capture::capture::Context;
 
 #[derive(Debug)]
 struct Capturer {
@@ -122,6 +130,67 @@ impl WCStream {
         };
 
         self.capture_control = Some(cc)
+    }
+
+    pub fn record_system_audio(system_audio: bool, stop_flag: Arc<Mutex<bool>>) {
+        if !system_audio {
+            return;
+        }
+        let host = cpal::default_host();
+        let device = host
+            .default_output_device()
+            .expect("Failed to get default output device");
+
+        print!("Default output device: {}", device.name().unwrap());
+
+        let config: StreamConfig = device
+            .default_output_config()
+            .expect("Failed to get default output config")
+            .into();
+
+        let spec: WavSpec = WavSpec {
+            channels: config.channels as u16,
+            sample_rate: config.sample_rate.0,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+
+        //for testing purpose
+
+        let file = std::fs::File::create("system_audio.wav").expect("Failed to create file");
+        let writer = Arc::new(Mutex::new(Some(
+            WavWriter::new(BufWriter::new(file), spec).unwrap(),
+        )));
+
+        let writer_clone = Arc::clone(&writer);
+        let stream = device
+            .build_input_stream(
+                &config,
+                move |data: &[f32], _: &cpal::InputCallbackInfo| {
+                    let mut writer_guard = writer_clone.lock().unwrap();
+                    if let Some(writer) = writer_guard.as_mut() {
+                        for &sample in data {
+                            let sample_i16 = (sample * i16::MAX as f32) as i16;
+                            writer.write_sample(sample_i16).unwrap();
+                        }
+                    }
+                },
+                |err| eprintln!("Error: {:?}", err),
+                None,
+            )
+            .expect("Failed to create input stream");
+
+        stream.play().unwrap();
+        loop {
+            if *stop_flag.lock().unwrap() {
+                break;
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+
+        drop(stream);
+
+        println!("✅ Recording saved as 'recorded_audio.wav'");
     }
 
     pub fn stop_capture(&mut self) {
