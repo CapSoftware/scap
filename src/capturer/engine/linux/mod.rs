@@ -243,14 +243,7 @@ fn pipewire_capturer(
         ),
         pw::spa::pod::property!(
             FormatProperties::VideoMaxFramerate,
-            Choice,
-            Range,
             Fraction,
-            pw::spa::utils::Fraction {
-                num: options.fps,
-                denom: 1
-            },
-            pw::spa::utils::Fraction { num: 0, denom: 1 },
             pw::spa::utils::Fraction {
                 num: options.fps,
                 denom: 1
