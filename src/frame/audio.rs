@@ -31,6 +31,10 @@ impl AudioFrame {
         }
     }
 
+    pub fn format(&self) -> AudioFormat {
+        self.format
+    }
+
     pub fn planes(&self) -> u16 {
         if self.is_planar {
             self.channels
