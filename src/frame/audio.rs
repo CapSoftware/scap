@@ -43,6 +43,10 @@ impl AudioFrame {
         }
     }
 
+    pub fn channels(&self) -> u16 {
+        self.channels
+    }
+
     pub fn rate(&self) -> u32 {
         self.rate
     }
