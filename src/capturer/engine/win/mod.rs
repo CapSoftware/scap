@@ -1,11 +1,14 @@
 use crate::{
     capturer::{Area, Options, Point, Resolution, Size},
-    frame::{BGRAFrame, Frame, FrameType},
+    frame::{AudioFormat, AudioFrame, BGRAFrame, Frame, FrameType, VideoFrame},
     targets::{self, get_scale_factor, Target},
 };
-use std::cmp;
-use std::sync::mpsc;
+use core_graphics::data_provider::CGDataProviderReleaseBytePointerCallback;
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use std::sync::mpsc::{self, Sender};
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::{cmp, time::Duration};
+use windows_capture::capture::Context;
 use windows_capture::{
     capture::{CaptureControl, GraphicsCaptureApiHandler},
     frame::Frame as WCFrame,
@@ -14,7 +17,6 @@ use windows_capture::{
     settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings as WCSettings},
     window::Window as WCWindow,
 };
-use windows_capture::capture::Context;
 
 #[derive(Debug)]
 struct Capturer {
@@ -31,6 +33,7 @@ enum Settings {
 pub struct WCStream {
     settings: Settings,
     capture_control: Option<CaptureControl<Capturer, Box<dyn std::error::Error + Send + Sync>>>,
+    audio_stream: Option<AudioStreamHandle>,
 }
 
 impl GraphicsCaptureApiHandler for Capturer {
@@ -81,7 +84,7 @@ impl GraphicsCaptureApiHandler for Capturer {
                 };
 
                 self.tx
-                    .send(Frame::BGRA(bgr_frame))
+                    .send(Frame::Video(VideoFrame::BGRA(bgr_frame)))
                     .expect("Failed to send data");
             }
             None => {
@@ -101,7 +104,7 @@ impl GraphicsCaptureApiHandler for Capturer {
                 };
 
                 self.tx
-                    .send(Frame::BGRA(bgr_frame))
+                    .send(Frame::Video(VideoFrame::BGRA(bgr_frame)))
                     .expect("Failed to send data");
             }
         }
@@ -121,12 +124,20 @@ impl WCStream {
             Settings::Window(st) => Capturer::start_free_threaded(st.to_owned()).unwrap(),
         };
 
+        if let Some(audio_stream) = self.audio_stream {
+            let _ = audio_stream.ctrl_tx.send(AudioStreamControl::Start);
+        }
+
         self.capture_control = Some(cc)
     }
 
     pub fn stop_capture(&mut self) {
         let capture_control = self.capture_control.take().unwrap();
         let _ = capture_control.stop();
+
+        if let Some(audio_stream) = self.audio_stream {
+            let _ = audio_stream.ctrl_tx.send(AudioStreamControl::Stop);
+        }
     }
 }
 
@@ -136,7 +147,15 @@ struct FlagStruct {
     pub crop: Option<Area>,
 }
 
-pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WCStream {
+pub enum CreateCapturerError {
+    AudioStreamConfig(cpal::DefaultStreamConfigError),
+    BuildAudioStream(cpal::BuildStreamError),
+}
+
+pub fn create_capturer(
+    options: &Options,
+    tx: mpsc::Sender<Frame>,
+) -> Result<WCStream, CreateCapturerError> {
     let target = options
         .target
         .clone()
@@ -175,10 +194,29 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WCStream {
         )),
     };
 
-    WCStream {
+    let host = cpal::default_host();
+    let audio_stream = if options.captures_audio {
+        let (ctrl_tx, ctrl_rx) = mpsc::channel();
+        let (ready_tx, ready_rx) = mpsc::sync_channel(1);
+
+        spawn_audio_stream(tx.clone(), ready_tx);
+
+        match ready_rx.recv() {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => return Err(e),
+            Err(_) => panic!("Audio spawn panicked"),
+        }
+
+        Some(AudioStreamHandle { ctrl_tx, frame_rx })
+    } else {
+        None
+    };
+
+    Ok(WCStream {
         settings,
         capture_control: None,
-    }
+        audio_stream,
+    })
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
@@ -247,4 +285,114 @@ pub fn get_crop_area(options: &Options) -> Area {
                 height: height as f64,
             },
         })
+}
+
+struct AudioStreamHandle {
+    ctrl_tx: mpsc::Sender<AudioStreamControl>,
+    frame_rx: mpsc::Receiver<(Vec<u8>, AudioFrame)>,
+}
+
+enum AudioStreamControl {
+    Start,
+    Stop,
+}
+
+fn build_audio_stream(
+    sample_tx: mpsc::Sender<Result<(Vec<u8>, cpal::InputCallbackInfo), cpal::StreamError>>,
+) -> Result<(cpal::Stream, cpal::SupportedStreamConfig), CreateCapturerError> {
+    let output_device = host
+        .default_output_device()
+        .ok_or(CreateCapturerError::CpalStream(
+            cpal::DefaultStreamConfigError::DeviceNotAvailable,
+        ))?;
+    let supported_config = output_device
+        .default_output_config()
+        .map_err(CreateCapturerError::CpalStream)?;
+    let config = supported_config.clone().into();
+
+    let (tx, rx) = mpsc::channel();
+
+    let stream = output_device
+        .build_input_stream_raw(
+            &config,
+            supported_config.sample_format(),
+            {
+                let tx = tx.clone();
+                move |data, info: &cpal::InputCallbackInfo| {
+                    sample_tx
+                        .send(Ok((data.bytes().to_vec(), info.clone())))
+                        .unwrap();
+                }
+            },
+            move |e| {
+                let _ = sample_tx.send(Err(e));
+            },
+            None,
+        )
+        .map_err(CreateCapturerError::BuildStream)?;
+
+    Ok((stream, supported_config))
+}
+
+fn spawn_audio_stream(tx: Sender<Frame>, ready_tx: Sender<Result<(), CreateCapturerError>>) {
+    std::thread::spawn({
+        let (sample_tx, sample_rx) = mpsc::channel();
+
+        let res = build_audio_stream(sample_tx);
+
+        let (stream, config) = match res {
+            Ok(stream) => stream,
+            Err(e) => {
+                ready_tx.send(Err(e));
+                return;
+            }
+        };
+
+        let Ok(mut ctrl) = ctrl_rx.recv() else {
+            return;
+        };
+
+        match ctrl {
+            AudioStreamControl::Start => {
+                stream.play().unwrap();
+            }
+            AudioStreamControl::Stop => {
+                return;
+            }
+        }
+
+        let audio_format = AudioFormat::from(config.sample_format());
+
+        loop {
+            match ctrl_rx.try_recv() {
+                Ok(AudioStreamControl::Stop) => return,
+                Ok(_) => {}
+                Err(_) => return,
+            };
+
+            let (data, info) = match sample_rx.recv_timeout(Duration::from_secs(3)) {
+                Ok(Ok((data, info))) => (data, info),
+                Ok(Err(e)) => {
+                    let _ = sample_tx.send(Err(e));
+                    return;
+                }
+                _ => {
+                    return;
+                }
+            };
+
+            let frame = AudioFrame::new(
+                audio_format,
+                config.channels(),
+                true,
+                data,
+                data.len() / (audio_format.sample_size() * config.channels() as usize),
+                rate,
+            );
+
+            if let Err(_) = tx.send(Ok(frame)) {
+                return;
+            };
+        }
+    });
 }

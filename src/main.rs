@@ -3,7 +3,7 @@
 
 use scap::{
     capturer::{Area, Capturer, Options, Point, Size},
-    frame::Frame,
+    frame::{Frame, VideoFrame},
 };
 use std::process;
 
@@ -42,6 +42,7 @@ fn main() {
                 height: 500.0,
             },
         }),
+        captures_audio: true,
         ..Default::default()
     };
 
@@ -57,22 +58,24 @@ fn main() {
     // Capture 100 frames
     let mut start_time: u64 = 0;
     for i in 0..100 {
-        let frame = recorder.get_next_frame().expect("Error");
+        let Frame::Video(frame) = recorder.get_next_frame().expect("Error") else {
+            continue;
+        };
 
         match frame {
-            Frame::YUVFrame(frame) => {
+            VideoFrame::YUVFrame(frame) => {
                 println!(
                     "Recieved YUV frame {} of width {} and height {} and pts {}",
                     i, frame.width, frame.height, frame.display_time
                 );
             }
-            Frame::BGR0(frame) => {
+            VideoFrame::BGR0(frame) => {
                 println!(
                     "Received BGR0 frame of width {} and height {}",
                     frame.width, frame.height
                 );
             }
-            Frame::RGB(frame) => {
+            VideoFrame::RGB(frame) => {
                 if start_time == 0 {
                     start_time = frame.display_time;
                 }
@@ -84,25 +87,25 @@ fn main() {
                     frame.display_time - start_time
                 );
             }
-            Frame::RGBx(frame) => {
+            VideoFrame::RGBx(frame) => {
                 println!(
                     "Recieved RGBx frame of width {} and height {}",
                     frame.width, frame.height
                 );
             }
-            Frame::XBGR(frame) => {
+            VideoFrame::XBGR(frame) => {
                 println!(
                     "Recieved xRGB frame of width {} and height {}",
                     frame.width, frame.height
                 );
             }
-            Frame::BGRx(frame) => {
+            VideoFrame::BGRx(frame) => {
                 println!(
                     "Recieved BGRx frame of width {} and height {}",
                     frame.width, frame.height
                 );
             }
-            Frame::BGRA(frame) => {
+            VideoFrame::BGRA(frame) => {
                 if start_time == 0 {
                     start_time = frame.display_time;
                 }

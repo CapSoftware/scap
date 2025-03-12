@@ -5,7 +5,7 @@ use std::{error::Error, sync::mpsc};
 use engine::ChannelItem;
 
 use crate::{
-    frame::{Frame, FrameType},
+    frame::{Frame, FrameType, VideoFrame},
     has_permission, is_supported,
     targets::Target,
 };
@@ -70,12 +70,7 @@ pub struct Options {
     pub output_resolution: Resolution,
     // excluded targets will only work on macOS
     pub excluded_targets: Option<Vec<Target>>,
-    #[cfg(target_os = "macos")]
-    pub macos: MacOSOptions,
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct MacOSOptions {
+    /// Only implemented for Windows and macOS currently
     pub captures_audio: bool,
     pub exclude_current_process_audio: bool,
 }

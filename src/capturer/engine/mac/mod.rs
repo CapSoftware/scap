@@ -22,7 +22,7 @@ use screencapturekit::{
     },
 };
 
-use crate::frame::{Frame, FrameType};
+use crate::frame::{AudioFormat, AudioFrame, Frame, FrameType, VideoFrame};
 use crate::targets::Target;
 use crate::{
     capturer::{Area, Options, Point, Resolution, Size},
@@ -48,6 +48,7 @@ impl SCStreamDelegateTrait for ErrorHandler {
     }
 }
 
+#[derive(Clone)]
 pub struct Capturer {
     pub tx: mpsc::Sender<ChannelItem>,
 }
@@ -157,16 +158,18 @@ pub fn create_capturer(
             epoch: 0,
             flags: 1,
         })?
-        .set_captures_audio(options.macos.captures_audio)?;
+        .set_captures_audio(options.captures_audio)?;
 
     let mut stream =
         SCStream::new_with_delegate(&filter, &stream_config, ErrorHandler { error_flag });
 
-    if options.macos.captures_audio {
-        stream.add_output_handler(Capturer::new(tx.clone()), SCStreamOutputType::Audio);
+    let capturer = Capturer::new(tx);
+
+    if options.captures_audio {
+        stream.add_output_handler(capturer.clone(), SCStreamOutputType::Audio);
     }
 
-    stream.add_output_handler(Capturer::new(tx), SCStreamOutputType::Screen);
+    stream.add_output_handler(capturer, SCStreamOutputType::Screen);
 
     Ok(stream)
 }
@@ -243,45 +246,64 @@ pub fn process_sample_buffer(
     of_type: SCStreamOutputType,
     output_type: FrameType,
 ) -> Option<Frame> {
-    if let SCStreamOutputType::Screen = of_type {
-        let info = SCStreamFrameInfo::from_sample_buffer(&sample).unwrap();
-        let frame_status = info.status();
+    match of_type {
+        SCStreamOutputType::Screen => {
+            let info = SCStreamFrameInfo::from_sample_buffer(&sample).unwrap();
+            let frame_status = info.status();
 
-        match frame_status {
-            SCFrameStatus::Complete | SCFrameStatus::Started => unsafe {
-                return Some(match output_type {
-                    FrameType::YUVFrame => {
-                        let yuvframe = pixelformat::create_yuv_frame(sample).unwrap();
-                        Frame::YUVFrame(yuvframe)
-                    }
-                    FrameType::RGB => {
-                        let rgbframe = pixelformat::create_rgb_frame(sample).unwrap();
-                        Frame::RGB(rgbframe)
-                    }
-                    FrameType::BGR0 => {
-                        let bgrframe = pixelformat::create_bgr_frame(sample).unwrap();
-                        Frame::BGR0(bgrframe)
-                    }
-                    FrameType::BGRAFrame => {
-                        let bgraframe = pixelformat::create_bgra_frame(sample).unwrap();
-                        Frame::BGRA(bgraframe)
-                    }
-                });
-            },
-            SCFrameStatus::Idle => {
-                // Quick hack - just send an empty frame, and the caller can figure out how to handle it
-                if let FrameType::BGRAFrame = output_type {
-                    return Some(Frame::BGRA(BGRAFrame {
-                        display_time: get_pts_in_nanoseconds(&sample),
-                        width: 0,
-                        height: 0,
-                        data: vec![],
+            match frame_status {
+                SCFrameStatus::Complete | SCFrameStatus::Started => unsafe {
+                    return Some(Frame::Video(match output_type {
+                        FrameType::YUVFrame => {
+                            let yuvframe = pixelformat::create_yuv_frame(sample).unwrap();
+                            VideoFrame::YUVFrame(yuvframe)
+                        }
+                        FrameType::RGB => {
+                            let rgbframe = pixelformat::create_rgb_frame(sample).unwrap();
+                            VideoFrame::RGB(rgbframe)
+                        }
+                        FrameType::BGR0 => {
+                            let bgrframe = pixelformat::create_bgr_frame(sample).unwrap();
+                            VideoFrame::BGR0(bgrframe)
+                        }
+                        FrameType::BGRAFrame => {
+                            let bgraframe = pixelformat::create_bgra_frame(sample).unwrap();
+                            VideoFrame::BGRA(bgraframe)
+                        }
                     }));
+                },
+                SCFrameStatus::Idle => {
+                    // Quick hack - just send an empty frame, and the caller can figure out how to handle it
+                    if let FrameType::BGRAFrame = output_type {
+                        return Some(Frame::Video(VideoFrame::BGRA(BGRAFrame {
+                            display_time: get_pts_in_nanoseconds(&sample),
+                            width: 0,
+                            height: 0,
+                            data: vec![],
+                        })));
+                    }
                 }
+                _ => {}
             }
-            _ => {}
         }
-    }
+        SCStreamOutputType::Audio => {
+            let list = sample.get_audio_buffer_list().unwrap();
+            let mut bytes = Vec::<u8>::new();
+
+            for buffer in list.buffers() {
+                bytes.extend(buffer.data());
+            }
+
+            return Some(Frame::Audio(AudioFrame::new(
+                AudioFormat::F32,
+                2,
+                false,
+                bytes,
+                sample.get_num_samples() as usize,
+                48_000,
+            )));
+        }
+    };
 
     None
 }
