@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.8](https://github.com/CapSoftware/scap/compare/v0.0.7...v0.0.8) - 2024-12-10
+
+### Other
+
+- rewind version
+- Update mod.rs
+- Bump version (backwards compatible bug fix)
+- Change as_raw_nopadding_buffer to as_nopadding_buffer
+- Make GraphicsCaptureApiHandler's fn `new` implementation for Capturer have the correct signature
+- handle macos stream errors with error flag
+- expose CMSampleBuffer
+
 ## [0.0.7](https://github.com/CapSoftware/scap/compare/v0.0.6...v0.0.7) - 2024-11-07
 
 ### Features
