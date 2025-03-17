@@ -58,8 +58,15 @@ fn main() {
     // Capture 100 frames
     let mut start_time: u64 = 0;
     for i in 0..100 {
-        let Frame::Video(frame) = recorder.get_next_frame().expect("Error") else {
-            continue;
+        let frame = loop {
+            match recorder.get_next_frame().expect("Error") {
+                Frame::Video(frame) => {
+                    break frame;
+                }
+                Frame::Audio(_) => {
+                    continue;
+                }
+            }
         };
 
         match frame {

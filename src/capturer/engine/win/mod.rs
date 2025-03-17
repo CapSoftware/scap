@@ -4,7 +4,7 @@ use crate::{
     targets::{self, get_scale_factor, Target},
 };
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{cmp, time::Duration};
 use windows_capture::{
@@ -375,17 +375,17 @@ fn spawn_audio_stream(
         loop {
             match ctrl_rx.try_recv() {
                 Ok(AudioStreamControl::Stop) => return,
-                Ok(_) => {}
+                Ok(_) | Err(mpsc::TryRecvError::Empty) => {}
                 Err(_) => return,
             };
 
-            let (data, info) = match sample_rx.recv_timeout(Duration::from_secs(3)) {
+            let (data, info) = match sample_rx.recv_timeout(Duration::from_millis(100)) {
                 Ok(Ok((data, info))) => (data, info),
-                Ok(Err(e)) => {
-                    // let _ = tx.send(Err(e));
-                    return;
+                Err(RecvTimeoutError::Timeout) => {
+                    continue;
                 }
                 _ => {
+                    // let _ = tx.send(Err(e));
                     return;
                 }
             };
