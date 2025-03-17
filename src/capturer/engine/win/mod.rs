@@ -395,7 +395,7 @@ fn spawn_audio_stream(
             let frame = AudioFrame::new(
                 audio_format,
                 config.channels(),
-                true,
+                false,
                 data,
                 sample_count,
                 config.sample_rate().0,
