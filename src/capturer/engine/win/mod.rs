@@ -3,14 +3,12 @@ use crate::{
     frame::{AudioFormat, AudioFrame, BGRAFrame, Frame, FrameType, VideoFrame},
     targets::{self, get_scale_factor, Target},
 };
-use core_graphics::data_provider::CGDataProviderReleaseBytePointerCallback;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::mpsc::{self, Sender};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{cmp, time::Duration};
-use windows_capture::capture::Context;
 use windows_capture::{
-    capture::{CaptureControl, GraphicsCaptureApiHandler},
+    capture::{CaptureControl, Context, GraphicsCaptureApiHandler},
     frame::Frame as WCFrame,
     graphics_capture_api::InternalCaptureControl,
     monitor::Monitor as WCMonitor,
@@ -207,7 +205,7 @@ pub fn create_capturer(
             Err(_) => panic!("Audio spawn panicked"),
         }
 
-        Some(AudioStreamHandle { ctrl_tx, frame_rx })
+        Some(AudioStreamHandle { ctrl_tx })
     } else {
         None
     };
@@ -289,7 +287,6 @@ pub fn get_crop_area(options: &Options) -> Area {
 
 struct AudioStreamHandle {
     ctrl_tx: mpsc::Sender<AudioStreamControl>,
-    frame_rx: mpsc::Receiver<(Vec<u8>, AudioFrame)>,
 }
 
 enum AudioStreamControl {
