@@ -102,7 +102,25 @@ impl AudioFormat {
             Self::U64 => std::mem::size_of::<u64>(),
             Self::F32 => std::mem::size_of::<f32>(),
             Self::F64 => std::mem::size_of::<f64>(),
-            v => panic!("Sample format {v:?} not supported"),
+            // v => panic!("Sample format {v:?} not supported"),
+        }
+    }
+}
+
+impl From<cpal::SampleFormat> for AudioFormat {
+    fn from(value: cpal::SampleFormat) -> Self {
+        match value {
+            cpal::SampleFormat::F32 => Self::F32,
+            cpal::SampleFormat::F64 => Self::F64,
+            cpal::SampleFormat::I8 => Self::I8,
+            cpal::SampleFormat::I16 => Self::I16,
+            cpal::SampleFormat::I32 => Self::I32,
+            cpal::SampleFormat::I64 => Self::I64,
+            cpal::SampleFormat::U8 => Self::U8,
+            cpal::SampleFormat::U16 => Self::U16,
+            cpal::SampleFormat::U32 => Self::U32,
+            cpal::SampleFormat::U64 => Self::U64,
+            _ => panic!("sample format {value:?} not supported"),
         }
     }
 }

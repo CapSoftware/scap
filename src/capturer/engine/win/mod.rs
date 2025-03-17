@@ -4,7 +4,7 @@ use crate::{
     targets::{self, get_scale_factor, Target},
 };
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use std::sync::mpsc::{self, Sender};
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{cmp, time::Duration};
 use windows_capture::{
@@ -122,7 +122,7 @@ impl WCStream {
             Settings::Window(st) => Capturer::start_free_threaded(st.to_owned()).unwrap(),
         };
 
-        if let Some(audio_stream) = self.audio_stream {
+        if let Some(audio_stream) = &self.audio_stream {
             let _ = audio_stream.ctrl_tx.send(AudioStreamControl::Start);
         }
 
@@ -133,7 +133,7 @@ impl WCStream {
         let capture_control = self.capture_control.take().unwrap();
         let _ = capture_control.stop();
 
-        if let Some(audio_stream) = self.audio_stream {
+        if let Some(audio_stream) = &self.audio_stream {
             let _ = audio_stream.ctrl_tx.send(AudioStreamControl::Stop);
         }
     }
@@ -145,6 +145,7 @@ struct FlagStruct {
     pub crop: Option<Area>,
 }
 
+#[derive(Debug)]
 pub enum CreateCapturerError {
     AudioStreamConfig(cpal::DefaultStreamConfigError),
     BuildAudioStream(cpal::BuildStreamError),
@@ -169,35 +170,39 @@ pub fn create_capturer(
         false => CursorCaptureSettings::WithoutCursor,
     };
 
+    let draw_border = options
+        .show_highlight
+        .then_some(DrawBorderSettings::WithBorder)
+        .unwrap_or(DrawBorderSettings::WithoutBorder);
+
     let settings = match target {
         Target::Display(display) => Settings::Display(WCSettings::new(
             WCMonitor::from_raw_hmonitor(display.raw_handle.0),
             show_cursor,
-            DrawBorderSettings::Default,
+            draw_border,
             color_format,
             FlagStruct {
-                tx,
+                tx: tx.clone(),
                 crop: Some(get_crop_area(options)),
             },
         )),
         Target::Window(window) => Settings::Window(WCSettings::new(
             WCWindow::from_raw_hwnd(window.raw_handle.0),
             show_cursor,
-            DrawBorderSettings::Default,
+            draw_border,
             color_format,
             FlagStruct {
-                tx,
+                tx: tx.clone(),
                 crop: Some(get_crop_area(options)),
             },
         )),
     };
 
-    let host = cpal::default_host();
     let audio_stream = if options.captures_audio {
         let (ctrl_tx, ctrl_rx) = mpsc::channel();
-        let (ready_tx, ready_rx) = mpsc::sync_channel(1);
+        let (ready_tx, ready_rx) = mpsc::channel();
 
-        spawn_audio_stream(tx.clone(), ready_tx);
+        spawn_audio_stream(tx.clone(), ready_tx, ctrl_rx);
 
         match ready_rx.recv() {
             Ok(Ok(())) => {}
@@ -289,6 +294,7 @@ struct AudioStreamHandle {
     ctrl_tx: mpsc::Sender<AudioStreamControl>,
 }
 
+#[derive(Debug)]
 enum AudioStreamControl {
     Start,
     Stop,
@@ -297,24 +303,23 @@ enum AudioStreamControl {
 fn build_audio_stream(
     sample_tx: mpsc::Sender<Result<(Vec<u8>, cpal::InputCallbackInfo), cpal::StreamError>>,
 ) -> Result<(cpal::Stream, cpal::SupportedStreamConfig), CreateCapturerError> {
-    let output_device = host
-        .default_output_device()
-        .ok_or(CreateCapturerError::CpalStream(
-            cpal::DefaultStreamConfigError::DeviceNotAvailable,
-        ))?;
+    let host = cpal::default_host();
+    let output_device =
+        host.default_output_device()
+            .ok_or(CreateCapturerError::AudioStreamConfig(
+                cpal::DefaultStreamConfigError::DeviceNotAvailable,
+            ))?;
     let supported_config = output_device
         .default_output_config()
-        .map_err(CreateCapturerError::CpalStream)?;
+        .map_err(CreateCapturerError::AudioStreamConfig)?;
     let config = supported_config.clone().into();
-
-    let (tx, rx) = mpsc::channel();
 
     let stream = output_device
         .build_input_stream_raw(
             &config,
             supported_config.sample_format(),
             {
-                let tx = tx.clone();
+                let sample_tx = sample_tx.clone();
                 move |data, info: &cpal::InputCallbackInfo| {
                     sample_tx
                         .send(Ok((data.bytes().to_vec(), info.clone())))
@@ -326,26 +331,33 @@ fn build_audio_stream(
             },
             None,
         )
-        .map_err(CreateCapturerError::BuildStream)?;
+        .map_err(CreateCapturerError::BuildAudioStream)?;
 
     Ok((stream, supported_config))
 }
 
-fn spawn_audio_stream(tx: Sender<Frame>, ready_tx: Sender<Result<(), CreateCapturerError>>) {
-    std::thread::spawn({
+fn spawn_audio_stream(
+    tx: Sender<Frame>,
+    ready_tx: Sender<Result<(), CreateCapturerError>>,
+    ctrl_rx: Receiver<AudioStreamControl>,
+) {
+    std::thread::spawn(move || {
         let (sample_tx, sample_rx) = mpsc::channel();
 
         let res = build_audio_stream(sample_tx);
 
         let (stream, config) = match res {
-            Ok(stream) => stream,
+            Ok(stream) => {
+                let _ = ready_tx.send(Ok(()));
+                stream
+            }
             Err(e) => {
-                ready_tx.send(Err(e));
+                let _ = ready_tx.send(Err(e));
                 return;
             }
         };
 
-        let Ok(mut ctrl) = ctrl_rx.recv() else {
+        let Ok(ctrl) = ctrl_rx.recv() else {
             return;
         };
 
@@ -370,7 +382,7 @@ fn spawn_audio_stream(tx: Sender<Frame>, ready_tx: Sender<Result<(), CreateCaptu
             let (data, info) = match sample_rx.recv_timeout(Duration::from_secs(3)) {
                 Ok(Ok((data, info))) => (data, info),
                 Ok(Err(e)) => {
-                    let _ = sample_tx.send(Err(e));
+                    // let _ = tx.send(Err(e));
                     return;
                 }
                 _ => {
@@ -378,16 +390,18 @@ fn spawn_audio_stream(tx: Sender<Frame>, ready_tx: Sender<Result<(), CreateCaptu
                 }
             };
 
+            let sample_count =
+                data.len() / (audio_format.sample_size() * config.channels() as usize);
             let frame = AudioFrame::new(
                 audio_format,
                 config.channels(),
                 true,
                 data,
-                data.len() / (audio_format.sample_size() * config.channels() as usize),
-                rate,
+                sample_count,
+                config.sample_rate().0,
             );
 
-            if let Err(_) = tx.send(Ok(frame)) {
+            if let Err(_) = tx.send(Frame::Audio(frame)) {
                 return;
             };
         }

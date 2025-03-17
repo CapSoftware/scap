@@ -31,7 +31,7 @@ fn main() {
     let options = Options {
         fps: 60,
         show_cursor: true,
-        show_highlight: true,
+        show_highlight: false,
         excluded_targets: None,
         output_type: scap::frame::FrameType::BGRAFrame,
         output_resolution: scap::capturer::Resolution::_720p,
