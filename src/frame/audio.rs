@@ -107,6 +107,7 @@ impl AudioFormat {
     }
 }
 
+#[cfg(windows)]
 impl From<cpal::SampleFormat> for AudioFormat {
     fn from(value: cpal::SampleFormat) -> Self {
         match value {
