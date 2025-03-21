@@ -1,5 +1,6 @@
 use std::{
     mem::size_of,
+    os::unix::io::RawFd,
     sync::{
         atomic::{AtomicBool, AtomicU8},
         mpsc::{self, sync_channel, SyncSender},
@@ -22,11 +23,17 @@ use pw::{
         },
         pod::{Pod, Property},
         sys::{
-            spa_buffer, spa_meta_header, SPA_META_Header, SPA_PARAM_META_size, SPA_PARAM_META_type,
+            spa_buffer, spa_meta_header, SPA_DATA_DmaBuf, SPA_DATA_MemPtr, SPA_META_Header,
+            SPA_PARAM_META_size, SPA_PARAM_META_type,
         },
         utils::{Direction, SpaTypes},
     },
     stream::{StreamRef, StreamState},
+};
+
+use rustix::{
+    fd::BorrowedFd,
+    mm::{mmap, munmap, MapFlags, ProtFlags},
 };
 
 use crate::{
@@ -125,14 +132,39 @@ fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
                 return;
             }
             let frame_size = user_data.format.size();
-            let frame_data: Vec<u8> = unsafe {
-                std::slice::from_raw_parts(
-                    (*(*buffer).datas).data as *mut u8,
-                    (*(*buffer).datas).maxsize as usize,
-                )
-                .to_vec()
-            };
+            let frame_data: Vec<u8> = match unsafe { (*(*buffer).datas).type_ } {
+                SPA_DATA_DmaBuf => {
+                    let size = unsafe { (*(*(*buffer).datas).chunk).size as usize };
+                    let offset = unsafe { (*(*(*buffer).datas).chunk).offset as u64 };
+                    let raw_fd = unsafe { (*(*buffer).datas).fd as RawFd };
+                    let mmap_ptr = unsafe {
+                        mmap(
+                            std::ptr::null_mut(),
+                            size,
+                            ProtFlags::READ,
+                            MapFlags::SHARED,
+                            BorrowedFd::borrow_raw(raw_fd),
+                            offset,
+                        )
+                    }
+                    .expect("mmap failed"); // TODO: Tell library user of the error
 
+                    let data_slice =
+                        unsafe { std::slice::from_raw_parts(mmap_ptr as *mut u8, size) };
+                    let frame_vec = data_slice.to_vec();
+                    unsafe { munmap(mmap_ptr, size) }.expect("munmap failed"); // TODO: Tell library user of the error
+
+                    frame_vec
+                }
+                SPA_DATA_MemPtr => unsafe {
+                    std::slice::from_raw_parts(
+                        (*(*buffer).datas).data as *mut u8,
+                        (*(*buffer).datas).maxsize as usize,
+                    )
+                    .to_vec()
+                },
+                _ => panic!("Unsupported spa data received"),
+            };
             if let Err(e) = match user_data.format.format() {
                 VideoFormat::RGBx => user_data.tx.send(Frame::RGBx(RGBxFrame {
                     display_time: timestamp as u64,
