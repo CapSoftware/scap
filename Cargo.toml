@@ -39,3 +39,4 @@ objc = "0.2.7"
 pipewire = "0.8.0"
 dbus = "0.9.7"
 rand = "0.8.5"
+rustix ={ version = "1.0.2", features = ["mm"]}
