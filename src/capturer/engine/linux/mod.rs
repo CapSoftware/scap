@@ -133,7 +133,7 @@ fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
             }
             let frame_size = user_data.format.size();
             let frame_data: Vec<u8> = match unsafe { (*(*buffer).datas).type_ } {
-                SPA_DATA_DmaBuf => {
+                SPA_DATA_DmaBuf | SPA_DATA_MemFd => {
                     let size = unsafe { (*(*(*buffer).datas).chunk).size as usize };
                     let offset = unsafe { (*(*(*buffer).datas).chunk).offset as u64 };
                     let raw_fd = unsafe { (*(*buffer).datas).fd as RawFd };
@@ -147,12 +147,12 @@ fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
                             offset,
                         )
                     }
-                    .expect("mmap failed"); // TODO: Tell library user of the error
+                    .expect("mmap failed");
 
                     let data_slice =
                         unsafe { std::slice::from_raw_parts(mmap_ptr as *mut u8, size) };
                     let frame_vec = data_slice.to_vec();
-                    unsafe { munmap(mmap_ptr, size) }.expect("munmap failed"); // TODO: Tell library user of the error
+                    unsafe { munmap(mmap_ptr, size) }.expect("munmap failed");
 
                     frame_vec
                 }
