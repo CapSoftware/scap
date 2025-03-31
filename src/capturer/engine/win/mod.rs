@@ -3,10 +3,17 @@ use crate::{
     frame::{AudioFormat, AudioFrame, BGRAFrame, Frame, FrameType, VideoFrame},
     targets::{self, get_scale_factor, Target},
 };
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
+use cpal::{
+    traits::{DeviceTrait, HostTrait, StreamTrait},
+    StreamInstant,
+};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{cmp, time::Duration};
+use std::{
+    os::windows,
+    ptr::null_mut,
+    sync::mpsc::{self, Receiver, RecvTimeoutError, Sender},
+};
 use windows_capture::{
     capture::{CaptureControl, Context, GraphicsCaptureApiHandler},
     frame::Frame as WCFrame,
@@ -372,6 +379,19 @@ fn spawn_audio_stream(
 
         let audio_format = AudioFormat::from(config.sample_format());
 
+        let start_capture_instant = unsafe {
+            let lpperformancecount = null_mut();
+            ::windows::Win32::System::Performance::QueryPerformanceCounter(lpperformancecount)
+                .unwrap();
+            *lpperformancecount as i128 * 100
+        };
+        let start_time = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs_f64();
+
+        let mut start_instant = None;
+
         loop {
             match ctrl_rx.try_recv() {
                 Ok(AudioStreamControl::Stop) => return,
@@ -390,6 +410,25 @@ fn spawn_audio_stream(
                 }
             };
 
+            let start_instant = match start_instant {
+                Some(start_instant) => start_instant,
+                None => *start_instant.insert((info.timestamp().capture, SystemTime::now())),
+            };
+
+            let capture_timestamp_diff = info
+                .timestamp()
+                .capture
+                .duration_since(&start_instant.0)
+                .unwrap();
+
+            let timestamp = start_instant
+                .1
+                .checked_add(capture_timestamp_diff)
+                .unwrap()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+
             let sample_count =
                 data.len() / (audio_format.sample_size() * config.channels() as usize);
             let frame = AudioFrame::new(
@@ -399,6 +438,7 @@ fn spawn_audio_stream(
                 data,
                 sample_count,
                 config.sample_rate().0,
+                timestamp,
             );
 
             if let Err(_) = tx.send(Frame::Audio(frame)) {

@@ -5,6 +5,8 @@ pub struct AudioFrame {
     data: Vec<u8>,
     sample_count: usize,
     rate: u32,
+    // unix timestamp with nanos
+    timestamp: u128,
 }
 
 impl AudioFrame {
@@ -15,6 +17,7 @@ impl AudioFrame {
         data: Vec<u8>,
         sample_count: usize,
         rate: u32,
+        timestamp: u128,
     ) -> Self {
         assert_eq!(
             data.len(),
@@ -28,6 +31,7 @@ impl AudioFrame {
             data,
             sample_count,
             rate,
+            timestamp,
         }
     }
 
