@@ -379,17 +379,6 @@ fn spawn_audio_stream(
 
         let audio_format = AudioFormat::from(config.sample_format());
 
-        let start_capture_instant = unsafe {
-            let lpperformancecount = null_mut();
-            ::windows::Win32::System::Performance::QueryPerformanceCounter(lpperformancecount)
-                .unwrap();
-            *lpperformancecount as i128 * 100
-        };
-        let start_time = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs_f64();
-
         let mut start_instant = None;
 
         loop {
