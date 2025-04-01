@@ -1,5 +1,6 @@
 use core_foundation::base::TCFType;
-use core_media_rs::cm_time::CMTime;
+use core_media::time::CMTime;
+// use core_media_rs::cm_time::CMTime;
 use screencapturekit::{
     output::{CMSampleBuffer, CMSampleBufferRef},
     stream::output_type::SCStreamOutputType,

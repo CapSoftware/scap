@@ -1,10 +1,14 @@
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc;
+use std::time::Duration;
 use std::{cmp, sync::Arc};
 
 use core_foundation::error::CFError;
 use core_graphics::display::{CGPoint, CGRect, CGSize};
-use core_media_rs::cm_time::CMTime;
+use core_media::sync::{CMClock, CMClockGetHostTimeClock};
+use core_media::time::{CMTime, CMTimeSubtract};
+// use core_media_rs::cm_time::CMTime;
+use pixel_buffer::get_sample_buffer_pts;
 use pixelformat::get_pts_in_nanoseconds;
 use screencapturekit::{
     output::{
@@ -152,7 +156,7 @@ pub fn create_capturer(
         .set_source_rect(source_rect)?
         .set_pixel_format(pixel_format)?
         .set_shows_cursor(options.show_cursor)?
-        .set_minimum_frame_interval(&CMTime {
+        .set_minimum_frame_interval(&core_media_rs::cm_time::CMTime {
             value: 1,
             timescale: options.fps as i32,
             epoch: 0,
@@ -294,6 +298,18 @@ pub fn process_sample_buffer(
                 bytes.extend(buffer.data());
             }
 
+            let system_time = std::time::SystemTime::now();
+            let unix_time = system_time
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("Time went backwards")
+                .as_nanos();
+
+            let clock = CMClock::get_host_time_clock();
+            let time = clock.get_time();
+
+            let gap = time.subtract(get_sample_buffer_pts(&sample));
+            let gap_f = gap.value as f64 / gap.timescale as f64;
+
             return Some(Frame::Audio(AudioFrame::new(
                 AudioFormat::F32,
                 2,
@@ -301,6 +317,7 @@ pub fn process_sample_buffer(
                 bytes,
                 sample.get_num_samples() as usize,
                 48_000,
+                unix_time + Duration::from_secs_f64(gap_f).as_nanos(),
             )));
         }
     };

@@ -19,10 +19,7 @@ impl AudioFrame {
         rate: u32,
         timestamp: u128,
     ) -> Self {
-        assert_eq!(
-            data.len(),
-            sample_count * format.sample_size() as usize * channels as usize
-        );
+        assert!(data.len() >= sample_count * format.sample_size() as usize * channels as usize);
 
         Self {
             format,
@@ -65,6 +62,10 @@ impl AudioFrame {
 
     pub fn sample_count(&self) -> usize {
         self.sample_count
+    }
+
+    pub fn time(&self) -> u128 {
+        self.timestamp
     }
 
     pub fn plane_data(&self, plane: usize) -> &[u8] {

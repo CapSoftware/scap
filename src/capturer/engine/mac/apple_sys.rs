@@ -1,6 +1,8 @@
 #![allow(non_upper_case_globals)]
 
-use core_media_rs::cm_time::CMTime;
+// use core_media_rs::cm_time::CMTime;
+
+use core_media::time::CMTime;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
