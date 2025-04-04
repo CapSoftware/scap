@@ -310,6 +310,9 @@ pub fn process_sample_buffer(
             let gap = time.subtract(get_sample_buffer_pts(&sample));
             let gap_f = gap.value as f64 / gap.timescale as f64;
 
+            // get_host_time_clock should return a static ref, not an owned instance
+            std::mem::forget(clock);
+
             return Some(Frame::Audio(AudioFrame::new(
                 AudioFormat::F32,
                 2,
