@@ -250,6 +250,20 @@ pub fn process_sample_buffer(
     of_type: SCStreamOutputType,
     output_type: FrameType,
 ) -> Option<Frame> {
+    let system_time = std::time::SystemTime::now();
+
+    let clock = CMClock::get_host_time_clock();
+    let time = clock.get_time();
+    // get_host_time_clock should return a static ref, not an owned instance
+    std::mem::forget(clock);
+
+    let gap = time.subtract(get_sample_buffer_pts(&sample));
+    let gap_f = gap.value as f64 / gap.timescale as f64;
+
+    let time = system_time
+        .checked_sub(Duration::from_secs_f64(gap_f))
+        .unwrap();
+
     match of_type {
         SCStreamOutputType::Screen => {
             let info = SCStreamFrameInfo::from_sample_buffer(&sample).unwrap();
@@ -259,19 +273,19 @@ pub fn process_sample_buffer(
                 SCFrameStatus::Complete | SCFrameStatus::Started => unsafe {
                     return Some(Frame::Video(match output_type {
                         FrameType::YUVFrame => {
-                            let yuvframe = pixelformat::create_yuv_frame(sample).unwrap();
+                            let yuvframe = pixelformat::create_yuv_frame(sample, time).unwrap();
                             VideoFrame::YUVFrame(yuvframe)
                         }
                         FrameType::RGB => {
-                            let rgbframe = pixelformat::create_rgb_frame(sample).unwrap();
+                            let rgbframe = pixelformat::create_rgb_frame(sample, time).unwrap();
                             VideoFrame::RGB(rgbframe)
                         }
                         FrameType::BGR0 => {
-                            let bgrframe = pixelformat::create_bgr_frame(sample).unwrap();
+                            let bgrframe = pixelformat::create_bgr_frame(sample, time).unwrap();
                             VideoFrame::BGR0(bgrframe)
                         }
                         FrameType::BGRAFrame => {
-                            let bgraframe = pixelformat::create_bgra_frame(sample).unwrap();
+                            let bgraframe = pixelformat::create_bgra_frame(sample, time).unwrap();
                             VideoFrame::BGRA(bgraframe)
                         }
                     }));
@@ -280,7 +294,7 @@ pub fn process_sample_buffer(
                     // Quick hack - just send an empty frame, and the caller can figure out how to handle it
                     if let FrameType::BGRAFrame = output_type {
                         return Some(Frame::Video(VideoFrame::BGRA(BGRAFrame {
-                            display_time: get_pts_in_nanoseconds(&sample),
+                            display_time: time,
                             width: 0,
                             height: 0,
                             data: vec![],
@@ -298,16 +312,6 @@ pub fn process_sample_buffer(
                 bytes.extend(buffer.data());
             }
 
-            let system_time = std::time::SystemTime::now();
-            let clock = CMClock::get_host_time_clock();
-            let time = clock.get_time();
-
-            let gap = time.subtract(get_sample_buffer_pts(&sample));
-            let gap_f = gap.value as f64 / gap.timescale as f64;
-
-            // get_host_time_clock should return a static ref, not an owned instance
-            std::mem::forget(clock);
-
             return Some(Frame::Audio(AudioFrame::new(
                 AudioFormat::F32,
                 2,
@@ -315,9 +319,7 @@ pub fn process_sample_buffer(
                 bytes,
                 sample.get_num_samples() as usize,
                 48_000,
-                system_time
-                    .checked_sub(Duration::from_secs_f64(gap_f))
-                    .unwrap(),
+                time,
             )));
         }
     };

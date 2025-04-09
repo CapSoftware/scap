@@ -1,3 +1,5 @@
+use std::time::SystemTime;
+
 use screencapturekit::output::{
     sc_stream_frame_info::{SCFrameStatus, SCStreamFrameInfo},
     CMSampleBuffer, LockTrait,
@@ -19,14 +21,16 @@ pub fn get_pts_in_nanoseconds(sample_buffer: &CMSampleBuffer) -> u64 {
     (seconds * 1_000_000_000.).trunc() as u64
 }
 
-pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame> {
+pub unsafe fn create_yuv_frame(
+    sample_buffer: CMSampleBuffer,
+    display_time: SystemTime,
+) -> Option<YUVFrame> {
     let info = SCStreamFrameInfo::from_sample_buffer(&sample_buffer).unwrap();
     let status = info.status();
     if !matches!(status, SCFrameStatus::Complete) {
         return None;
     }
 
-    let display_time = get_pts_in_nanoseconds(&sample_buffer);
     let pixel_buffer = sample_buffer.get_pixel_buffer().unwrap();
     let bytes = pixel_buffer.lock().unwrap();
     let width = pixel_buffer.get_width();
@@ -53,8 +57,10 @@ pub unsafe fn create_yuv_frame(sample_buffer: CMSampleBuffer) -> Option<YUVFrame
     .into()
 }
 
-pub unsafe fn create_bgr_frame(sample_buffer: CMSampleBuffer) -> Option<BGRFrame> {
-    let display_time = get_pts_in_nanoseconds(&sample_buffer);
+pub unsafe fn create_bgr_frame(
+    sample_buffer: CMSampleBuffer,
+    display_time: SystemTime,
+) -> Option<BGRFrame> {
     let pixel_buffer = sample_buffer.get_pixel_buffer().unwrap();
     let bytes = pixel_buffer.lock().unwrap();
     let width = pixel_buffer.get_width();
@@ -82,8 +88,10 @@ pub unsafe fn create_bgr_frame(sample_buffer: CMSampleBuffer) -> Option<BGRFrame
     })
 }
 
-pub unsafe fn create_bgra_frame(sample_buffer: CMSampleBuffer) -> Option<BGRAFrame> {
-    let display_time = get_pts_in_nanoseconds(&sample_buffer);
+pub unsafe fn create_bgra_frame(
+    sample_buffer: CMSampleBuffer,
+    display_time: SystemTime,
+) -> Option<BGRAFrame> {
     let pixel_buffer = sample_buffer.get_pixel_buffer().unwrap();
     let bytes = pixel_buffer.lock().unwrap();
     let width = pixel_buffer.get_width();
@@ -110,8 +118,10 @@ pub unsafe fn create_bgra_frame(sample_buffer: CMSampleBuffer) -> Option<BGRAFra
     })
 }
 
-pub unsafe fn create_rgb_frame(sample_buffer: CMSampleBuffer) -> Option<RGBFrame> {
-    let display_time = get_pts_in_nanoseconds(&sample_buffer);
+pub unsafe fn create_rgb_frame(
+    sample_buffer: CMSampleBuffer,
+    display_time: SystemTime,
+) -> Option<RGBFrame> {
     let pixel_buffer = sample_buffer.get_pixel_buffer().unwrap();
     let bytes = pixel_buffer.lock().unwrap();
     let width = pixel_buffer.get_width();
