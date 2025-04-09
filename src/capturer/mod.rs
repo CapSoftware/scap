@@ -1,5 +1,6 @@
 pub mod engine;
 
+use std::sync::{Arc, Mutex};
 use std::{error::Error, sync::mpsc};
 
 use engine::ChannelItem;
@@ -63,6 +64,7 @@ pub struct Area {
 pub struct Options {
     pub fps: u32,
     pub show_cursor: bool,
+    pub system_audio: bool,
     pub show_highlight: bool,
     pub target: Option<Target>,
     pub crop_area: Option<Area>,
@@ -161,4 +163,8 @@ impl Capturer {
 
 pub struct RawCapturer<'a> {
     capturer: &'a Capturer,
+}
+
+pub fn record_system_audio(system_audio: bool, stop_flag: Arc<Mutex<bool>>) {
+    engine::Engine::record_system_audio(system_audio, stop_flag);
 }

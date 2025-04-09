@@ -1,7 +1,14 @@
-use std::sync::mpsc;
-
 use super::Options;
 use crate::frame::Frame;
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::{SampleFormat, StreamConfig};
+use hound::{WavSpec, WavWriter};
+use std::fs::File;
+use std::io::BufWriter;
+use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 
 #[cfg(target_os = "macos")]
 pub mod mac;
@@ -118,6 +125,17 @@ impl Engine {
         #[cfg(target_os = "linux")]
         {
             self.linux.stop_capture();
+        }
+    }
+
+    pub fn record_system_audio(system_audio: bool, stop_flag: Arc<Mutex<bool>>) {
+        #[cfg(target_os = "macos")]
+        {
+            mac::record_system_audio(system_audio, stop_flag);
+        }
+        #[cfg(target_os = "windows")]
+        {
+            win::WCStream::record_system_audio(system_audio, stop_flag);
         }
     }
 
