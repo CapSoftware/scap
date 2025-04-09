@@ -1,6 +1,6 @@
 ![Github banner](./.github/banner.gif)
 
-[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/invite/SC468DK4du)
+[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/invite/y8gdQ3WRN3)
 [![Twitter](https://img.shields.io/badge/twitter-blue?style=for-the-badge&logo=twitter&logoColor=white&labelColor=%231DA1F2&color=%231DA1F2)](https://www.x.com/helmerapp)
 ![GitHub Repo stars](https://img.shields.io/github/stars/helmerapp/scap?style=for-the-badge&logo=github&label=Github%20Stars&labelColor=black)
 ![docs.rs](https://img.shields.io/docsrs/scap?style=for-the-badge&logo=rust&logoColor=white&labelColor=black)
