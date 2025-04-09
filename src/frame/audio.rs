@@ -1,4 +1,4 @@
-use std::time::SystemTime;
+use std::{alloc::System, time::SystemTime};
 
 pub struct AudioFrame {
     format: AudioFormat,
@@ -65,7 +65,7 @@ impl AudioFrame {
         self.sample_count
     }
 
-    pub fn time(&self) -> u128 {
+    pub fn time(&self) -> SystemTime {
         self.timestamp
     }
 

@@ -5,7 +5,7 @@ use scap::{
     capturer::{Area, Capturer, Options, Point, Size},
     frame::{Frame, VideoFrame},
 };
-use std::process;
+use std::{process, time::SystemTime};
 
 fn main() {
     // Check if the platform is supported
@@ -56,7 +56,7 @@ fn main() {
     recorder.start_capture();
 
     // Capture 100 frames
-    let mut start_time: u64 = 0;
+    let mut start_time = SystemTime::now();
     for i in 0..100 {
         let frame = loop {
             match recorder.get_next_frame().expect("Error") {
@@ -72,7 +72,7 @@ fn main() {
         match frame {
             VideoFrame::YUVFrame(frame) => {
                 println!(
-                    "Recieved YUV frame {} of width {} and height {} and pts {}",
+                    "Recieved YUV frame {} of width {} and height {} and pts {:?}",
                     i, frame.width, frame.height, frame.display_time
                 );
             }
@@ -83,15 +83,9 @@ fn main() {
                 );
             }
             VideoFrame::RGB(frame) => {
-                if start_time == 0 {
-                    start_time = frame.display_time;
-                }
                 println!(
-                    "Recieved RGB frame {} of width {} and height {} and time {}",
-                    i,
-                    frame.width,
-                    frame.height,
-                    frame.display_time - start_time
+                    "Recieved RGB frame {} of width {} and height {} and time {:?}",
+                    i, frame.width, frame.height, frame.display_time
                 );
             }
             VideoFrame::RGBx(frame) => {
@@ -113,15 +107,9 @@ fn main() {
                 );
             }
             VideoFrame::BGRA(frame) => {
-                if start_time == 0 {
-                    start_time = frame.display_time;
-                }
                 println!(
-                    "Recieved BGRA frame {} of width {} and height {} and time {}",
-                    i,
-                    frame.width,
-                    frame.height,
-                    frame.display_time - start_time
+                    "Recieved BGRA frame {} of width {} and height {} and time {:?}",
+                    i, frame.width, frame.height, frame.display_time
                 );
             }
         }

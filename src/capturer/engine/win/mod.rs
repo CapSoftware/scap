@@ -3,6 +3,7 @@ use crate::{
     frame::{AudioFormat, AudioFrame, BGRAFrame, Frame, FrameType, VideoFrame},
     targets::{self, get_scale_factor, Target},
 };
+use ::windows::Win32::System::Performance::{QueryPerformanceCounter, QueryPerformanceFrequency};
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     StreamInstant,
@@ -27,6 +28,8 @@ use windows_capture::{
 struct Capturer {
     pub tx: mpsc::Sender<Frame>,
     pub crop: Option<Area>,
+    pub start_time: (i64, SystemTime),
+    pub perf_freq: i64,
 }
 
 #[derive(Clone)]
@@ -49,6 +52,19 @@ impl GraphicsCaptureApiHandler for Capturer {
         Ok(Self {
             tx: context.flags.tx,
             crop: context.flags.crop,
+            start_time: (
+                unsafe {
+                    let mut time = 0;
+                    QueryPerformanceCounter(&mut time);
+                    time
+                },
+                SystemTime::now(),
+            ),
+            perf_freq: unsafe {
+                let mut freq = 0;
+                QueryPerformanceFrequency(&mut freq);
+                freq
+            },
         })
     }
 
@@ -57,6 +73,15 @@ impl GraphicsCaptureApiHandler for Capturer {
         frame: &mut WCFrame,
         _: InternalCaptureControl,
     ) -> Result<(), Self::Error> {
+        let elapsed = frame.timespan().Duration - self.start_time.0;
+        let display_time = self
+            .start_time
+            .1
+            .checked_add(Duration::from_secs_f64(
+                elapsed as f64 / self.perf_freq as f64,
+            ))
+            .unwrap();
+
         match &self.crop {
             Some(cropped_area) => {
                 // get the cropped area
@@ -82,7 +107,7 @@ impl GraphicsCaptureApiHandler for Capturer {
                     .as_nanos() as u64;
 
                 let bgr_frame = BGRAFrame {
-                    display_time: current_time,
+                    display_time,
                     width: cropped_area.size.width as i32,
                     height: cropped_area.size.height as i32,
                     data: raw_frame_buffer.to_vec(),
@@ -102,7 +127,7 @@ impl GraphicsCaptureApiHandler for Capturer {
                     .expect("Failed to get current time")
                     .as_nanos() as u64;
                 let bgr_frame = BGRAFrame {
-                    display_time: current_time,
+                    display_time,
                     width: frame.width() as i32,
                     height: frame.height() as i32,
                     data: frame_data,
@@ -308,7 +333,9 @@ enum AudioStreamControl {
 }
 
 fn build_audio_stream(
-    sample_tx: mpsc::Sender<Result<(Vec<u8>, cpal::InputCallbackInfo), cpal::StreamError>>,
+    sample_tx: mpsc::Sender<
+        Result<(Vec<u8>, cpal::InputCallbackInfo, SystemTime), cpal::StreamError>,
+    >,
 ) -> Result<(cpal::Stream, cpal::SupportedStreamConfig), CreateCapturerError> {
     let host = cpal::default_host();
     let output_device =
@@ -329,7 +356,7 @@ fn build_audio_stream(
                 let sample_tx = sample_tx.clone();
                 move |data, info: &cpal::InputCallbackInfo| {
                     sample_tx
-                        .send(Ok((data.bytes().to_vec(), info.clone())))
+                        .send(Ok((data.bytes().to_vec(), info.clone(), SystemTime::now())))
                         .unwrap();
                 }
             },
@@ -379,8 +406,6 @@ fn spawn_audio_stream(
 
         let audio_format = AudioFormat::from(config.sample_format());
 
-        let mut start_instant = None;
-
         loop {
             match ctrl_rx.try_recv() {
                 Ok(AudioStreamControl::Stop) => return,
@@ -388,8 +413,8 @@ fn spawn_audio_stream(
                 Err(_) => return,
             };
 
-            let (data, info) = match sample_rx.recv_timeout(Duration::from_millis(100)) {
-                Ok(Ok((data, info))) => (data, info),
+            let (data, info, timestamp) = match sample_rx.recv_timeout(Duration::from_millis(100)) {
+                Ok(Ok(data)) => data,
                 Err(RecvTimeoutError::Timeout) => {
                     continue;
                 }
@@ -398,25 +423,6 @@ fn spawn_audio_stream(
                     return;
                 }
             };
-
-            let start_instant = match start_instant {
-                Some(start_instant) => start_instant,
-                None => *start_instant.insert((info.timestamp().capture, SystemTime::now())),
-            };
-
-            let capture_timestamp_diff = info
-                .timestamp()
-                .capture
-                .duration_since(&start_instant.0)
-                .unwrap();
-
-            let timestamp = start_instant
-                .1
-                .checked_add(capture_timestamp_diff)
-                .unwrap()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos();
 
             let sample_count =
                 data.len() / (audio_format.sample_size() * config.channels() as usize);
