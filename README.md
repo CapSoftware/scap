@@ -14,14 +14,14 @@ A Rust library for high-quality screen capture that leverages native OS APIs for
 
 ---
 
-## features
+## Features
 
 1. Cross-platform across Windows, Mac and Linux!
 2. Checks for support and recording permissions.
 3. Query list of captureable targets (displays and windows).
 4. Exclude certain targets from being captured.
 
-## contributing
+## Contributing
 
 We found most of Rust's tooling around screen capture either very outdated, non-performant or platform-specific. This project is our attempt to change that. Contributions, PRs and Issues are most welcome!
 
@@ -32,7 +32,7 @@ If you want to contribute code, here's a quick primer:
 3. Platform-specific code lives in the `win`, `mac` and `linux` modules.
 4. The [main.rs](./src/main.rs) is a small program that "consumes" the library, for easy testing.
 
-## usage
+## Usage
 
 ```rust
 use scap::{
@@ -97,11 +97,11 @@ fn main() {
 }
 ```
 
-## license
+## License
 
 The code in this repository is open-sourced under the MIT license, though it may be relying on dependencies that are licensed differently. Please consult their documentation for exact terms.
 
-## contributors
+## Contributors
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
@@ -125,7 +125,7 @@ The code in this repository is open-sourced under the MIT license, though it may
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-## credits
+## Credits
 
 This project builds on top of the fabulous work done by:
 
