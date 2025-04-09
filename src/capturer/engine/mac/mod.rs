@@ -299,11 +299,6 @@ pub fn process_sample_buffer(
             }
 
             let system_time = std::time::SystemTime::now();
-            let unix_time = system_time
-                .duration_since(std::time::UNIX_EPOCH)
-                .expect("Time went backwards")
-                .as_nanos();
-
             let clock = CMClock::get_host_time_clock();
             let time = clock.get_time();
 
@@ -320,7 +315,9 @@ pub fn process_sample_buffer(
                 bytes,
                 sample.get_num_samples() as usize,
                 48_000,
-                unix_time + Duration::from_secs_f64(gap_f).as_nanos(),
+                system_time
+                    .checked_sub(Duration::from_secs_f64(gap_f))
+                    .unwrap(),
             )));
         }
     };

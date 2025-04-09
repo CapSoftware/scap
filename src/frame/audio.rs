@@ -1,3 +1,5 @@
+use std::time::SystemTime;
+
 pub struct AudioFrame {
     format: AudioFormat,
     channels: u16,
@@ -5,8 +7,7 @@ pub struct AudioFrame {
     data: Vec<u8>,
     sample_count: usize,
     rate: u32,
-    // unix timestamp with nanos
-    timestamp: u128,
+    timestamp: SystemTime,
 }
 
 impl AudioFrame {
@@ -17,7 +18,7 @@ impl AudioFrame {
         data: Vec<u8>,
         sample_count: usize,
         rate: u32,
-        timestamp: u128,
+        timestamp: SystemTime,
     ) -> Self {
         assert!(data.len() >= sample_count * format.sample_size() as usize * channels as usize);
 
