@@ -284,7 +284,7 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
 }
 
 fn get_absolute_value(value: f64, scale_factor: f64) -> f64 {
-    let value = (value * scale_factor).floor();
+    let value = (value).floor();
     value + value % 2.0
 }
 
