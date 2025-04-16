@@ -1,5 +1,6 @@
 use std::{
     mem::size_of,
+    os::unix::io::RawFd,
     sync::{
         atomic::{AtomicBool, AtomicU8},
         mpsc::{self, sync_channel, SyncSender},
@@ -22,11 +23,18 @@ use pw::{
         },
         pod::{Pod, Property},
         sys::{
-            spa_buffer, spa_meta_header, SPA_META_Header, SPA_PARAM_META_size, SPA_PARAM_META_type,
+            spa_buffer, spa_meta_header, SPA_DATA_DmaBuf as SPA_DATA_DMA_BUF,
+            SPA_DATA_MemFd as SPA_DATA_MEM_FD, SPA_DATA_MemPtr as SPA_DATA_MEM_PTR,
+            SPA_META_Header, SPA_PARAM_META_size, SPA_PARAM_META_type,
         },
         utils::{Direction, SpaTypes},
     },
     stream::{StreamRef, StreamState},
+};
+
+use rustix::{
+    fd::BorrowedFd,
+    mm::{mmap, munmap, MapFlags, ProtFlags},
 };
 
 use crate::{
@@ -37,6 +45,7 @@ use crate::{
 use self::{error::LinCapError, portal::ScreenCastPortal};
 
 mod error;
+mod ioctl;
 mod portal;
 
 static CAPTURER_STATE: AtomicU8 = AtomicU8::new(0);
@@ -110,6 +119,41 @@ unsafe fn get_timestamp(buffer: *mut spa_buffer) -> i64 {
     }
 }
 
+unsafe fn fd_read(buffer: *mut spa_buffer, is_dma_buff: bool) -> Result<Vec<u8>, LinCapError> {
+    let borrowed_fd = BorrowedFd::borrow_raw((*(*buffer).datas).fd as RawFd);
+    let offset = u64::try_from((*(*(*buffer).datas).chunk).offset).unwrap();
+
+    let stat = rustix::fs::fstat(borrowed_fd)?;
+
+    let len = usize::try_from(stat.st_size)
+        .unwrap()
+        .next_multiple_of(rustix::param::page_size());
+
+    let mmap_ptr = mmap(
+        std::ptr::null_mut(),
+        len,
+        ProtFlags::READ,
+        MapFlags::SHARED,
+        borrowed_fd,
+        offset,
+    )?;
+
+    if is_dma_buff {
+        ioctl::dma_buf_begin_cpu_read_access(borrowed_fd)?;
+    }
+
+    let data_slice = std::slice::from_raw_parts(mmap_ptr as *mut u8, len);
+    let frame_vec = data_slice.to_vec();
+
+    if is_dma_buff {
+        ioctl::dma_buf_end_cpu_read_access(borrowed_fd)?;
+    }
+
+    munmap(mmap_ptr, len)?;
+
+    Ok(frame_vec)
+}
+
 fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
     let buffer = unsafe { stream.dequeue_raw_buffer() };
     if !buffer.is_null() {
@@ -125,14 +169,23 @@ fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
                 return;
             }
             let frame_size = user_data.format.size();
-            let frame_data: Vec<u8> = unsafe {
-                std::slice::from_raw_parts(
-                    (*(*buffer).datas).data as *mut u8,
-                    (*(*buffer).datas).maxsize as usize,
-                )
-                .to_vec()
-            };
+            let frame_data: Vec<u8> = match unsafe { (*(*buffer).datas).type_ } {
+                SPA_DATA_DMA_BUF => {
+                    if user_data.format.modifier() != 0 {
+                        panic!("Unsupported modifier, only linear modifier is supported");
+                    }
 
+                    unsafe { fd_read(buffer, true) }.unwrap()
+                }
+                SPA_DATA_MEM_FD | SPA_DATA_MEM_PTR => unsafe {
+                    std::slice::from_raw_parts(
+                        (*(*buffer).datas).data as *mut u8,
+                        (*(*buffer).datas).maxsize as usize,
+                    )
+                    .to_vec()
+                },
+                _ => panic!("Unsupported spa data received"),
+            };
             if let Err(e) = match user_data.format.format() {
                 VideoFormat::RGBx => user_data.tx.send(Frame::RGBx(RGBxFrame {
                     display_time: timestamp as u64,
@@ -153,6 +206,12 @@ fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
                     data: frame_data,
                 })),
                 VideoFormat::BGRx => user_data.tx.send(Frame::BGRx(BGRxFrame {
+                    display_time: timestamp as u64,
+                    width: frame_size.width as i32,
+                    height: frame_size.height as i32,
+                    data: frame_data,
+                })),
+                VideoFormat::RGBA => user_data.tx.send(Frame::RGBx(RGBxFrame {
                     display_time: timestamp as u64,
                     width: frame_size.width as i32,
                     height: frame_size.height as i32,
@@ -255,6 +314,14 @@ fn pipewire_capturer(
                 num: 1000,
                 denom: 1
             }
+        ),
+        // Ask linear modifier from pipewire.
+        // Nothing make sure that pipewire will give us linear modifier,
+        // it is determined by how xdg portal backend is implemented.
+        pw::spa::pod::property!(
+            pw::spa::param::format::FormatProperties::VideoModifier,
+            Long,
+            0 // Linear modifier, found in link https://github.com/dzfranklin/drm-fourcc-rs/blob/main/src/consts.rs#L134
         ),
     );
 

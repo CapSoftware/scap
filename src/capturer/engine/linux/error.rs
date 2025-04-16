@@ -54,3 +54,9 @@ impl<T> From<PoisonError<T>> for LinCapError {
         Self::new(e.to_string())
     }
 }
+
+impl From<rustix::io::Errno> for LinCapError {
+    fn from(e: rustix::io::Errno) -> Self {
+        Self::new(e.to_string())
+    }
+}
