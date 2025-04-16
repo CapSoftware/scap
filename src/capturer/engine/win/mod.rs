@@ -202,7 +202,7 @@ pub fn create_capturer(
         false => CursorCaptureSettings::WithoutCursor,
     };
 
-    let draw_border = if GraphicsCaptureApi::is_border_settings_supported() {
+    let draw_border = if GraphicsCaptureApi::is_border_settings_supported().unwrap_or(false) {
         options
             .show_highlight
             .then_some(DrawBorderSettings::WithBorder)
