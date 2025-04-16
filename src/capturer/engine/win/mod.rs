@@ -18,7 +18,7 @@ use std::{
 use windows_capture::{
     capture::{CaptureControl, Context, GraphicsCaptureApiHandler},
     frame::Frame as WCFrame,
-    graphics_capture_api::InternalCaptureControl,
+    graphics_capture_api::{GraphicsCaptureApi, InternalCaptureControl},
     monitor::Monitor as WCMonitor,
     settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings as WCSettings},
     window::Window as WCWindow,
@@ -202,10 +202,14 @@ pub fn create_capturer(
         false => CursorCaptureSettings::WithoutCursor,
     };
 
-    let draw_border = options
-        .show_highlight
-        .then_some(DrawBorderSettings::WithBorder)
-        .unwrap_or(DrawBorderSettings::WithoutBorder);
+    let draw_border = if GraphicsCaptureApi::is_border_settings_supported() {
+        options
+            .show_highlight
+            .then_some(DrawBorderSettings::WithBorder)
+            .unwrap_or(DrawBorderSettings::WithoutBorder)
+    } else {
+        DrawBorderSettings::Default
+    };
 
     let settings = match target {
         Target::Display(display) => Settings::Display(WCSettings::new(
