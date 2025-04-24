@@ -73,7 +73,7 @@ fn main() {
         excluded_targets: None,
         output_type: scap::frame::FrameType::BGRAFrame,
         output_resolution: scap::capturer::Resolution::_720p,
-        source_rect: Some(Area {
+        crop_area: Some(Area {
             origin: Point { x: 0.0, y: 0.0 },
             size: Size {
                 width: 2000.0,
@@ -84,7 +84,7 @@ fn main() {
     };
 
     // Create Capturer
-    let mut capturer = Capturer::new(options);
+    let mut capturer = Capturer::build(options).unwrap();
 
     // Start Capture
     capturer.start_capture();
