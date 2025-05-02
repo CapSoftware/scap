@@ -1,5 +1,7 @@
 use super::{Display, Target};
+use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_BOUNDS};
 use windows::Win32::UI::HiDpi::{GetDpiForMonitor, GetDpiForWindow, MDT_EFFECTIVE_DPI};
+use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
 use windows::Win32::{
     Foundation::{HWND, RECT},
     Graphics::Gdi::HMONITOR,
@@ -87,7 +89,20 @@ pub fn get_target_dimensions(target: &Target) -> (u64, u64) {
 
             // get width and height of the window
             let mut rect = RECT::default();
-            let _ = windows::Win32::UI::WindowsAndMessaging::GetWindowRect(hwnd, &mut rect);
+            
+            // Try DwmGetWindowAttribute first for accurate bounds without shadows
+            let result = DwmGetWindowAttribute(
+                hwnd,
+                DWMWA_EXTENDED_FRAME_BOUNDS,
+                &mut rect as *mut RECT as *mut _,
+                std::mem::size_of::<RECT>() as u32,
+            );
+
+            // Fall back to GetWindowRect if DwmGetWindowAttribute fails
+            if result.is_err() {
+                let _ = GetWindowRect(hwnd, &mut rect);
+            }
+            
             let width = rect.right - rect.left;
             let height = rect.bottom - rect.top;
 
@@ -97,8 +112,8 @@ pub fn get_target_dimensions(target: &Target) -> (u64, u64) {
             let monitor = Monitor::from_raw_hmonitor(display.raw_handle.0);
 
             (
-                monitor.width().unwrap() as u64,
-                monitor.height().unwrap() as u64,
+                monitor.width().unwrap_or_default() as u64,
+                monitor.height().unwrap_or_default() as u64,
             )
         }
     }
