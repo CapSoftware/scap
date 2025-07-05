@@ -95,7 +95,6 @@ impl Engine {
     pub async fn start(&mut self) {
         #[cfg(target_os = "macos")]
         {
-            // self.mac.add_output(Capturer::new(tx));
             self.mac.2.start().await.expect("Failed to start capture");
         }
 
