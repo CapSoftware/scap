@@ -2,6 +2,7 @@ use cidre::{cg, ns, sc};
 use cocoa::appkit::{NSApp, NSScreen};
 use cocoa::base::{id, nil};
 use cocoa::foundation::{NSRect, NSString, NSUInteger};
+use futures::executor::block_on;
 use objc::{msg_send, sel, sel_impl};
 
 use crate::engine::mac::ext::DirectDisplayIdExt;
@@ -36,7 +37,7 @@ fn get_display_name(display_id: cg::DirectDisplayId) -> String {
 pub async fn get_all_targets() -> Vec<Target> {
     let mut targets: Vec<Target> = Vec::new();
 
-    let content = sc::ShareableContent::current().await.unwrap();
+    let content = block_on(sc::ShareableContent::current()).unwrap();
 
     // Add displays to targets
     for display in content.displays().iter() {

@@ -1,4 +1,7 @@
 #[cfg(target_os = "macos")]
+use futures::executor::block_on;
+
+#[cfg(target_os = "macos")]
 mod mac;
 
 #[cfg(target_os = "windows")]
@@ -40,7 +43,7 @@ pub enum Target {
 /// Returns a list of targets that can be captured
 pub async fn get_all_targets() -> Vec<Target> {
     #[cfg(target_os = "macos")]
-    return mac::get_all_targets().await;
+    return block_on(mac::get_all_targets());
 
     #[cfg(target_os = "windows")]
     return win::get_all_targets();

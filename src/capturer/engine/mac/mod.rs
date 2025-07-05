@@ -8,6 +8,7 @@ use cidre::{
     arc, cg, cm, cv, define_obj_type, dispatch, ns, objc,
     sc::{self, StreamDelegate, StreamOutput, StreamOutputImpl},
 };
+use futures::executor::block_on;
 
 use crate::frame::{AudioFormat, AudioFrame, Frame, FrameType, VideoFrame};
 use crate::targets::Target;
@@ -82,7 +83,7 @@ pub(crate) enum CreateCapturerError {
     DisplayNotFound(String),
 }
 
-pub(crate) async fn create_capturer(
+pub(crate) fn create_capturer(
     options: &Options,
     tx: mpsc::Sender<ChannelItem>,
     error_flag: Arc<AtomicBool>,
@@ -93,7 +94,7 @@ pub(crate) async fn create_capturer(
         .clone()
         .unwrap_or_else(|| Target::Display(targets::get_main_display()));
 
-    let shareable_content = sc::ShareableContent::current().await?;
+    let shareable_content = block_on(sc::ShareableContent::current())?;
 
     let filter = match target {
         Target::Window(window) => {

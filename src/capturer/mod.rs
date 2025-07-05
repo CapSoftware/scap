@@ -102,7 +102,7 @@ impl Error for CapturerBuildError {}
 
 impl Capturer {
     /// Build a new [Capturer] instance with the provided options
-    pub async fn build(options: Options) -> Result<Capturer, CapturerBuildError> {
+    pub fn build(options: Options) -> Result<Capturer, CapturerBuildError> {
         if !is_supported() {
             return Err(CapturerBuildError::NotSupported);
         }
@@ -112,7 +112,7 @@ impl Capturer {
         }
 
         let (tx, rx) = mpsc::channel();
-        let engine = engine::Engine::new(&options, tx).await;
+        let engine = engine::Engine::new(&options, tx);
 
         Ok(Capturer { engine, rx })
     }
@@ -120,13 +120,13 @@ impl Capturer {
     // TODO
     // Prevent starting capture if already started
     /// Start capturing the frames
-    pub async fn start_capture(&mut self) {
-        self.engine.start().await;
+    pub fn start_capture(&mut self) {
+        self.engine.start();
     }
 
     /// Stop the capturer
-    pub async fn stop_capture(&mut self) {
-        self.engine.stop().await;
+    pub fn stop_capture(&mut self) {
+        self.engine.stop();
     }
 
     /// Get the next captured frame

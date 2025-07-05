@@ -58,13 +58,11 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub async fn new(options: &Options, tx: mpsc::Sender<ChannelItem>) -> Engine {
+    pub fn new(options: &Options, tx: mpsc::Sender<ChannelItem>) -> Engine {
         #[cfg(target_os = "macos")]
         {
             let error_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-            let mac = mac::create_capturer(options, tx, error_flag.clone())
-                .await
-                .unwrap();
+            let mac = mac::create_capturer(options, tx, error_flag.clone()).unwrap();
 
             Engine {
                 mac,
@@ -95,7 +93,9 @@ impl Engine {
     pub async fn start(&mut self) {
         #[cfg(target_os = "macos")]
         {
-            self.mac.2.start().await.expect("Failed to start capture");
+            use futures::executor::block_on;
+
+            block_on(self.mac.2.start()).expect("Failed to start capture");
         }
 
         #[cfg(target_os = "windows")]
@@ -112,7 +112,9 @@ impl Engine {
     pub async fn stop(&mut self) {
         #[cfg(target_os = "macos")]
         {
-            self.mac.2.stop().await.expect("Failed to stop capture");
+            use futures::executor::block_on;
+
+            block_on(self.mac.2.stop()).expect("Failed to stop capture");
         }
 
         #[cfg(target_os = "windows")]

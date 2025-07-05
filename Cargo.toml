@@ -16,6 +16,7 @@ keywords = ["screen", "recording", "video", "capture", "media"]
 categories = ["graphics", "multimedia", "multimedia::video"]
 
 [dependencies]
+futures = "0.3.31"
 sysinfo = "0.30.0"
 thiserror = "2.0.12"
 
@@ -40,6 +41,3 @@ cidre = "0.9.2"
 pipewire = "0.8.0"
 dbus = "0.9.7"
 rand = "0.8.5"
-
-[dev-dependencies]
-tokio = { version = "1.46.0", features = ["macros"] }
