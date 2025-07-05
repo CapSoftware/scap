@@ -90,7 +90,7 @@ impl Engine {
         }
     }
 
-    pub async fn start(&mut self) {
+    pub fn start(&mut self) {
         #[cfg(target_os = "macos")]
         {
             use futures::executor::block_on;
@@ -109,7 +109,7 @@ impl Engine {
         }
     }
 
-    pub async fn stop(&mut self) {
+    pub fn stop(&mut self) {
         #[cfg(target_os = "macos")]
         {
             use futures::executor::block_on;

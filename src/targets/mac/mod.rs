@@ -34,7 +34,7 @@ fn get_display_name(display_id: cg::DirectDisplayId) -> String {
     }
 }
 
-pub async fn get_all_targets() -> Vec<Target> {
+pub fn get_all_targets() -> Vec<Target> {
     let mut targets: Vec<Target> = Vec::new();
 
     let content = block_on(sc::ShareableContent::current()).unwrap();
