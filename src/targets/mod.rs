@@ -16,7 +16,7 @@ pub struct Window {
     pub raw_handle: windows::Win32::Foundation::HWND,
 
     #[cfg(target_os = "macos")]
-    pub raw_handle: core_graphics_helmer_fork::window::CGWindowID,
+    pub raw_handle: cidre::cg::WindowId,
 }
 
 #[derive(Debug, Clone)]
@@ -28,7 +28,7 @@ pub struct Display {
     pub raw_handle: windows::Win32::Graphics::Gdi::HMONITOR,
 
     #[cfg(target_os = "macos")]
-    pub raw_handle: core_graphics_helmer_fork::display::CGDisplay,
+    pub raw_handle: cidre::cg::DirectDisplayId,
 }
 
 #[derive(Debug, Clone)]
@@ -38,9 +38,9 @@ pub enum Target {
 }
 
 /// Returns a list of targets that can be captured
-pub fn get_all_targets() -> Vec<Target> {
+pub async fn get_all_targets() -> Vec<Target> {
     #[cfg(target_os = "macos")]
-    return mac::get_all_targets();
+    return mac::get_all_targets().await;
 
     #[cfg(target_os = "windows")]
     return win::get_all_targets();

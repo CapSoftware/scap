@@ -101,20 +101,8 @@ impl std::fmt::Display for CapturerBuildError {
 impl Error for CapturerBuildError {}
 
 impl Capturer {
-    /// Create a new capturer instance with the provided options
-    #[deprecated(
-        since = "0.0.6",
-        note = "Use `build` instead of `new` to create a new capturer instance."
-    )]
-    pub fn new(options: Options) -> Capturer {
-        let (tx, rx) = mpsc::channel();
-        let engine = engine::Engine::new(&options, tx);
-
-        Capturer { engine, rx }
-    }
-
     /// Build a new [Capturer] instance with the provided options
-    pub fn build(options: Options) -> Result<Capturer, CapturerBuildError> {
+    pub async fn build(options: Options) -> Result<Capturer, CapturerBuildError> {
         if !is_supported() {
             return Err(CapturerBuildError::NotSupported);
         }
@@ -124,7 +112,7 @@ impl Capturer {
         }
 
         let (tx, rx) = mpsc::channel();
-        let engine = engine::Engine::new(&options, tx);
+        let engine = engine::Engine::new(&options, tx).await;
 
         Ok(Capturer { engine, rx })
     }
@@ -132,13 +120,13 @@ impl Capturer {
     // TODO
     // Prevent starting capture if already started
     /// Start capturing the frames
-    pub fn start_capture(&mut self) {
-        self.engine.start();
+    pub async fn start_capture(&mut self) {
+        self.engine.start().await;
     }
 
     /// Stop the capturer
-    pub fn stop_capture(&mut self) {
-        self.engine.stop();
+    pub async fn stop_capture(&mut self) {
+        self.engine.stop().await;
     }
 
     /// Get the next captured frame

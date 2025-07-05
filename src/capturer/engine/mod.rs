@@ -14,8 +14,8 @@ mod linux;
 
 #[cfg(target_os = "macos")]
 pub type ChannelItem = (
-    screencapturekit::output::CMSampleBuffer,
-    screencapturekit::stream::output_type::SCStreamOutputType,
+    cidre::arc::R<cidre::cm::SampleBuf>,
+    cidre::sc::stream::OutputType,
 );
 #[cfg(not(target_os = "macos"))]
 pub type ChannelItem = Frame;
@@ -42,7 +42,11 @@ pub struct Engine {
     options: Options,
 
     #[cfg(target_os = "macos")]
-    mac: screencapturekit::stream::SCStream,
+    mac: (
+        cidre::arc::R<mac::Capturer>,
+        cidre::arc::R<mac::ErrorHandler>,
+        cidre::arc::R<cidre::sc::Stream>,
+    ),
     #[cfg(target_os = "macos")]
     error_flag: std::sync::Arc<std::sync::atomic::AtomicBool>,
 
@@ -54,11 +58,13 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn new(options: &Options, tx: mpsc::Sender<ChannelItem>) -> Engine {
+    pub async fn new(options: &Options, tx: mpsc::Sender<ChannelItem>) -> Engine {
         #[cfg(target_os = "macos")]
         {
             let error_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-            let mac = mac::create_capturer(options, tx, error_flag.clone()).unwrap();
+            let mac = mac::create_capturer(options, tx, error_flag.clone())
+                .await
+                .unwrap();
 
             Engine {
                 mac,
@@ -86,11 +92,11 @@ impl Engine {
         }
     }
 
-    pub fn start(&mut self) {
+    pub async fn start(&mut self) {
         #[cfg(target_os = "macos")]
         {
             // self.mac.add_output(Capturer::new(tx));
-            self.mac.start_capture().expect("Failed to start capture");
+            self.mac.2.start().await.expect("Failed to start capture");
         }
 
         #[cfg(target_os = "windows")]
@@ -104,10 +110,10 @@ impl Engine {
         }
     }
 
-    pub fn stop(&mut self) {
+    pub async fn stop(&mut self) {
         #[cfg(target_os = "macos")]
         {
-            self.mac.stop_capture().expect("Failed to stop capture");
+            self.mac.2.stop().await.expect("Failed to stop capture");
         }
 
         #[cfg(target_os = "windows")]

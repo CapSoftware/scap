@@ -1,14 +1,14 @@
+use cidre::{cg, ns, sc};
 use cocoa::appkit::{NSApp, NSScreen};
 use cocoa::base::{id, nil};
 use cocoa::foundation::{NSRect, NSString, NSUInteger};
-use core_graphics_helmer_fork::display::{CGDirectDisplayID, CGDisplay, CGMainDisplayID};
-use core_graphics_helmer_fork::window::CGWindowID;
 use objc::{msg_send, sel, sel_impl};
-use screencapturekit::shareable_content::SCShareableContent;
+
+use crate::engine::mac::ext::DirectDisplayIdExt;
 
 use super::{Display, Target};
 
-fn get_display_name(display_id: CGDirectDisplayID) -> String {
+fn get_display_name(display_id: cg::DirectDisplayId) -> String {
     unsafe {
         // Get all screens
         let screens: id = NSScreen::screens(nil);
@@ -20,7 +20,7 @@ fn get_display_name(display_id: CGDirectDisplayID) -> String {
             let display_id_number: id = msg_send![device_description, objectForKey: NSString::alloc(nil).init_str("NSScreenNumber")];
             let display_id_number: u32 = msg_send![display_id_number, unsignedIntValue];
 
-            if display_id_number == display_id {
+            if display_id_number == display_id.0 {
                 let localized_name: id = msg_send![screen, localizedName];
                 let name: *const i8 = msg_send![localized_name, UTF8String];
                 return std::ffi::CStr::from_ptr(name)
@@ -29,40 +29,39 @@ fn get_display_name(display_id: CGDirectDisplayID) -> String {
             }
         }
 
-        format!("Unknown Display {}", display_id)
+        format!("Unknown Display {}", display_id.0)
     }
 }
 
-pub fn get_all_targets() -> Vec<Target> {
+pub async fn get_all_targets() -> Vec<Target> {
     let mut targets: Vec<Target> = Vec::new();
 
-    let content = SCShareableContent::get().unwrap();
+    let content = sc::ShareableContent::current().await.unwrap();
 
     // Add displays to targets
-    for display in content.displays() {
-        let id: CGDirectDisplayID = display.display_id();
-        let raw_handle = CGDisplay::new(id);
+    for display in content.displays().iter() {
+        let id = display.display_id();
+
         let title = get_display_name(id);
 
         let target = Target::Display(super::Display {
-            id,
+            id: id.0,
             title,
-            raw_handle,
+            raw_handle: id,
         });
 
         targets.push(target);
     }
 
     // Add windows to targets
-    for window in content.windows() {
-        let id = window.window_id();
+    for window in content.windows().iter() {
+        let id = window.id();
         let title = window.title();
-        let raw_handle: CGWindowID = id;
 
         let target = Target::Window(super::Window {
             id,
-            title,
-            raw_handle,
+            title: title.map(|v| v.to_string()).unwrap_or_default(),
+            raw_handle: id,
         });
         targets.push(target);
     }
@@ -71,13 +70,13 @@ pub fn get_all_targets() -> Vec<Target> {
 }
 
 pub fn get_main_display() -> Display {
-    let id = unsafe { CGMainDisplayID() };
+    let id = cg::direct_display::Id::main();
     let title = get_display_name(id);
 
     Display {
-        id,
+        id: id.0,
         title,
-        raw_handle: CGDisplay::new(id),
+        raw_handle: id,
     }
 }
 

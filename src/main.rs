@@ -7,7 +7,8 @@ use scap::{
 };
 use std::{process, time::SystemTime};
 
-fn main() {
+#[tokio::main]
+async fn main() {
     // Check if the platform is supported
     if !scap::is_supported() {
         println!("❌ Platform not supported");
@@ -47,16 +48,15 @@ fn main() {
     };
 
     // Create Recorder with options
-    let mut recorder = Capturer::build(options).unwrap_or_else(|err| {
+    let mut recorder = Capturer::build(options).await.unwrap_or_else(|err| {
         println!("Problem with building Capturer: {err}");
         process::exit(1);
     });
 
     // Start Capture
-    recorder.start_capture();
+    recorder.start_capture().await;
 
     // Capture 100 frames
-    let mut start_time = SystemTime::now();
     for i in 0..100 {
         let frame = loop {
             match recorder.get_next_frame().expect("Error") {

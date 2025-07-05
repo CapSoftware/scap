@@ -1,10 +1,4 @@
-use core_foundation::base::TCFType;
-use core_media::time::CMTime;
-// use core_media_rs::cm_time::CMTime;
-use screencapturekit::{
-    output::{CMSampleBuffer, CMSampleBufferRef},
-    stream::output_type::SCStreamOutputType,
-};
+use cidre::{arc, cm, sc};
 use std::sync::mpsc;
 
 use crate::capturer::RawCapturer;
@@ -12,7 +6,7 @@ use crate::capturer::RawCapturer;
 impl RawCapturer<'_> {
     pub fn get_next_sample_buffer(
         &self,
-    ) -> Result<(CMSampleBuffer, SCStreamOutputType), mpsc::RecvError> {
+    ) -> Result<(arc::R<cm::SampleBuf>, sc::stream::OutputType), mpsc::RecvError> {
         use std::time::Duration;
 
         let capturer = &self.capturer;
@@ -33,13 +27,4 @@ impl RawCapturer<'_> {
             };
         }
     }
-}
-
-pub fn get_sample_buffer_pts(sample_buffer: &CMSampleBuffer) -> CMTime {
-    extern "C" {
-        pub fn CMSampleBufferGetPresentationTimeStamp(sample: CMSampleBufferRef) -> CMTime;
-
-    }
-
-    unsafe { CMSampleBufferGetPresentationTimeStamp(sample_buffer.as_concrete_TypeRef()) }
 }
