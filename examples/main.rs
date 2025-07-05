@@ -5,7 +5,7 @@ use scap::{
     capturer::{Area, Capturer, Options, Point, Size},
     frame::{Frame, VideoFrame},
 };
-use std::{process, time::SystemTime};
+use std::process;
 
 #[tokio::main]
 async fn main() {

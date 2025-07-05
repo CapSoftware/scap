@@ -30,7 +30,7 @@ If you want to contribute code, here's a quick primer:
 1. Clone the repo and run it with `cargo run`.
 2. Explore the API and library code in [lib.rs](./src/lib.rs).
 3. Platform-specific code lives in the `win`, `mac` and `linux` modules.
-4. The [main.rs](./src/main.rs) is a small program that "consumes" the library, for easy testing.
+4. The [main.rs](./examples/main.rs) is a small program that "consumes" the library, for easy testing.
 
 ## usage
 
