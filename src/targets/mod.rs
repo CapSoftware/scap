@@ -1,4 +1,7 @@
 #[cfg(target_os = "macos")]
+use futures::executor::block_on;
+
+#[cfg(target_os = "macos")]
 mod mac;
 
 #[cfg(target_os = "windows")]
@@ -16,7 +19,7 @@ pub struct Window {
     pub raw_handle: windows::Win32::Foundation::HWND,
 
     #[cfg(target_os = "macos")]
-    pub raw_handle: core_graphics_helmer_fork::window::CGWindowID,
+    pub raw_handle: cidre::cg::WindowId,
 }
 
 #[derive(Debug, Clone)]
@@ -28,7 +31,7 @@ pub struct Display {
     pub raw_handle: windows::Win32::Graphics::Gdi::HMONITOR,
 
     #[cfg(target_os = "macos")]
-    pub raw_handle: core_graphics_helmer_fork::display::CGDisplay,
+    pub raw_handle: cidre::cg::DirectDisplayId,
 }
 
 #[derive(Debug, Clone)]

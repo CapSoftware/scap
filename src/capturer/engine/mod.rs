@@ -14,8 +14,8 @@ mod linux;
 
 #[cfg(target_os = "macos")]
 pub type ChannelItem = (
-    screencapturekit::output::CMSampleBuffer,
-    screencapturekit::stream::output_type::SCStreamOutputType,
+    cidre::arc::R<cidre::cm::SampleBuf>,
+    cidre::sc::stream::OutputType,
 );
 #[cfg(not(target_os = "macos"))]
 pub type ChannelItem = Frame;
@@ -42,7 +42,11 @@ pub struct Engine {
     options: Options,
 
     #[cfg(target_os = "macos")]
-    mac: screencapturekit::stream::SCStream,
+    mac: (
+        cidre::arc::R<mac::Capturer>,
+        cidre::arc::R<mac::ErrorHandler>,
+        cidre::arc::R<cidre::sc::Stream>,
+    ),
     #[cfg(target_os = "macos")]
     error_flag: std::sync::Arc<std::sync::atomic::AtomicBool>,
 
@@ -89,8 +93,9 @@ impl Engine {
     pub fn start(&mut self) {
         #[cfg(target_os = "macos")]
         {
-            // self.mac.add_output(Capturer::new(tx));
-            self.mac.start_capture().expect("Failed to start capture");
+            use futures::executor::block_on;
+
+            block_on(self.mac.2.start()).expect("Failed to start capture");
         }
 
         #[cfg(target_os = "windows")]
@@ -107,7 +112,9 @@ impl Engine {
     pub fn stop(&mut self) {
         #[cfg(target_os = "macos")]
         {
-            self.mac.stop_capture().expect("Failed to stop capture");
+            use futures::executor::block_on;
+
+            block_on(self.mac.2.stop()).expect("Failed to stop capture");
         }
 
         #[cfg(target_os = "windows")]

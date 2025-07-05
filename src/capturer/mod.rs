@@ -101,18 +101,6 @@ impl std::fmt::Display for CapturerBuildError {
 impl Error for CapturerBuildError {}
 
 impl Capturer {
-    /// Create a new capturer instance with the provided options
-    #[deprecated(
-        since = "0.0.6",
-        note = "Use `build` instead of `new` to create a new capturer instance."
-    )]
-    pub fn new(options: Options) -> Capturer {
-        let (tx, rx) = mpsc::channel();
-        let engine = engine::Engine::new(&options, tx);
-
-        Capturer { engine, rx }
-    }
-
     /// Build a new [Capturer] instance with the provided options
     pub fn build(options: Options) -> Result<Capturer, CapturerBuildError> {
         if !is_supported() {

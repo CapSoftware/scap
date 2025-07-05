@@ -1,51 +1,58 @@
 use std::time::SystemTime;
 
-use screencapturekit::output::{
-    sc_stream_frame_info::{SCFrameStatus, SCStreamFrameInfo},
-    CMSampleBuffer, LockTrait,
-};
+use cidre::{cm, cv};
 
-use super::{apple_sys::CMTimeGetSeconds, pixel_buffer::get_sample_buffer_pts};
 use crate::frame::{
     convert_bgra_to_rgb, get_cropped_data, remove_alpha_channel, BGRAFrame, BGRFrame, RGBFrame,
     YUVFrame,
 };
 
-// Returns a frame's presentation timestamp in nanoseconds since an arbitrary start time.
-// This is typically yielded from a monotonic clock started on system boot.
-pub fn get_pts_in_nanoseconds(sample_buffer: &CMSampleBuffer) -> u64 {
-    let pts = get_sample_buffer_pts(sample_buffer);
-
-    let seconds = unsafe { CMTimeGetSeconds(pts) };
-
-    (seconds * 1_000_000_000.).trunc() as u64
-}
-
 pub unsafe fn create_yuv_frame(
-    sample_buffer: CMSampleBuffer,
+    sample_buffer: &mut cm::SampleBuf,
     display_time: SystemTime,
 ) -> Option<YUVFrame> {
-    let info = SCStreamFrameInfo::from_sample_buffer(&sample_buffer).unwrap();
-    let status = info.status();
-    if !matches!(status, SCFrameStatus::Complete) {
-        return None;
-    }
+    let image_buffer = sample_buffer.image_buf_mut().unwrap();
 
-    let pixel_buffer = sample_buffer.get_pixel_buffer().unwrap();
-    let bytes = pixel_buffer.lock().unwrap();
-    let width = pixel_buffer.get_width();
-    let height = pixel_buffer.get_height();
+    unsafe {
+        image_buffer
+            .lock_base_addr(cv::pixel_buffer::LockFlags::DEFAULT)
+            .result()
+            .unwrap()
+    };
+
+    let width = image_buffer.width();
+    let height = image_buffer.height();
 
     if width == 0 || height == 0 {
         return None;
     }
 
-    let luminance_bytes = bytes.as_slice_plane(0).to_vec();
-    let luminance_stride = pixel_buffer.get_bytes_per_row_of_plane(0);
-    let chrominance_bytes = bytes.as_slice_plane(1).to_vec();
-    let chrominance_stride = pixel_buffer.get_bytes_per_row_of_plane(1);
+    let luminance_stride = image_buffer.plane_bytes_per_row(0);
+    let luminance_bytes = unsafe {
+        std::slice::from_raw_parts(
+            image_buffer.plane_base_address(0),
+            luminance_stride * image_buffer.plane_height(0),
+        )
+    }
+    .to_vec();
 
-    YUVFrame {
+    let chrominance_stride = image_buffer.plane_bytes_per_row(0);
+    let chrominance_bytes = unsafe {
+        std::slice::from_raw_parts(
+            image_buffer.plane_base_address(0),
+            luminance_stride * image_buffer.plane_height(0),
+        )
+    }
+    .to_vec();
+
+    unsafe {
+        image_buffer
+            .unlock_lock_base_addr(cv::pixel_buffer::LockFlags::DEFAULT)
+            .result()
+            .unwrap()
+    };
+
+    Some(YUVFrame {
         display_time,
         width: width as i32,
         height: height as i32,
@@ -53,32 +60,39 @@ pub unsafe fn create_yuv_frame(
         luminance_stride: luminance_stride as i32,
         chrominance_bytes,
         chrominance_stride: chrominance_stride as i32,
-    }
-    .into()
+    })
 }
 
 pub unsafe fn create_bgr_frame(
-    sample_buffer: CMSampleBuffer,
+    sample_buffer: &mut cm::SampleBuf,
     display_time: SystemTime,
 ) -> Option<BGRFrame> {
-    let pixel_buffer = sample_buffer.get_pixel_buffer().unwrap();
-    let bytes = pixel_buffer.lock().unwrap();
-    let width = pixel_buffer.get_width();
-    let height = pixel_buffer.get_height();
+    let image_buffer = sample_buffer.image_buf_mut().unwrap();
+
+    unsafe {
+        image_buffer
+            .lock_base_addr(cv::pixel_buffer::LockFlags::DEFAULT)
+            .result()
+            .unwrap()
+    };
+
+    let width = image_buffer.width();
+    let height = image_buffer.height();
 
     if width == 0 || height == 0 {
         return None;
     }
 
-    let bytes_per_row = pixel_buffer.get_bytes_per_row();
-    let data = bytes.to_vec();
+    let stride = image_buffer.plane_bytes_per_row(0);
+    let bytes = unsafe {
+        std::slice::from_raw_parts(
+            image_buffer.plane_base_address(0),
+            stride * image_buffer.plane_height(0),
+        )
+    }
+    .to_vec();
 
-    let cropped_data = get_cropped_data(
-        data,
-        (bytes_per_row / 4) as i32,
-        height as i32,
-        width as i32,
-    );
+    let cropped_data = get_cropped_data(bytes, (stride / 4) as i32, height as i32, width as i32);
 
     Some(BGRFrame {
         display_time,
@@ -89,24 +103,38 @@ pub unsafe fn create_bgr_frame(
 }
 
 pub unsafe fn create_bgra_frame(
-    sample_buffer: CMSampleBuffer,
+    sample_buffer: &mut cm::SampleBuf,
     display_time: SystemTime,
 ) -> Option<BGRAFrame> {
-    let pixel_buffer = sample_buffer.get_pixel_buffer().unwrap();
-    let bytes = pixel_buffer.lock().unwrap();
-    let width = pixel_buffer.get_width();
-    let height = pixel_buffer.get_height();
+    let image_buffer = sample_buffer.image_buf_mut().unwrap();
+
+    unsafe {
+        image_buffer
+            .lock_base_addr(cv::pixel_buffer::LockFlags::DEFAULT)
+            .result()
+            .unwrap()
+    };
+
+    let width = image_buffer.width();
+    let height = image_buffer.height();
 
     if width == 0 || height == 0 {
         return None;
     }
 
-    let bytes_per_row = pixel_buffer.get_bytes_per_row();
+    let stride = image_buffer.plane_bytes_per_row(0);
 
     let mut data: Vec<u8> = vec![];
 
+    let bytes = unsafe {
+        std::slice::from_raw_parts(
+            image_buffer.plane_base_address(0),
+            stride * image_buffer.plane_height(0),
+        )
+    };
+
     for i in 0..height {
-        let base = i * bytes_per_row;
+        let base = i * stride;
         data.extend_from_slice(&bytes[base as usize..(base + 4 * width) as usize]);
     }
 
@@ -119,27 +147,36 @@ pub unsafe fn create_bgra_frame(
 }
 
 pub unsafe fn create_rgb_frame(
-    sample_buffer: CMSampleBuffer,
+    sample_buffer: &mut cm::SampleBuf,
     display_time: SystemTime,
 ) -> Option<RGBFrame> {
-    let pixel_buffer = sample_buffer.get_pixel_buffer().unwrap();
-    let bytes = pixel_buffer.lock().unwrap();
-    let width = pixel_buffer.get_width();
-    let height = pixel_buffer.get_height();
+    let image_buffer = sample_buffer.image_buf_mut().unwrap();
+
+    unsafe {
+        image_buffer
+            .lock_base_addr(cv::pixel_buffer::LockFlags::DEFAULT)
+            .result()
+            .unwrap()
+    };
+
+    let width = image_buffer.width();
+    let height = image_buffer.height();
 
     if width == 0 || height == 0 {
         return None;
     }
 
-    let bytes_per_row = pixel_buffer.get_bytes_per_row();
-    let data = bytes.to_vec();
+    let stride = image_buffer.plane_bytes_per_row(0);
 
-    let cropped_data = get_cropped_data(
-        data,
-        (bytes_per_row / 4) as i32,
-        height as i32,
-        width as i32,
-    );
+    let bytes = unsafe {
+        std::slice::from_raw_parts(
+            image_buffer.plane_base_address(0),
+            stride * image_buffer.plane_height(0),
+        )
+    }
+    .to_vec();
+
+    let cropped_data = get_cropped_data(bytes, (stride / 4) as i32, height as i32, width as i32);
 
     Some(RGBFrame {
         display_time,

@@ -5,7 +5,7 @@ use scap::{
     capturer::{Area, Capturer, Options, Point, Size},
     frame::{Frame, VideoFrame},
 };
-use std::{process, time::SystemTime};
+use std::process;
 
 fn main() {
     // Check if the platform is supported
@@ -56,7 +56,6 @@ fn main() {
     recorder.start_capture();
 
     // Capture 100 frames
-    let mut start_time = SystemTime::now();
     for i in 0..100 {
         let frame = loop {
             match recorder.get_next_frame().expect("Error") {
