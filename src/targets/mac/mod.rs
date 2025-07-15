@@ -57,7 +57,10 @@ pub fn get_all_targets() -> Vec<Target> {
     // Add windows to targets
     for window in content.windows().iter() {
         let id = window.id();
-        let title = window.title();
+        let title = window
+            .title()
+            // on intel chips we can have Some but also a null pointer for some reason
+            .filter(|v| !unsafe { v.utf8_chars_ar().is_null() });
 
         let target = Target::Window(super::Window {
             id,
