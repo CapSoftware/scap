@@ -259,9 +259,9 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "cidre"
-version = "0.9.2"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5b83f5e597a8fb4ba25eec2683aa3e89f9890dd7524622639a38e3f854c60eb"
+checksum = "c7a105a9a8dd9e625e1e5938aa8442f63551990bfb2ab4bd606b1b30ccbfd8cf"
 dependencies = [
  "cidre-macros",
  "half",
