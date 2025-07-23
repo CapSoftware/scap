@@ -6,8 +6,8 @@ edition = "2021"
 rust-version = "1.71"
 license = "MIT"
 authors = [
-	"Siddharth <siddharth99c@gmail.com>",
-	"Pranav <pranav2000joglekar@gmail.com>",
+    "Siddharth <siddharth99c@gmail.com>",
+    "Pranav <pranav2000joglekar@gmail.com>",
 ]
 readme = "README.md"
 repository = "https://github.com/helmerapp/scap"
@@ -19,12 +19,12 @@ categories = ["graphics", "multimedia", "multimedia::video"]
 sysinfo = "0.30.0"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows-capture = "1.3.6"
+windows-capture = "1.5.0"
 windows = { version = "0.58", features = [
-	"Win32_Foundation",
-	"Win32_Graphics_Gdi",
-	"Win32_UI_HiDpi",
-	"Win32_UI_WindowsAndMessaging",
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_HiDpi",
+    "Win32_UI_WindowsAndMessaging",
 ] }
 
 [target.'cfg(target_os = "macos")'.dependencies]

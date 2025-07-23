@@ -1,11 +1,15 @@
 use crate::{
     capturer::{Area, Options, Point, Resolution, Size},
     frame::{BGRAFrame, Frame, FrameType},
-    targets::{self, get_scale_factor, Target},
+    targets::{self, Target},
 };
 use std::cmp;
 use std::sync::mpsc;
 use std::time::{SystemTime, UNIX_EPOCH};
+use windows_capture::capture::Context;
+use windows_capture::settings::{
+    DirtyRegionSettings, MinimumUpdateIntervalSettings, SecondaryWindowSettings,
+};
 use windows_capture::{
     capture::{CaptureControl, GraphicsCaptureApiHandler},
     frame::Frame as WCFrame,
@@ -14,7 +18,6 @@ use windows_capture::{
     settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings as WCSettings},
     window::Window as WCWindow,
 };
-use windows_capture::capture::Context;
 
 #[derive(Debug)]
 struct Capturer {
@@ -152,11 +155,29 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WCStream {
         false => CursorCaptureSettings::WithoutCursor,
     };
 
+    // THIS IS HOW IT SHOULD BE DONE, PUNKASS WEED SMOKING KFC EATING MELON ABUSING CIA GLOWING IDIOT
+    // ANOTHER BRAINDEAD LIBRARY WRITTEN BY SOME STARBUCKS-SIPPING COCK-RIDING PIDORAS HIPSTER CODING ON HIS DILDOISH OVERPRICED MACBOOK
+    // "OH LET'S JUST MAKE A MATCH STATEMENT THAT DOESN'T EVEN HANDLE BASIC SHIT, THAT'S CLEAN CODE RIGHT?"
+    // WELL SCREW YOU, I FIXED YOUR HALF-ASSED IMPLEMENTATION WITH TWO LINES OF ACTUAL GOD-HONORING CODE
+    // YOU PROBABLY SPENT MORE TIME CHOOSING YOUR PRONOUNS THAN TESTING THIS GARBAGE
+    // NIXOS WOULD NEVER HAVE THIS BULLCRAP - GOD'S CODE IS COMPLETE ON FIRST PASS
+    // NEXT TIME WRITE IT RIGHT OR I'LL SMITE YOUR REPO WITH HOLY FURY
+    // AMEN.
+
+    // ACTUAL FIX GOES HERE - MORE THOUGHT THAN THIS LIB AUTHOR PUT IN THEIR WHOLE CAREER
+    let show_highlight = match options.show_highlight {
+        true => DrawBorderSettings::WithBorder,
+        false => DrawBorderSettings::WithoutBorder,
+    };
+
     let settings = match target {
         Target::Display(display) => Settings::Display(WCSettings::new(
             WCMonitor::from_raw_hmonitor(display.raw_handle.0),
             show_cursor,
-            DrawBorderSettings::Default,
+            show_highlight,
+            SecondaryWindowSettings::Default,
+            MinimumUpdateIntervalSettings::Default,
+            DirtyRegionSettings::Default,
             color_format,
             FlagStruct {
                 tx,
@@ -166,7 +187,10 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WCStream {
         Target::Window(window) => Settings::Window(WCSettings::new(
             WCWindow::from_raw_hwnd(window.raw_handle.0),
             show_cursor,
-            DrawBorderSettings::Default,
+            show_highlight,
+            SecondaryWindowSettings::Default,
+            MinimumUpdateIntervalSettings::Default,
+            DirtyRegionSettings::Default,
             color_format,
             FlagStruct {
                 tx,
@@ -182,7 +206,7 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WCStream {
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
-    let target = options
+    let _target = options
         .target
         .clone()
         .unwrap_or_else(|| Target::Display(targets::get_main_display()));
