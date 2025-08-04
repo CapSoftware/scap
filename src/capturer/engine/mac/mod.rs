@@ -2,21 +2,15 @@ use std::sync::atomic::AtomicBool;
 use std::sync::mpsc;
 use std::{cmp, sync::Arc};
 
-use pixelformat::get_pts_in_nanoseconds;
-use screencapturekit::{
-    cm_sample_buffer::CMSampleBuffer,
-    sc_content_filter::{InitParams, SCContentFilter},
-    sc_error_handler::StreamErrorHandler,
-    sc_output_handler::{SCStreamOutputType, StreamOutput},
-    sc_shareable_content::SCShareableContent,
-    sc_stream::SCStream,
-    sc_stream_configuration::{PixelFormat, SCStreamConfiguration},
-    sc_types::SCFrameStatus,
+use cidre::mach;
+use cidre::sc::StreamDelegateImpl;
+use cidre::{
+    arc, cg, cm, cv, define_obj_type, dispatch, ns, objc,
+    sc::{self, StreamDelegate, StreamOutput, StreamOutputImpl},
 };
-use screencapturekit_sys::os_types::base::{CMTime, CMTimeScale};
-use screencapturekit_sys::os_types::geometry::{CGPoint, CGRect, CGSize};
+use futures::executor::block_on;
 
-use crate::frame::{Frame, FrameType};
+use crate::frame::{AudioFormat, AudioFrame, Frame, FrameType, VideoFrame};
 use crate::targets::Target;
 use crate::{
     capturer::{Area, Options, Point, Resolution, Size},
@@ -26,141 +20,190 @@ use crate::{
 
 use super::ChannelItem;
 
-mod apple_sys;
+pub(crate) mod ext;
 mod pixel_buffer;
 mod pixelformat;
 
-pub use pixel_buffer::PixelBuffer;
-
-struct ErrorHandler {
+struct ErrorHandlerInner {
     error_flag: Arc<AtomicBool>,
 }
 
-impl StreamErrorHandler for ErrorHandler {
-    fn on_error(&self) {
+define_obj_type!(
+    pub ErrorHandler + StreamDelegateImpl,
+    ErrorHandlerInner,
+    ERROR_HANDLER
+);
+
+impl sc::stream::Delegate for ErrorHandler {}
+
+#[objc::add_methods]
+impl sc::stream::DelegateImpl for ErrorHandler {
+    extern "C" fn impl_stream_did_stop_with_err(
+        &mut self,
+        _cmd: Option<&objc::Sel>,
+        stream: &sc::Stream,
+        error: &ns::Error,
+    ) {
         eprintln!("Screen capture error occurred.");
-        self.error_flag
+        self.inner_mut()
+            .error_flag
             .store(true, std::sync::atomic::Ordering::Relaxed);
     }
 }
 
-pub struct Capturer {
+#[repr(C)]
+pub struct CapturerInner {
     pub tx: mpsc::Sender<ChannelItem>,
 }
 
-impl Capturer {
-    pub fn new(tx: mpsc::Sender<ChannelItem>) -> Self {
-        Capturer { tx }
+define_obj_type!(pub Capturer + StreamOutputImpl, CapturerInner, CAPTURER);
+
+impl sc::stream::Output for Capturer {}
+
+#[objc::add_methods]
+impl sc::stream::OutputImpl for Capturer {
+    extern "C" fn impl_stream_did_output_sample_buf(
+        &mut self,
+        _cmd: Option<&objc::Sel>,
+        _stream: &sc::Stream,
+        sample_buf: &mut cm::SampleBuf,
+        kind: sc::OutputType,
+    ) {
+        let _ = self.inner_mut().tx.send((sample_buf.retained(), kind));
     }
 }
 
-impl StreamOutput for Capturer {
-    fn did_output_sample_buffer(&self, sample: CMSampleBuffer, of_type: SCStreamOutputType) {
-        self.tx.send((sample, of_type)).unwrap_or(());
-    }
+#[derive(thiserror::Error, Debug)]
+pub(crate) enum CreateCapturerError {
+    #[error("{0}")]
+    OtherNative(#[from] arc::R<ns::Error>),
+    #[error("Window with title '{0}' not found")]
+    WindowNotFound(String),
+    #[error("Display with title '{0}' not found")]
+    DisplayNotFound(String),
 }
 
-pub fn create_capturer(
+pub(crate) fn create_capturer(
     options: &Options,
     tx: mpsc::Sender<ChannelItem>,
     error_flag: Arc<AtomicBool>,
-) -> SCStream {
+) -> Result<(arc::R<Capturer>, arc::R<ErrorHandler>, arc::R<sc::Stream>), CreateCapturerError> {
     // If no target is specified, capture the main display
     let target = options
         .target
         .clone()
         .unwrap_or_else(|| Target::Display(targets::get_main_display()));
 
-    let sc_shareable_content = SCShareableContent::current();
+    let shareable_content = block_on(sc::ShareableContent::current())?;
 
-    let params = match target {
+    let filter = match target {
         Target::Window(window) => {
+            let windows = shareable_content.windows();
+
             // Get SCWindow from window id
-            let sc_window = sc_shareable_content
-                .windows
-                .into_iter()
-                .find(|sc_win| sc_win.window_id == window.id)
-                .unwrap();
+            let sc_window = windows
+                .iter()
+                .find(|sc_win| sc_win.id() == window.id)
+                .ok_or_else(|| CreateCapturerError::WindowNotFound(window.title))?;
 
             // Return a DesktopIndependentWindow
             // https://developer.apple.com/documentation/screencapturekit/sccontentfilter/3919804-init
-            InitParams::DesktopIndependentWindow(sc_window)
+            sc::ContentFilter::with_desktop_independent_window(sc_window)
         }
         Target::Display(display) => {
+            let displays = shareable_content.displays();
             // Get SCDisplay from display id
-            let sc_display = sc_shareable_content
-                .displays
-                .into_iter()
-                .find(|sc_dis| sc_dis.display_id == display.id)
-                .unwrap();
+            let sc_display = displays
+                .iter()
+                .find(|sc_dis| sc_dis.display_id() == display.raw_handle)
+                .ok_or_else(|| CreateCapturerError::DisplayNotFound(display.title))?;
 
             match &options.excluded_targets {
-                None => InitParams::Display(sc_display),
+                None => sc::ContentFilter::with_display_excluding_windows(
+                    &sc_display,
+                    &ns::Array::new(),
+                ),
                 Some(excluded_targets) => {
-                    let excluded_windows = sc_shareable_content
-                        .windows
-                        .into_iter()
+                    let windows = shareable_content.windows();
+                    let excluded_windows = windows
+                        .iter()
                         .filter(|window| {
                             excluded_targets
                                 .iter()
                                 .any(|excluded_target| match excluded_target {
                                     Target::Window(excluded_window) => {
-                                        excluded_window.id == window.window_id
+                                        excluded_window.id == window.id()
                                     }
                                     _ => false,
                                 })
                         })
-                        .collect();
+                        .collect::<Vec<_>>();
 
-                    InitParams::DisplayExcludingWindows(sc_display, excluded_windows)
+                    sc::ContentFilter::with_display_excluding_windows(
+                        &sc_display,
+                        &ns::Array::from_slice(&excluded_windows),
+                    )
                 }
             }
         }
     };
 
-    let filter = SCContentFilter::new(params);
-
     let crop_area = get_crop_area(options);
 
-    let source_rect = CGRect {
-        origin: CGPoint {
+    let source_rect = cg::Rect {
+        origin: cg::Point {
             x: crop_area.origin.x,
             y: crop_area.origin.y,
         },
-        size: CGSize {
+        size: cg::Size {
             width: crop_area.size.width,
             height: crop_area.size.height,
         },
     };
 
     let pixel_format = match options.output_type {
-        FrameType::YUVFrame => PixelFormat::YCbCr420v,
-        FrameType::BGR0 => PixelFormat::ARGB8888,
-        FrameType::RGB => PixelFormat::ARGB8888,
-        FrameType::BGRAFrame => PixelFormat::ARGB8888,
+        FrameType::YUVFrame => cv::PixelFormat::_420V,
+        FrameType::BGR0 => cv::PixelFormat::_32_BGRA,
+        FrameType::RGB => cv::PixelFormat::_32_BGRA,
+        FrameType::BGRAFrame => cv::PixelFormat::_32_BGRA,
     };
 
     let [width, height] = get_output_frame_size(options);
 
-    let stream_config = SCStreamConfiguration {
-        width,
-        height,
-        source_rect,
-        pixel_format,
-        shows_cursor: options.show_cursor,
-        minimum_frame_interval: CMTime {
-            value: 1,
-            timescale: options.fps as CMTimeScale,
-            epoch: 0,
-            flags: 1,
-        },
-        ..Default::default()
-    };
+    let mut stream_config = sc::StreamCfg::new();
+    stream_config.set_width(width as usize);
+    stream_config.set_height(height as usize);
+    stream_config.set_src_rect(source_rect);
+    stream_config.set_pixel_format(pixel_format);
+    stream_config.set_shows_cursor(options.show_cursor);
+    stream_config.set_minimum_frame_interval(cm::Time {
+        value: 1,
+        scale: options.fps as i32,
+        epoch: 0,
+        flags: cm::TimeFlags::VALID,
+    });
+    stream_config.set_captures_audio(options.captures_audio);
 
-    let mut stream = SCStream::new(filter, stream_config, ErrorHandler { error_flag });
-    stream.add_output(Capturer::new(tx), SCStreamOutputType::Screen);
+    let error_handler = ErrorHandler::with(ErrorHandlerInner { error_flag });
+    let stream = sc::Stream::with_delegate(&filter, &stream_config, error_handler.as_ref());
+
+    let capturer = CapturerInner { tx };
+
+    let queue = dispatch::Queue::serial_with_ar_pool();
+
+    let capturer = Capturer::with(capturer);
+
+    if options.captures_audio {
+        stream
+            .add_stream_output(capturer.as_ref(), sc::OutputType::Audio, Some(&queue))
+            .unwrap();
+    }
 
     stream
+        .add_stream_output(capturer.as_ref(), sc::OutputType::Screen, Some(&queue))
+        .unwrap();
+
+    Ok((capturer, error_handler, stream))
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
@@ -231,48 +274,110 @@ pub fn get_crop_area(options: &Options) -> Area {
 }
 
 pub fn process_sample_buffer(
-    sample: CMSampleBuffer,
-    of_type: SCStreamOutputType,
+    mut sample: arc::R<cm::SampleBuf>,
+    of_type: sc::stream::OutputType,
     output_type: FrameType,
 ) -> Option<Frame> {
-    if let SCStreamOutputType::Screen = of_type {
-        let frame_status = &sample.frame_status;
+    let system_time = std::time::SystemTime::now();
+    let system_mach_time = mach::abs_time();
 
-        match frame_status {
-            SCFrameStatus::Complete | SCFrameStatus::Started => unsafe {
-                return Some(match output_type {
-                    FrameType::YUVFrame => {
-                        let yuvframe = pixelformat::create_yuv_frame(sample).unwrap();
-                        Frame::YUVFrame(yuvframe)
-                    }
-                    FrameType::RGB => {
-                        let rgbframe = pixelformat::create_rgb_frame(sample).unwrap();
-                        Frame::RGB(rgbframe)
-                    }
-                    FrameType::BGR0 => {
-                        let bgrframe = pixelformat::create_bgr_frame(sample).unwrap();
-                        Frame::BGR0(bgrframe)
-                    }
-                    FrameType::BGRAFrame => {
-                        let bgraframe = pixelformat::create_bgra_frame(sample).unwrap();
-                        Frame::BGRA(bgraframe)
-                    }
-                });
-            },
-            SCFrameStatus::Idle => {
-                // Quick hack - just send an empty frame, and the caller can figure out how to handle it
-                if let FrameType::BGRAFrame = output_type {
-                    return Some(Frame::BGRA(BGRAFrame {
-                        display_time: get_pts_in_nanoseconds(&sample),
-                        width: 0,
-                        height: 0,
-                        data: vec![],
+    let frame_cm_time = sample.pts();
+    let frame_mach_time = cm::Clock::convert_host_time_to_sys_units(frame_cm_time);
+
+    let mach_time_diff = if frame_mach_time > system_mach_time {
+        (frame_mach_time - system_mach_time) as i64
+    } else {
+        -((system_mach_time - frame_mach_time) as i64)
+    };
+
+    // Convert mach time difference to nanoseconds
+    let mach_timebase = mach::TimeBaseInfo::new();
+    let nanos_diff = (mach_time_diff * mach_timebase.numer as i64) / mach_timebase.denom as i64;
+
+    // Calculate frame SystemTime
+    let frame_system_time = if nanos_diff >= 0 {
+        system_time + std::time::Duration::from_nanos(nanos_diff as u64)
+    } else {
+        system_time - std::time::Duration::from_nanos((-nanos_diff) as u64)
+    };
+
+    match of_type {
+        sc::stream::OutputType::Screen => {
+            let attaches = sample.attaches(false).and_then(|a| {
+                let mut iter = a.iter();
+                iter.next()
+            })?;
+
+            match attaches
+                .get(sc::FrameInfo::status().as_cf())?
+                .as_number()
+                .to_i32()
+                .unwrap()
+            {
+                0 => unsafe {
+                    return Some(Frame::Video(match output_type {
+                        FrameType::YUVFrame => {
+                            let yuvframe =
+                                pixelformat::create_yuv_frame(sample.as_mut(), frame_system_time)
+                                    .unwrap();
+                            VideoFrame::YUVFrame(yuvframe)
+                        }
+                        FrameType::RGB => {
+                            let rgbframe =
+                                pixelformat::create_rgb_frame(sample.as_mut(), frame_system_time)
+                                    .unwrap();
+                            VideoFrame::RGB(rgbframe)
+                        }
+                        FrameType::BGR0 => {
+                            let bgrframe =
+                                pixelformat::create_bgr_frame(sample.as_mut(), frame_system_time)
+                                    .unwrap();
+                            VideoFrame::BGR0(bgrframe)
+                        }
+                        FrameType::BGRAFrame => {
+                            let bgraframe =
+                                pixelformat::create_bgra_frame(sample.as_mut(), frame_system_time)
+                                    .unwrap();
+                            VideoFrame::BGRA(bgraframe)
+                        }
                     }));
+                },
+                1 => {
+                    // Quick hack - just send an empty frame, and the caller can figure out how to handle it
+                    if let FrameType::BGRAFrame = output_type {
+                        return Some(Frame::Video(VideoFrame::BGRA(BGRAFrame {
+                            display_time: frame_system_time,
+                            width: 0,
+                            height: 0,
+                            data: vec![],
+                        })));
+                    }
                 }
-            }
-            _ => {}
-        }
-    }
+                _ => {}
+            };
 
-    None
+            None
+        }
+        sc::stream::OutputType::Audio => {
+            let list = sample.audio_buf_list::<2>().ok()?;
+            let mut bytes = Vec::<u8>::new();
+
+            for buffer in list.list().buffers {
+                bytes.extend(unsafe {
+                    std::slice::from_raw_parts(buffer.data, buffer.data_bytes_size as usize)
+                });
+            }
+
+            return Some(Frame::Audio(AudioFrame::new(
+                AudioFormat::F32,
+                2,
+                false,
+                bytes,
+                sample.num_samples() as usize,
+                48_000,
+                frame_system_time,
+            )));
+        }
+        _ => None,
+    }
 }

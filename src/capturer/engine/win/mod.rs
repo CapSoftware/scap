@@ -1,25 +1,35 @@
 use crate::{
     capturer::{Area, Options, Point, Resolution, Size},
-    frame::{BGRAFrame, Frame, FrameType},
+    frame::{AudioFormat, AudioFrame, BGRAFrame, Frame, FrameType, VideoFrame},
     targets::{self, get_scale_factor, Target},
 };
-use std::cmp;
-use std::sync::mpsc;
+use ::windows::Win32::System::Performance::{QueryPerformanceCounter, QueryPerformanceFrequency};
+use cpal::{
+    traits::{DeviceTrait, HostTrait, StreamTrait},
+    StreamInstant,
+};
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::{cmp, time::Duration};
+use std::{
+    os::windows,
+    ptr::null_mut,
+    sync::mpsc::{self, Receiver, RecvTimeoutError, Sender},
+};
 use windows_capture::{
-    capture::{CaptureControl, GraphicsCaptureApiHandler},
+    capture::{CaptureControl, Context, GraphicsCaptureApiHandler},
     frame::Frame as WCFrame,
-    graphics_capture_api::InternalCaptureControl,
+    graphics_capture_api::{GraphicsCaptureApi, InternalCaptureControl},
     monitor::Monitor as WCMonitor,
     settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings as WCSettings},
     window::Window as WCWindow,
 };
-use windows_capture::capture::Context;
 
 #[derive(Debug)]
 struct Capturer {
     pub tx: mpsc::Sender<Frame>,
     pub crop: Option<Area>,
+    pub start_time: (i64, SystemTime),
+    pub perf_freq: i64,
 }
 
 #[derive(Clone)]
@@ -31,6 +41,7 @@ enum Settings {
 pub struct WCStream {
     settings: Settings,
     capture_control: Option<CaptureControl<Capturer, Box<dyn std::error::Error + Send + Sync>>>,
+    audio_stream: Option<AudioStreamHandle>,
 }
 
 impl GraphicsCaptureApiHandler for Capturer {
@@ -41,6 +52,19 @@ impl GraphicsCaptureApiHandler for Capturer {
         Ok(Self {
             tx: context.flags.tx,
             crop: context.flags.crop,
+            start_time: (
+                unsafe {
+                    let mut time = 0;
+                    QueryPerformanceCounter(&mut time);
+                    time
+                },
+                SystemTime::now(),
+            ),
+            perf_freq: unsafe {
+                let mut freq = 0;
+                QueryPerformanceFrequency(&mut freq);
+                freq
+            },
         })
     }
 
@@ -49,6 +73,15 @@ impl GraphicsCaptureApiHandler for Capturer {
         frame: &mut WCFrame,
         _: InternalCaptureControl,
     ) -> Result<(), Self::Error> {
+        let elapsed = frame.timespan().Duration - self.start_time.0;
+        let display_time = self
+            .start_time
+            .1
+            .checked_add(Duration::from_secs_f64(
+                elapsed as f64 / self.perf_freq as f64,
+            ))
+            .unwrap();
+
         match &self.crop {
             Some(cropped_area) => {
                 // get the cropped area
@@ -74,14 +107,14 @@ impl GraphicsCaptureApiHandler for Capturer {
                     .as_nanos() as u64;
 
                 let bgr_frame = BGRAFrame {
-                    display_time: current_time,
+                    display_time,
                     width: cropped_area.size.width as i32,
                     height: cropped_area.size.height as i32,
                     data: raw_frame_buffer.to_vec(),
                 };
 
                 self.tx
-                    .send(Frame::BGRA(bgr_frame))
+                    .send(Frame::Video(VideoFrame::BGRA(bgr_frame)))
                     .expect("Failed to send data");
             }
             None => {
@@ -94,14 +127,14 @@ impl GraphicsCaptureApiHandler for Capturer {
                     .expect("Failed to get current time")
                     .as_nanos() as u64;
                 let bgr_frame = BGRAFrame {
-                    display_time: current_time,
+                    display_time,
                     width: frame.width() as i32,
                     height: frame.height() as i32,
                     data: frame_data,
                 };
 
                 self.tx
-                    .send(Frame::BGRA(bgr_frame))
+                    .send(Frame::Video(VideoFrame::BGRA(bgr_frame)))
                     .expect("Failed to send data");
             }
         }
@@ -121,12 +154,20 @@ impl WCStream {
             Settings::Window(st) => Capturer::start_free_threaded(st.to_owned()).unwrap(),
         };
 
+        if let Some(audio_stream) = &self.audio_stream {
+            let _ = audio_stream.ctrl_tx.send(AudioStreamControl::Start);
+        }
+
         self.capture_control = Some(cc)
     }
 
     pub fn stop_capture(&mut self) {
         let capture_control = self.capture_control.take().unwrap();
         let _ = capture_control.stop();
+
+        if let Some(audio_stream) = &self.audio_stream {
+            let _ = audio_stream.ctrl_tx.send(AudioStreamControl::Stop);
+        }
     }
 }
 
@@ -136,7 +177,16 @@ struct FlagStruct {
     pub crop: Option<Area>,
 }
 
-pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WCStream {
+#[derive(Debug)]
+pub enum CreateCapturerError {
+    AudioStreamConfig(cpal::DefaultStreamConfigError),
+    BuildAudioStream(cpal::BuildStreamError),
+}
+
+pub fn create_capturer(
+    options: &Options,
+    tx: mpsc::Sender<Frame>,
+) -> Result<WCStream, CreateCapturerError> {
     let target = options
         .target
         .clone()
@@ -152,33 +202,60 @@ pub fn create_capturer(options: &Options, tx: mpsc::Sender<Frame>) -> WCStream {
         false => CursorCaptureSettings::WithoutCursor,
     };
 
+    let draw_border = if GraphicsCaptureApi::is_border_settings_supported().unwrap_or(false) {
+        options
+            .show_highlight
+            .then_some(DrawBorderSettings::WithBorder)
+            .unwrap_or(DrawBorderSettings::WithoutBorder)
+    } else {
+        DrawBorderSettings::Default
+    };
+
     let settings = match target {
         Target::Display(display) => Settings::Display(WCSettings::new(
             WCMonitor::from_raw_hmonitor(display.raw_handle.0),
             show_cursor,
-            DrawBorderSettings::Default,
+            draw_border,
             color_format,
             FlagStruct {
-                tx,
+                tx: tx.clone(),
                 crop: Some(get_crop_area(options)),
             },
         )),
         Target::Window(window) => Settings::Window(WCSettings::new(
             WCWindow::from_raw_hwnd(window.raw_handle.0),
             show_cursor,
-            DrawBorderSettings::Default,
+            draw_border,
             color_format,
             FlagStruct {
-                tx,
+                tx: tx.clone(),
                 crop: Some(get_crop_area(options)),
             },
         )),
     };
 
-    WCStream {
+    let audio_stream = if options.captures_audio {
+        let (ctrl_tx, ctrl_rx) = mpsc::channel();
+        let (ready_tx, ready_rx) = mpsc::channel();
+
+        spawn_audio_stream(tx.clone(), ready_tx, ctrl_rx);
+
+        match ready_rx.recv() {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => return Err(e),
+            Err(_) => panic!("Audio spawn panicked"),
+        }
+
+        Some(AudioStreamHandle { ctrl_tx })
+    } else {
+        None
+    };
+
+    Ok(WCStream {
         settings,
         capture_control: None,
-    }
+        audio_stream,
+    })
 }
 
 pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
@@ -211,7 +288,7 @@ pub fn get_output_frame_size(options: &Options) -> [u32; 2] {
 }
 
 fn get_absolute_value(value: f64, scale_factor: f64) -> f64 {
-    let value = (value * scale_factor).floor();
+    let value = (value).floor();
     value + value % 2.0
 }
 
@@ -247,4 +324,125 @@ pub fn get_crop_area(options: &Options) -> Area {
                 height: height as f64,
             },
         })
+}
+
+struct AudioStreamHandle {
+    ctrl_tx: mpsc::Sender<AudioStreamControl>,
+}
+
+#[derive(Debug)]
+enum AudioStreamControl {
+    Start,
+    Stop,
+}
+
+fn build_audio_stream(
+    sample_tx: mpsc::Sender<
+        Result<(Vec<u8>, cpal::InputCallbackInfo, SystemTime), cpal::StreamError>,
+    >,
+) -> Result<(cpal::Stream, cpal::SupportedStreamConfig), CreateCapturerError> {
+    let host = cpal::default_host();
+    let output_device =
+        host.default_output_device()
+            .ok_or(CreateCapturerError::AudioStreamConfig(
+                cpal::DefaultStreamConfigError::DeviceNotAvailable,
+            ))?;
+    let supported_config = output_device
+        .default_output_config()
+        .map_err(CreateCapturerError::AudioStreamConfig)?;
+    let config = supported_config.clone().into();
+
+    let stream = output_device
+        .build_input_stream_raw(
+            &config,
+            supported_config.sample_format(),
+            {
+                let sample_tx = sample_tx.clone();
+                move |data, info: &cpal::InputCallbackInfo| {
+                    sample_tx
+                        .send(Ok((data.bytes().to_vec(), info.clone(), SystemTime::now())))
+                        .unwrap();
+                }
+            },
+            move |e| {
+                let _ = sample_tx.send(Err(e));
+            },
+            None,
+        )
+        .map_err(CreateCapturerError::BuildAudioStream)?;
+
+    Ok((stream, supported_config))
+}
+
+fn spawn_audio_stream(
+    tx: Sender<Frame>,
+    ready_tx: Sender<Result<(), CreateCapturerError>>,
+    ctrl_rx: Receiver<AudioStreamControl>,
+) {
+    std::thread::spawn(move || {
+        let (sample_tx, sample_rx) = mpsc::channel();
+
+        let res = build_audio_stream(sample_tx);
+
+        let (stream, config) = match res {
+            Ok(stream) => {
+                let _ = ready_tx.send(Ok(()));
+                stream
+            }
+            Err(e) => {
+                let _ = ready_tx.send(Err(e));
+                return;
+            }
+        };
+
+        let Ok(ctrl) = ctrl_rx.recv() else {
+            return;
+        };
+
+        match ctrl {
+            AudioStreamControl::Start => {
+                stream.play().unwrap();
+            }
+            AudioStreamControl::Stop => {
+                return;
+            }
+        }
+
+        let audio_format = AudioFormat::from(config.sample_format());
+
+        loop {
+            match ctrl_rx.try_recv() {
+                Ok(AudioStreamControl::Stop) => return,
+                Ok(_) | Err(mpsc::TryRecvError::Empty) => {}
+                Err(_) => return,
+            };
+
+            let (data, info, timestamp) = match sample_rx.recv_timeout(Duration::from_millis(100)) {
+                Ok(Ok(data)) => data,
+                Err(RecvTimeoutError::Timeout) => {
+                    continue;
+                }
+                _ => {
+                    // let _ = tx.send(Err(e));
+                    return;
+                }
+            };
+
+            let sample_count =
+                data.len() / (audio_format.sample_size() * config.channels() as usize);
+            let frame = AudioFrame::new(
+                audio_format,
+                config.channels(),
+                false,
+                data,
+                sample_count,
+                config.sample_rate().0,
+                timestamp,
+            );
+
+            if let Err(_) = tx.send(Frame::Audio(frame)) {
+                return;
+            };
+        }
+    });
 }
