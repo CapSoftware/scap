@@ -158,6 +158,12 @@ fn process_callback(stream: &StreamRef, user_data: &mut ListenerUserData) {
                     height: frame_size.height as i32,
                     data: frame_data,
                 })),
+                VideoFormat::RGBA => user_data.tx.send(Frame::RGBx(RGBxFrame {
+                    display_time: timestamp as u64,
+                    width: frame_size.width as i32,
+                    height: frame_size.height as i32,
+                    data: frame_data,
+                })),
                 _ => panic!("Unsupported frame format received"),
             } {
                 eprintln!("{e}");
