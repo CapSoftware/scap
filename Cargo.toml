@@ -21,7 +21,7 @@ sysinfo = "0.30.0"
 thiserror = "2.0.12"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows-capture = "1.4.2"
+windows-capture = "1.5.0"
 windows = { version = "0.58", features = [
 	"Win32_Foundation",
 	"Win32_Graphics_Gdi",
@@ -36,12 +36,12 @@ core-graphics-helmer-fork = "0.24.0"
 cocoa = "0.25.0"
 objc = "0.2.7"
 cidre = { version = "0.10.1", default-features = false, features = [
-    "async",
-    "av",
-    "sc",
-    "dispatch",
-    "macos_13_0",
-]}
+	"async",
+	"av",
+	"sc",
+	"dispatch",
+	"macos_13_0",
+] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 pipewire = "0.8.0"

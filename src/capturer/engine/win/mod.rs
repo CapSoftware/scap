@@ -20,7 +20,10 @@ use windows_capture::{
     frame::Frame as WCFrame,
     graphics_capture_api::{GraphicsCaptureApi, InternalCaptureControl},
     monitor::Monitor as WCMonitor,
-    settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings as WCSettings},
+    settings::{
+        ColorFormat, CursorCaptureSettings, DirtyRegionSettings, DrawBorderSettings,
+        MinimumUpdateIntervalSettings, SecondaryWindowSettings, Settings as WCSettings,
+    },
     window::Window as WCWindow,
 };
 
@@ -217,6 +220,9 @@ pub fn create_capturer(
             show_cursor,
             draw_border,
             color_format,
+            SecondaryWindowSettings::Default,
+            MinimumUpdateIntervalSettings::Default,
+            DirtyRegionSettings::Default,
             FlagStruct {
                 tx: tx.clone(),
                 crop: Some(get_crop_area(options)),
@@ -226,6 +232,9 @@ pub fn create_capturer(
             WCWindow::from_raw_hwnd(window.raw_handle.0),
             show_cursor,
             draw_border,
+            SecondaryWindowSettings::Default,
+            MinimumUpdateIntervalSettings::Default,
+            DirtyRegionSettings::Default,
             color_format,
             FlagStruct {
                 tx: tx.clone(),
