@@ -116,9 +116,7 @@ impl GraphicsCaptureApiHandler for Capturer {
                     data: raw_frame_buffer.to_vec(),
                 };
 
-                self.tx
-                    .send(Frame::Video(VideoFrame::BGRA(bgr_frame)))
-                    .expect("Failed to send data");
+                let _ = self.tx.send(Frame::Video(VideoFrame::BGRA(bgr_frame)));
             }
             None => {
                 // get raw frame buffer
@@ -136,9 +134,7 @@ impl GraphicsCaptureApiHandler for Capturer {
                     data: frame_data,
                 };
 
-                self.tx
-                    .send(Frame::Video(VideoFrame::BGRA(bgr_frame)))
-                    .expect("Failed to send data");
+                let _ = self.tx.send(Frame::Video(VideoFrame::BGRA(bgr_frame)));
             }
         }
         Ok(())
