@@ -1,4 +1,54 @@
 # Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.0.9](https://github.com/CapSoftware/scap/compare/v0.0.8...v0.0.9) - 2025-08-04
+
+### Fixed
+
+- fix macos
+- fix windows builds
+
+### Other
+
+- beta.0
+- silent fail when sending frames on windows
+- beta 1
+- 0.1.0 beta
+- Merge pull request #157 from rubenskj/fix/fixing-readme-typo
+- windows-capture 1.5.0
+- Merge pull request #149 from MyrikLD/main
+- Merge branch 'audio-capture'
+- ensure window title string isn't null for macos intel
+- disable all default features
+- upgrade Cidre
+- Squash merge cidre-ify into audio-capture
+- expose get_main_display
+- is_border_settings_supported can fail
+- only specify border config if available
+- no more windows scale factor
+- windows
+- macos audio system time
+- account for incorrect core_media impl
+- core_media
+- cleanup
+- capture audio timestamp on windows
+- packed audio on windows
+- properly receive audio data
+- only cpal on windows
+- improve windows a bit
+- expose channels
+- expose format
+- Merge branch 'main' into audio-capture
+- windows and mac
+- some more stuff
+- start of audio capture
+# Changelog
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
