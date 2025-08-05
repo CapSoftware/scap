@@ -215,10 +215,10 @@ pub fn create_capturer(
             WCMonitor::from_raw_hmonitor(display.raw_handle.0),
             show_cursor,
             draw_border,
-            color_format,
             SecondaryWindowSettings::Default,
             MinimumUpdateIntervalSettings::Default,
             DirtyRegionSettings::Default,
+            color_format,
             FlagStruct {
                 tx: tx.clone(),
                 crop: Some(get_crop_area(options)),
