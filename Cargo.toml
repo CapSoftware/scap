@@ -24,6 +24,7 @@ thiserror = "2.0.12"
 windows-capture = "1.5.0"
 windows = { version = "0.58", features = [
 	"Win32_Foundation",
+	"Win32_Graphics_Dwm",
 	"Win32_Graphics_Gdi",
 	"Win32_UI_HiDpi",
 	"Win32_UI_WindowsAndMessaging",
