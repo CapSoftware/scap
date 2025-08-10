@@ -97,6 +97,55 @@ fn main() {
 }
 ```
 
+## Examples
+
+The project includes several examples that demonstrate how to use the library. Here's how to run them:
+
+### Screenshots Example
+
+The `screenshots` example captures your screen and saves individual frames as PNG images:
+
+```bash
+# Run the screenshots example
+cargo run --example screenshots
+```
+
+**What it does:**
+- Captures your screen at 60 FPS
+- Saves frames as PNG images in a `captured_frames/` directory
+- Crops to 2000x1000 pixels (configurable)
+- Shows cursor and highlights during capture
+- Press Enter to stop capturing
+
+**Alternative ways to run:**
+```bash
+# Build first, then run
+cargo build --example screenshots
+./target/debug/examples/screenshots
+
+# Run with release optimizations
+cargo run --release --example screenshots
+```
+
+### Main Example
+
+The main example in `src/main.rs` demonstrates basic screen capture:
+
+```bash
+# Run the main example
+cargo run
+```
+
+### Customizing Examples
+
+You can modify the capture settings in the example files:
+- Change FPS (currently 60)
+- Modify crop area dimensions
+- Adjust output resolution
+- Enable/disable cursor and highlights
+
+**Note:** Make sure you have the necessary permissions for screen recording on your platform.
+
 ## License
 
 The code in this repository is open-sourced under the MIT license, though it may be relying on dependencies that are licensed differently. Please consult their documentation for exact terms.
