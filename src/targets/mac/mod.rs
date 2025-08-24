@@ -86,13 +86,41 @@ pub fn get_main_display() -> Display {
 
 pub fn get_scale_factor(target: &Target) -> f64 {
     match target {
-        Target::Window(window) => unsafe {
-            let cg_win_id = window.raw_handle;
-            let ns_app: id = NSApp();
-            let ns_window: id = msg_send![ns_app, windowWithWindowNumber: cg_win_id as NSUInteger];
-            let scale_factor: f64 = msg_send![ns_window, backingScaleFactor];
-            scale_factor
-        },
+        Target::Window(window) => {
+            // Get the window's frame to determine which display it's on
+            let content = block_on(sc::ShareableContent::current()).unwrap();
+
+            // Find the window in ScreenCaptureKit
+            if let Some(sc_window) = content
+                .windows()
+                .iter()
+                .find(|w| w.id() == window.raw_handle)
+            {
+                let window_frame = sc_window.frame();
+                let window_center_x = window_frame.origin.x + window_frame.size.width / 2.0;
+                let window_center_y = window_frame.origin.y + window_frame.size.height / 2.0;
+
+                // Find which display contains the center of the window
+                for display in content.displays().iter() {
+                    let display_id = display.display_id();
+                    let bounds = display_id.bounds();
+
+                    if window_center_x >= bounds.origin.x
+                        && window_center_x < bounds.origin.x + bounds.size.width
+                        && window_center_y >= bounds.origin.y
+                        && window_center_y < bounds.origin.y + bounds.size.height
+                    {
+                        // Found the display containing the window's center
+                        if let Some(mode) = display_id.display_mode() {
+                            return (mode.pixel_width() / mode.width()) as f64;
+                        }
+                    }
+                }
+            }
+
+            // Fallback: if we can't determine the display or get scale factor, use 1.0
+            1.0
+        }
         Target::Display(display) => {
             let mode = display.raw_handle.display_mode().unwrap();
             (mode.pixel_width() / mode.width()) as f64
@@ -102,13 +130,21 @@ pub fn get_scale_factor(target: &Target) -> f64 {
 
 pub fn get_target_dimensions(target: &Target) -> (u64, u64) {
     match target {
-        Target::Window(window) => unsafe {
+        Target::Window(window) => {
             let cg_win_id = window.raw_handle;
-            let ns_app: id = NSApp();
-            let ns_window: id = msg_send![ns_app, windowWithWindowNumber: cg_win_id as NSUInteger];
-            let frame: NSRect = msg_send![ns_window, frame];
-            (frame.size.width as u64, frame.size.height as u64)
-        },
+
+            // Use ScreenCaptureKit directly to get window dimensions
+            let content = block_on(sc::ShareableContent::current()).unwrap();
+            for sc_window in content.windows().iter() {
+                if sc_window.id() == cg_win_id {
+                    let frame = sc_window.frame();
+                    return (frame.size.width as u64, frame.size.height as u64);
+                }
+            }
+
+            // Fallback to default dimensions if window not found
+            (800, 600)
+        }
         Target::Display(display) => {
             let mode = display.raw_handle.display_mode().unwrap();
             (mode.width(), mode.height())
