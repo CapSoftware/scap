@@ -88,7 +88,10 @@ pub fn get_scale_factor(target: &Target) -> f64 {
     match target {
         Target::Window(window) => {
             // Get the window's frame to determine which display it's on
-            let content = block_on(sc::ShareableContent::current()).unwrap();
+            let content = match block_on(sc::ShareableContent::current()) {
+                Ok(c) => c,
+                Err(_) => return 1.0, // fallback on SC failures to avoid panic
+            };
 
             // Find the window in ScreenCaptureKit
             if let Some(sc_window) = content
@@ -112,7 +115,7 @@ pub fn get_scale_factor(target: &Target) -> f64 {
                     {
                         // Found the display containing the window's center
                         if let Some(mode) = display_id.display_mode() {
-                            return (mode.pixel_width() / mode.width()) as f64;
+                            return (mode.pixel_width() as f64) / mode.width() as f64;
                         }
                     }
                 }
@@ -134,14 +137,17 @@ pub fn get_target_dimensions(target: &Target) -> (u64, u64) {
             let cg_win_id = window.raw_handle;
 
             // Use ScreenCaptureKit directly to get window dimensions
-            let content = block_on(sc::ShareableContent::current()).unwrap();
-            for sc_window in content.windows().iter() {
-                if sc_window.id() == cg_win_id {
-                    let frame = sc_window.frame();
-                    return (frame.size.width as u64, frame.size.height as u64);
-                }
+            let content = match block_on(sc::ShareableContent::current()) {
+                Ok(c) => c,
+                Err(_) => return (800, 600), // conservative fallback on SC failures
+            };
+            if let Some(sc_window) = content.windows().iter().find(|w| w.id() == cg_win_id) {
+                let frame = sc_window.frame(); // points
+                let scale = get_scale_factor(target); // uses SC as well; safe to reuse
+                let w_px = (frame.size.width * scale).round() as u64;
+                let h_px = (frame.size.height * scale).round() as u64;
+                return (w_px, h_px);
             }
-
             // Fallback to default dimensions if window not found
             (800, 600)
         }
